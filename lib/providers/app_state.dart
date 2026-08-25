@@ -1,0 +1,3115 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import '../core/theme/app_colors.dart';
+import '../data/models/timetable_model.dart';
+import '../data/models/grade_model.dart';
+import '../data/models/attendance_model.dart';
+import '../data/models/medical_model.dart';
+import '../data/models/ticket_model.dart';
+import '../data/models/assignment_model.dart';
+import '../data/models/student_model.dart';
+import '../data/models/library_model.dart';
+import '../data/models/menu_model.dart';
+import '../data/models/meet_model.dart';
+import '../data/models/notification_model.dart';
+import '../data/models/inventory_model.dart';
+import '../data/models/user_model.dart';
+import '../data/models/role_model.dart';
+import '../data/models/class_details_model.dart';
+import '../data/models/user_preferences_model.dart';
+import '../data/mock_data.dart';
+import '../core/utils/email_generator.dart';
+import '../services/firestore_service.dart';
+import '../services/auth_storage_service.dart';
+
+enum UserRole {
+  admin, // Məktəb İdarəetməsi (Admin)
+  parent, // Valideyn Paneli
+  student, // Şagird Paneli
+  teacher, // Müəllim Paneli
+}
+
+extension UserRoleExt on UserRole {
+  String get displayName {
+    switch (this) {
+      case UserRole.admin:
+        return 'Admin Paneli';
+      case UserRole.parent:
+        return 'Valideyn Paneli';
+      case UserRole.student:
+        return 'Şagird Paneli';
+      case UserRole.teacher:
+        return 'Müəllim Paneli';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case UserRole.admin:
+        return Icons.admin_panel_settings_rounded;
+      case UserRole.parent:
+        return Icons.family_restroom_rounded;
+      case UserRole.student:
+        return Icons.school_rounded;
+      case UserRole.teacher:
+        return Icons.psychology_rounded;
+    }
+  }
+}
+
+class AppState extends ChangeNotifier {
+  final FirestoreService _firestoreService = FirestoreService();
+  final AuthStorageService _authStorage = AuthStorageService();
+  StreamSubscription<List<MeetRoom>>? _meetRoomsSubscription;
+
+  // Public getter for FirestoreService
+  FirestoreService get firestoreService => _firestoreService;
+
+  // --- APPEARANCE (Light / Dark) ---
+  bool _isDarkMode = false;
+  bool get isDarkMode => _isDarkMode;
+
+  /// Restores the persisted theme before the first frame so the app
+  /// never flashes the wrong palette on startup.
+  Future<void> loadThemeMode() async {
+    _isDarkMode = await _authStorage.getIsDarkMode();
+    AppColors.applyDark(_isDarkMode);
+  }
+
+  void toggleTheme() {
+    _isDarkMode = !_isDarkMode;
+    AppColors.applyDark(_isDarkMode);
+    _authStorage.saveIsDarkMode(_isDarkMode);
+    notifyListeners();
+  }
+
+  // Current Logged In User
+  AppUser? _currentUser;
+  AppUser? get currentUser => _currentUser;
+  bool get isAuthenticated => _currentUser != null;
+
+  // Active Role
+  UserRole get currentRole => _currentUser?.role ?? UserRole.admin;
+
+  // User Accounts Database (Default Master Admin)
+  final List<AppUser> _users = [
+    AppUser(
+      id: 'usr-admin-1',
+      username: 'admin',
+      password: '123',
+      fullName: 'İdrak Liseyi Baş İnzibatçısı',
+      role: UserRole.admin,
+      idrakCode: 'IDR-ADM-001',
+      phone: '+994 (12) 598-00-00',
+      email: 'admin@idrakliseyi.edu.az',
+      createdAt: DateTime(2024, 1, 1),
+    ),
+  ];
+
+  List<AppUser> get users => _users;
+
+  // Real Students List
+  final List<StudentProfile> _students = [];
+  List<StudentProfile> get students => _students;
+
+  // Explicit distinct classes created by Admin
+  final Set<String> _customClasses = {'9B', '10A', '11A'};
+
+  // Sinif detalları (otaq, rəhbər, təhsil ili, qeyd) — Firestore-da saxlanır
+  final Map<String, ClassDetails> _classDetailsMap = {};
+  ClassDetails? classDetails(String name) => _classDetailsMap[name];
+
+  // --- ROLES & PERMISSIONS (Rol İdarəetməsi) ---
+  List<Role> _roles = [];
+  List<Role> get roles => _roles;
+
+  // --- USER PREFERENCES (Modül Sıralama & Navigation Özelleştirme) ---
+  UserPreferences? _userPreferences;
+  UserPreferences? get userPreferences => _userPreferences;
+
+  /// Kullanıcı tercihlerini Firestore'dan yükle
+  Future<void> loadUserPreferences() async {
+    if (_currentUser == null) return;
+
+    try {
+      final prefs = await _firestoreService.fetchUserPreferences(
+        _currentUser!.id,
+      );
+      if (prefs != null && prefs.userRole == _currentUser!.role.name) {
+        _userPreferences = prefs;
+      } else {
+        // Varsayılan tercihleri oluştur
+        _userPreferences = UserPreferences.createDefault(
+          userId: _currentUser!.id,
+          userRole: _currentUser!.role.name,
+        );
+        // Firestore'a kaydet
+        await _firestoreService.saveUserPreferences(_userPreferences!);
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('User preferences load error: $e');
+      // Hata durumunda varsayılan değerleri kullan
+      _userPreferences = UserPreferences.createDefault(
+        userId: _currentUser!.id,
+        userRole: _currentUser!.role.name,
+      );
+      notifyListeners();
+    }
+  }
+
+  /// Modül sırasını güncelle ve kaydet
+  Future<void> updateModuleOrder(List<ModuleItem> newOrder) async {
+    if (_currentUser == null) return;
+
+    // Index'leri güncelle
+    for (int i = 0; i < newOrder.length; i++) {
+      newOrder[i] = newOrder[i].copyWith(orderIndex: i);
+    }
+
+    _userPreferences = (_userPreferences ?? UserPreferences.createDefault(
+      userId: _currentUser!.id,
+      userRole: _currentUser!.role.name,
+    )).copyWith(
+      dashboardModules: newOrder,
+      lastModified: DateTime.now(),
+    );
+
+    await _firestoreService.saveUserPreferences(_userPreferences!);
+    notifyListeners();
+  }
+
+  /// Navigation item sırasını güncelle ve kaydet
+  Future<void> updateNavigationOrder(List<NavigationItem> newOrder) async {
+    if (_currentUser == null) return;
+
+    for (int i = 0; i < newOrder.length; i++) {
+      newOrder[i] = newOrder[i].copyWith(orderIndex: i);
+    }
+
+    _userPreferences = (_userPreferences ?? UserPreferences.createDefault(
+      userId: _currentUser!.id,
+      userRole: _currentUser!.role.name,
+    )).copyWith(
+      navigationItems: newOrder,
+      lastModified: DateTime.now(),
+    );
+
+    await _firestoreService.saveUserPreferences(_userPreferences!);
+    notifyListeners();
+  }
+
+  /// Modül görünürlüğünü değiştir
+  Future<void> toggleModuleVisibility(String moduleId) async {
+    if (_userPreferences == null) return;
+
+    final modules = List<ModuleItem>.from(_userPreferences!.dashboardModules);
+    final index = modules.indexWhere((m) => m.id == moduleId);
+    if (index == -1) return;
+
+    modules[index] = modules[index].copyWith(
+      isVisible: !modules[index].isVisible,
+    );
+
+    await updateModuleOrder(modules);
+  }
+
+  /// Add a module to bottom navigation bar (if not already pinned)
+  Future<bool> pinModuleToNavigation(ModuleItem module) async {
+    if (_currentUser == null) return false;
+
+    if (_userPreferences == null) {
+      _userPreferences = UserPreferences.createDefault(
+        userId: _currentUser!.id,
+        userRole: _currentUser!.role.name,
+      );
+    }
+
+    final currentNav = List<NavigationItem>.from(_userPreferences!.navigationItems);
+    
+    // Check if already in navigation
+    final existingIndex = currentNav.indexWhere((n) => n.id == module.id);
+    if (existingIndex != -1) {
+      if (!currentNav[existingIndex].isVisible) {
+        currentNav[existingIndex] = currentNav[existingIndex].copyWith(isVisible: true, isPinned: true);
+        await updateNavigationOrder(currentNav);
+        return true;
+      }
+      return false; // Already present
+    }
+
+    // Limit maximum bottom bar tabs to 5 for optimal mobile layout
+    if (currentNav.where((n) => n.isVisible).length >= 5) {
+      return false; // Max limit reached
+    }
+
+    final newNavItem = module.toNavigationItem(
+      orderIndex: currentNav.length,
+      isPinned: true,
+    );
+    currentNav.add(newNavItem);
+    await updateNavigationOrder(currentNav);
+    return true;
+  }
+
+  /// Remove an item from bottom navigation bar
+  Future<bool> removeNavigationItem(String navId) async {
+    if (_currentUser == null) return false;
+
+    // Do not allow removing main dashboard tab
+    if (navId == 'dashboard') return false;
+
+    if (_userPreferences == null) {
+      _userPreferences = UserPreferences.createDefault(
+        userId: _currentUser!.id,
+        userRole: _currentUser!.role.name,
+      );
+    }
+
+    final currentNav = List<NavigationItem>.from(_userPreferences!.navigationItems);
+    final index = currentNav.indexWhere((n) => n.id == navId);
+    if (index == -1) return false;
+
+    currentNav.removeAt(index);
+
+    // Re-index
+    for (int i = 0; i < currentNav.length; i++) {
+      currentNav[i] = currentNav[i].copyWith(orderIndex: i);
+    }
+
+    await updateNavigationOrder(currentNav);
+    return true;
+  }
+
+  /// Navigation item pinleme durumunu değiştir
+  Future<void> toggleNavigationPin(String navId) async {
+    if (_userPreferences == null) return;
+
+    final navItems = List<NavigationItem>.from(
+      _userPreferences!.navigationItems,
+    );
+    final index = navItems.indexWhere((n) => n.id == navId);
+    if (index == -1) return;
+
+    navItems[index] = navItems[index].copyWith(
+      isPinned: !navItems[index].isPinned,
+    );
+
+    await updateNavigationOrder(navItems);
+  }
+
+  /// Kullanıcı tercihlerini varsayılana sıfırla
+  Future<void> resetUserPreferences() async {
+    if (_currentUser == null) return;
+
+    _userPreferences = UserPreferences.createDefault(
+      userId: _currentUser!.id,
+      userRole: _currentUser!.role.name,
+    );
+
+    await _firestoreService.saveUserPreferences(_userPreferences!);
+    notifyListeners();
+  }
+
+  /// Sıralı modül listesini döndür (yetkiye göre filtrelenmiş + sıralı)
+  List<ModuleItem> getOrderedModules() {
+    if (_currentUser == null) return [];
+
+    final roleName = _currentUser!.role.name;
+    if (_userPreferences == null || _userPreferences!.userRole != roleName) {
+      _userPreferences = UserPreferences.createDefault(
+        userId: _currentUser!.id,
+        userRole: roleName,
+      );
+    }
+
+    // Default modüllerden eksik olan varsa ekle
+    final defaultMods = UserPreferences.createDefault(
+      userId: _currentUser!.id,
+      userRole: roleName,
+    ).dashboardModules;
+
+    final currentMods = List<ModuleItem>.from(_userPreferences!.dashboardModules);
+    bool updated = false;
+    for (final defMod in defaultMods) {
+      if (!currentMods.any((m) => m.id == defMod.id)) {
+        currentMods.add(defMod.copyWith(orderIndex: currentMods.length));
+        updated = true;
+      }
+    }
+    if (updated) {
+      _userPreferences = _userPreferences!.copyWith(dashboardModules: currentMods);
+    }
+
+    // Səlahiyyətlərə görə filtrlə
+    final authorized = currentMods
+        .where((m) => m.isVisible && hasPermission(m.id))
+        .toList();
+
+    authorized.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    return authorized;
+  }
+
+  /// Sıralı navigation item listesini döndür
+  /// İcazəsi olmayan naviqasiya elementləri filtr edilir
+  List<NavigationItem> getOrderedNavigation() {
+    if (_currentUser == null) return [];
+
+    final roleName = _currentUser!.role.name;
+    if (_userPreferences == null || _userPreferences!.userRole != roleName) {
+      _userPreferences = UserPreferences.createDefault(
+        userId: _currentUser!.id,
+        userRole: roleName,
+      );
+    }
+
+    final visible = _userPreferences!.navigationItems
+        .where((n) => n.isVisible)
+        .where((n) => n.id == 'dashboard' || hasPermission(n.id))
+        .toList();
+
+    visible.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    return visible;
+  }
+
+  /// Rol üçün mövcud bütün modulları qaytarır
+  List<ModuleItem> getAvailableModulesForRole() {
+    if (_currentUser == null) return [];
+    final roleName = _currentUser!.role.name;
+    final defaultMods = UserPreferences.createDefault(
+      userId: _currentUser!.id,
+      userRole: roleName,
+    ).dashboardModules;
+
+    // Səlahiyyət yoxlanışı
+    return defaultMods.where((m) => hasPermission(m.id)).toList();
+  }
+
+  /// Rolları Firestore-dan yükləyir (ilk açılışda default rollar yaradılır)
+  Future<void> loadRoles() async {
+    try {
+      _roles = await _firestoreService.fetchRoles();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Roles load error: $e');
+    }
+  }
+
+  Role? getRoleById(String? roleId) {
+    if (roleId == null || roleId.isEmpty) return null;
+    for (final r in _roles) {
+      if (r.id == roleId) return r;
+    }
+    return null;
+  }
+
+  /// Səlahiyyət yoxlaması.
+  /// assignedRoleId olan istifadəçi YALNIZ rolunun icazə verdiyi
+  /// səlahiyyətlərə çatır. Rol təyin olunmayan istifadəçilər
+  /// öz rollarının standart modullarına tam giriş əldə edirlər.
+  bool hasPermission(String permissionId) {
+    final user = _currentUser;
+    if (user == null) return false;
+    final roleId = user.assignedRoleId;
+    if (roleId == null || roleId.isEmpty) {
+      return true;
+    }
+    final role = getRoleById(roleId);
+    if (role == null) return true;
+    return role.permissionIds.contains(permissionId);
+  }
+
+  // Per-student medical cards map: studentId -> StudentMedicalCard
+  final Map<String, StudentMedicalCard> _medicalCardsMap = {};
+
+  // Per-class Timetables Map: className -> List<DayTimetable>
+  final Map<String, List<DayTimetable>> _classTimetablesMap = {};
+
+  // Get Timetable for a specific class (or default empty 5 days)
+  List<DayTimetable> getClassTimetable(String className) {
+    if (_classTimetablesMap.containsKey(className)) {
+      return _classTimetablesMap[className]!;
+    }
+    final defaultDays = [
+      DayTimetable(dayName: 'Bazar ertəsi', shortDay: 'B.E', lessons: []),
+      DayTimetable(dayName: 'Çərşənbə axşamı', shortDay: 'Ç.A', lessons: []),
+      DayTimetable(dayName: 'Çərşənbə', shortDay: 'Ç.', lessons: []),
+      DayTimetable(dayName: 'Cümə axşamı', shortDay: 'C.A', lessons: []),
+      DayTimetable(dayName: 'Cümə', shortDay: 'C.', lessons: []),
+    ];
+    _classTimetablesMap[className] = defaultDays;
+    return defaultDays;
+  }
+
+  // Selected Student for Parent / Active view
+  String? _activeChildId;
+
+  /// Valideynin bütün övladları (Övladlar modeli)
+  List<StudentProfile> get children {
+    final user = _currentUser;
+    if (user == null || user.role != UserRole.parent) return const [];
+    final ids = <String>{
+      if (user.linkedStudentId != null) user.linkedStudentId!,
+      ...user.linkedStudentIds,
+    };
+    return _students.where((s) => ids.contains(s.id)).toList();
+  }
+
+  /// Valideyn panelində aktiv övladı dəyişir
+  void setActiveChild(String studentId) {
+    if (children.any((c) => c.id == studentId) && _activeChildId != studentId) {
+      _activeChildId = studentId;
+      notifyListeners();
+    }
+  }
+
+  StudentProfile get student {
+    final user = _currentUser;
+    if (user?.role == UserRole.parent) {
+      final kids = children;
+      if (kids.isEmpty) return MockData.currentStudent;
+      // Aktiv seçilmiş övlad (keçid düyməsi ilə)
+      if (_activeChildId != null) {
+        for (final s in kids) {
+          if (s.id == _activeChildId) return s;
+        }
+      }
+      // Əsas övlad (linkedStudentId), yoxsa siyahıdakı ilk
+      final primaryId = user!.linkedStudentId;
+      if (primaryId != null) {
+        for (final s in kids) {
+          if (s.id == primaryId) return s;
+        }
+      }
+      return kids.first;
+    }
+    if (_currentUser?.role == UserRole.student) {
+      return _students.firstWhere(
+        (s) =>
+            s.fullName.toLowerCase() == _currentUser!.fullName.toLowerCase() ||
+            s.studentNumber.toLowerCase() ==
+                _currentUser!.idrakCode.toLowerCase(),
+        orElse: () => MockData.currentStudent,
+      );
+    }
+    if (_students.isNotEmpty) {
+      return _students.first;
+    }
+    return MockData.currentStudent;
+  }
+
+  // Available classes in the entire school
+  List<String> get allDistinctClasses {
+    final classesSet = <String>{..._customClasses};
+    for (final s in _students) {
+      if (s.className.isNotEmpty) classesSet.add(s.className);
+    }
+    for (final u in _users) {
+      classesSet.addAll(u.assignedClasses);
+    }
+    classesSet.addAll(_classTimetablesMap.keys);
+    return classesSet.toList()..sort();
+  }
+
+  // Classes claimed/taught by current teacher
+  List<String> get currentTeacherClasses {
+    if (_currentUser == null) return [];
+    return _currentUser!.assignedClasses;
+  }
+
+  // --- INITIALIZE & SYNC FROM FIRESTORE ---
+  Future<void>? _initFuture;
+
+  /// Returns the ongoing (or a new) Firestore sync so callers can await it
+  /// before relying on cloud data (e.g. auto-login needs the users list).
+  Future<void> ensureDataReady() {
+    return _initFuture ??= initFirebaseData();
+  }
+
+  Future<void> initFirebaseData() async {
+    try {
+      // Meet presence must start immediately. Waiting for every other school
+      // collection can otherwise delay a live room by minutes on a weak link.
+      _startMeetRoomsListener();
+
+      // 1. Fetch Users
+      final cloudUsers = await _firestoreService.fetchUsers();
+      if (cloudUsers.isNotEmpty) {
+        for (final u in cloudUsers) {
+          if (!_users.any((x) => x.id == u.id)) {
+            _users.add(u);
+          }
+        }
+      }
+
+      // 2. Fetch Students
+      final cloudStudents = await _firestoreService.fetchStudents();
+      if (cloudStudents.isNotEmpty) {
+        _students.clear();
+        _students.addAll(cloudStudents);
+        _pendingAttendanceStudents = List.from(_students);
+      }
+
+      // 3. Fetch Timetables
+      final cloudTimetables = await _firestoreService.fetchAllClassTimetables();
+      if (cloudTimetables.isNotEmpty) {
+        _classTimetablesMap.clear();
+        _classTimetablesMap.addAll(cloudTimetables);
+      }
+
+      // 4. Fetch Books
+      final cloudBooks = await _firestoreService.fetchBooks();
+      if (cloudBooks.isNotEmpty) {
+        _books.clear();
+        _books.addAll(cloudBooks);
+      }
+
+      // 5. Fetch Assignments
+      final cloudAssignments = await _firestoreService.fetchAssignments();
+      if (cloudAssignments.isNotEmpty) {
+        _assignments.clear();
+        _assignments.addAll(cloudAssignments);
+      }
+
+      // 6. Fetch Tickets
+      final cloudTickets = await _firestoreService.fetchTickets();
+      if (cloudTickets.isNotEmpty) {
+        _tickets.clear();
+        _tickets.addAll(cloudTickets);
+      }
+
+      // 7. Fetch Menu
+      final cloudMenu = await _firestoreService.fetchWeeklyMenu();
+      if (cloudMenu.isNotEmpty) {
+        _weeklyMenu.clear();
+        _weeklyMenu.addAll(cloudMenu);
+      }
+
+      // 8. Fetch Grades
+      final cloudGrades = await _firestoreService.fetchGrades(null);
+      if (cloudGrades.isNotEmpty) {
+        _grades.clear();
+        _grades.addAll(cloudGrades);
+      }
+
+      // 9. Fetch Medical Cards
+      final cloudMedicalCards = await _firestoreService.fetchAllMedicalCards();
+      if (cloudMedicalCards.isNotEmpty) {
+        _medicalCardsMap.addAll(cloudMedicalCards);
+      }
+
+      // 10. Fetch Attendance
+      final cloudAttendance = await _firestoreService.fetchAllAttendance();
+      if (cloudAttendance.isNotEmpty) {
+        _studentAttendanceMap.clear();
+        _studentAttendanceMap.addAll(cloudAttendance);
+      }
+
+      // 11. Fetch Meet Rooms
+      final cloudMeetRooms = await _firestoreService.fetchMeetRooms();
+      // Do not overwrite a newer snapshot delivered by the listener above.
+      if (_meetRooms.isEmpty && cloudMeetRooms.isNotEmpty) {
+        _meetRooms.addAll(cloudMeetRooms);
+      }
+
+      // 12. Fetch Notifications
+      final cloudNotifs = await _firestoreService.fetchNotifications();
+      if (cloudNotifs.isNotEmpty) {
+        _notifications.clear();
+        _notifications.addAll(cloudNotifs);
+      }
+
+      // 13. Fetch QR Inventory Items
+      final cloudInventory = await _firestoreService.fetchInventoryItems();
+      if (cloudInventory.isNotEmpty) {
+        _inventoryItems.clear();
+        _inventoryItems.addAll(cloudInventory);
+      }
+
+      // 14. Fetch Roles (ilk dəfədə default rollar yaradılır)
+      _roles = await _firestoreService.fetchRoles();
+
+      // 15. Fetch Class Details (siniflər restartdan sonra itmir)
+      final cloudClassDetails = await _firestoreService.fetchClassDetails();
+      if (cloudClassDetails.isNotEmpty) {
+        _classDetailsMap.addAll(cloudClassDetails);
+        _customClasses.addAll(cloudClassDetails.keys);
+      }
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Firestore initialization sync notice: $e');
+    }
+  }
+
+  void _startMeetRoomsListener() {
+    _meetRoomsSubscription?.cancel();
+    _meetRoomsSubscription = _firestoreService.watchMeetRooms().listen(
+      (rooms) {
+        _meetRooms
+          ..clear()
+          ..addAll(rooms);
+        notifyListeners();
+      },
+      onError: (Object error) {
+        debugPrint('Meet rooms live sync error: $error');
+        // Keep existing rooms on error instead of clearing
+      },
+      cancelOnError: false, // Keep stream alive on Firestore reconnects
+    );
+  }
+
+  // --- AUTHENTICATION ---
+  String? login(
+    String username,
+    String password, {
+    bool saveCredentials = true,
+  }) {
+    final cleanUsername = username.trim().toLowerCase();
+    final cleanPass = password.trim();
+
+    debugPrint(
+      '[AppState] Login attempt - username: "$cleanUsername", password length: ${cleanPass.length}',
+    );
+    debugPrint('[AppState] Total users in database: ${_users.length}');
+
+    final user = _users.firstWhere(
+      (u) =>
+          (u.username.toLowerCase() == cleanUsername ||
+              u.idrakCode.toLowerCase() == cleanUsername ||
+              (u.email ?? '').toLowerCase() == cleanUsername ||
+              (u.finCode ?? '').toLowerCase() == cleanUsername) &&
+          u.password == cleanPass,
+      orElse: () => AppUser(
+        id: '',
+        username: '',
+        password: '',
+        fullName: '',
+        role: UserRole.student,
+        idrakCode: '',
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    if (user.id.isEmpty) {
+      debugPrint('[AppState] Login failed - user not found');
+      return 'E-poçt / FIN / istifadəçi adı və ya şifrə yanlışdır!';
+    }
+
+    if (!user.isActive) {
+      return 'Bu hesab inzibatçı tərəfindən deaktiv edilib.';
+    }
+
+    debugPrint('[AppState] ✓ Login successful - user: ${user.fullName}');
+    _currentUser = user;
+
+    // Səlahiyyət qapısı üçün rollar mütləq yüklənməlidir —
+    // manual loginda auto-login yolu işləmir, buradan yükləyirik.
+    if (_roles.isEmpty) {
+      loadRoles();
+    }
+
+    // 🆕 İstifadəçi seçimlərini yüklə (modul sıralaması üçün)
+    loadUserPreferences();
+
+    // Save credentials for auto-login if requested
+    if (saveCredentials) {
+      debugPrint('[AppState] Saving credentials for auto-login...');
+      _authStorage.saveCredentials(cleanUsername, cleanPass);
+    }
+
+    notifyListeners();
+    return null;
+  }
+
+  /// Attempt auto-login using stored credentials.
+  /// Never logs in silently: biometric confirmation is always required.
+  Future<bool> tryAutoLogin() async {
+    try {
+      debugPrint('[AppState] Attempting auto-login...');
+
+      // Fast local checks first, before waiting on any network sync.
+      final hasCredentials = await _authStorage.hasStoredCredentials();
+      final biometricEnabled = await _authStorage.isBiometricEnabled();
+      debugPrint(
+        '[AppState] Credentials: $hasCredentials, biometric enabled: $biometricEnabled',
+      );
+
+      // Without stored credentials or an explicit opt-in to biometric
+      // login the user must always sign in manually.
+      if (!hasCredentials || !biometricEnabled) return false;
+
+      final authenticated = await _authStorage.authenticateWithBiometrics();
+      debugPrint('[AppState] Biometric authenticated: $authenticated');
+      if (!authenticated) return false;
+
+      // Wait for the Firestore users sync; without it only the built-in
+      // master admin exists and saved cloud users would fail to match.
+      try {
+        await ensureDataReady().timeout(const Duration(seconds: 10));
+      } on TimeoutException {
+        debugPrint('[AppState] Firestore sync timed out, trying login anyway');
+      }
+
+      debugPrint('[AppState] Users in database: ${_users.length}');
+
+      final credentials = await _authStorage.getSavedCredentials();
+      debugPrint('[AppState] Credentials found: ${credentials != null}');
+
+      if (credentials == null) return false;
+
+      debugPrint('[AppState] Saved username: "${credentials['username']}"');
+      debugPrint(
+        '[AppState] Saved password length: ${credentials['password']?.length}',
+      );
+
+      final error = login(
+        credentials['username']!,
+        credentials['password']!,
+        saveCredentials: false, // Already saved
+      );
+
+      if (error == null) {
+        debugPrint('[AppState] ✓ Auto-login successful');
+        return true;
+      } else {
+        debugPrint('[AppState] ⚠️ Auto-login failed: $error');
+        // Clear invalid credentials
+        await _authStorage.clearAll();
+        return false;
+      }
+    } catch (e) {
+      debugPrint('[AppState] ⚠️ Auto-login error: $e');
+      return false;
+    }
+  }
+
+  void logout() async {
+    _currentUser = null;
+    await _authStorage.clearAll();
+    notifyListeners();
+  }
+
+  void switchUserRoleForTesting(UserRole role) {
+    final matchingUser = _users.firstWhere(
+      (u) => u.role == role && u.isActive,
+      orElse: () => _users.first,
+    );
+    _currentUser = matchingUser;
+    loadUserPreferences();
+    notifyListeners();
+  }
+
+  // --- SMART CLASS MANAGEMENT & PROMOTION ---
+  /// Yeni sinif yaradır — detallarla birlikdə Firestore-da saxlanır
+  void addNewClass(
+    String className, {
+    String? room,
+    String? curatorTeacherId,
+    String academicYear = '2025 - 2026',
+    String? note,
+  }) {
+    final name = className.trim();
+    _customClasses.add(name);
+    final details = ClassDetails(
+      name: name,
+      room: room,
+      curatorTeacherId: curatorTeacherId,
+      academicYear: academicYear,
+      note: note,
+    );
+    _classDetailsMap[name] = details;
+    _firestoreService.saveClassDetails(details);
+    notifyListeners();
+  }
+
+  void deleteClass(String className) {
+    _customClasses.remove(className);
+    _classTimetablesMap.remove(className);
+    _classDetailsMap.remove(className);
+    _firestoreService.deleteClassDetails(className);
+    notifyListeners();
+  }
+
+  /// Sinifə müəllim təyin edir (müəllimin assignedClasses siyahısına əlavə
+  /// olunur və class_teachers kolleksiyasında qeydə alınır)
+  void assignTeacherToClass({
+    required String teacherId,
+    required String className,
+    String? subject,
+    bool isClassTeacher = false,
+  }) {
+    final index = _users.indexWhere((u) => u.id == teacherId);
+    if (index != -1) {
+      final t = _users[index];
+      final classes = [...t.assignedClasses];
+      if (!classes.contains(className)) classes.add(className);
+      _users[index] = t.copyWith(assignedClasses: classes);
+      _firestoreService.saveUser(_users[index]);
+      notifyListeners();
+    }
+    _firestoreService.assignTeacherToClass(
+      className: className,
+      teacherId: teacherId,
+      isClassTeacher: isClassTeacher,
+      subject: subject,
+    );
+  }
+
+  /// Sinfə təyin olunan müəllimlər
+  List<AppUser> getTeachersForClass(String className) {
+    return _users
+        .where(
+          (u) =>
+              u.role == UserRole.teacher &&
+              u.assignedClasses.contains(className),
+        )
+        .toList();
+  }
+
+  List<StudentProfile> getStudentsForClass(String className) {
+    return _students
+        .where((s) => s.className.toLowerCase() == className.toLowerCase())
+        .toList();
+  }
+
+  double getClassAverageGpa(String className) {
+    final classStudents = getStudentsForClass(className);
+    if (classStudents.isEmpty) return 0.0;
+    final gradedStudents = classStudents.where((s) => s.gpa > 0).toList();
+    if (gradedStudents.isEmpty) return 0.0;
+    final sum = gradedStudents.map((s) => s.gpa).reduce((a, b) => a + b);
+    return double.parse((sum / gradedStudents.length).toStringAsFixed(2));
+  }
+
+  int getClassAverageAttendance(String className) {
+    final classStudents = getStudentsForClass(className);
+    if (classStudents.isEmpty) return 0;
+    final sum = classStudents
+        .map((s) => s.attendanceRate)
+        .reduce((a, b) => a + b);
+    return (sum / classStudents.length).round();
+  }
+
+  // 🚀 PROMOTE CLASS ("Sinifi Yüksəlt")
+  void promoteClass(String fromClass, String toClass) {
+    for (int i = 0; i < _students.length; i++) {
+      if (_students[i].className.toLowerCase() == fromClass.toLowerCase()) {
+        final std = _students[i];
+        _students[i] = StudentProfile(
+          id: std.id,
+          fullName: std.fullName,
+          studentNumber: std.studentNumber,
+          className: toClass,
+          photoUrl: std.photoUrl,
+          qrData: std.qrData.replaceAll(fromClass, toClass),
+          barcodeData: std.barcodeData,
+          parentName: std.parentName,
+          parentPhone: std.parentPhone,
+          gpa: std.gpa,
+          attendanceRate: std.attendanceRate,
+          academicYear: std.academicYear,
+        );
+        _firestoreService.updateStudentClass(std.id, toClass);
+      }
+    }
+
+    // Update corresponding AppUsers
+    for (int i = 0; i < _users.length; i++) {
+      if (_users[i].className != null &&
+          _users[i].className!.toLowerCase() == fromClass.toLowerCase()) {
+        _users[i] = _users[i].copyWith(className: toClass);
+      }
+    }
+
+    // Move Timetable if exists
+    if (_classTimetablesMap.containsKey(fromClass)) {
+      final t = _classTimetablesMap.remove(fromClass)!;
+      _classTimetablesMap[toClass] = t;
+      _firestoreService.saveClassTimetable(toClass, t);
+    }
+
+    _customClasses.remove(fromClass);
+    _customClasses.add(toClass);
+
+    notifyListeners();
+  }
+
+  // --- TEACHER CLASS OWNERSHIP (Sinif Sahiplənmə) ---
+  void claimClassForTeacher(String className) {
+    if (_currentUser == null || _currentUser!.role != UserRole.teacher) return;
+    final currentClasses = List<String>.from(_currentUser!.assignedClasses);
+    if (!currentClasses.contains(className)) {
+      currentClasses.add(className);
+      final updatedUser = _currentUser!.copyWith(
+        assignedClasses: currentClasses,
+      );
+      _currentUser = updatedUser;
+      final idx = _users.indexWhere((u) => u.id == updatedUser.id);
+      if (idx != -1) _users[idx] = updatedUser;
+      _firestoreService.updateTeacherAssignedClasses(
+        updatedUser.id,
+        currentClasses,
+      );
+      notifyListeners();
+    }
+  }
+
+  void unclaimClassForTeacher(String className) {
+    if (_currentUser == null || _currentUser!.role != UserRole.teacher) return;
+    final currentClasses = List<String>.from(_currentUser!.assignedClasses);
+    if (currentClasses.contains(className)) {
+      currentClasses.remove(className);
+      final updatedUser = _currentUser!.copyWith(
+        assignedClasses: currentClasses,
+      );
+      _currentUser = updatedUser;
+      final idx = _users.indexWhere((u) => u.id == updatedUser.id);
+      if (idx != -1) _users[idx] = updatedUser;
+      _firestoreService.updateTeacherAssignedClasses(
+        updatedUser.id,
+        currentClasses,
+      );
+      notifyListeners();
+    }
+  }
+
+  // --- DƏRS CƏDVƏLİ ƏLAVƏ ETMƏ & SİLMƏ (TIMETABLE CRUD) ---
+  void addLessonSlotToClass({
+    required String className,
+    required String dayName,
+    required String period,
+    required String time,
+    required String subject,
+    required String teacherName,
+    required String room,
+    String colorHex = '0xFF2563EB',
+  }) {
+    final days = getClassTimetable(className);
+    final dayIndex = days.indexWhere((d) => d.dayName == dayName);
+
+    final newSlot = LessonSlot(
+      period: period,
+      time: time,
+      subject: subject,
+      teacher: teacherName,
+      room: room,
+      colorHex: colorHex,
+    );
+
+    if (dayIndex != -1) {
+      days[dayIndex].lessons.add(newSlot);
+    } else {
+      days.add(
+        DayTimetable(
+          dayName: dayName,
+          shortDay: dayName.substring(0, 2),
+          lessons: [newSlot],
+        ),
+      );
+    }
+
+    _classTimetablesMap[className] = days;
+    _firestoreService.saveClassTimetable(className, days);
+    notifyListeners();
+  }
+
+  void deleteLessonSlotFromClass({
+    required String className,
+    required String dayName,
+    required int slotIndex,
+  }) {
+    final days = getClassTimetable(className);
+    final dayIndex = days.indexWhere((d) => d.dayName == dayName);
+
+    if (dayIndex != -1 &&
+        slotIndex >= 0 &&
+        slotIndex < days[dayIndex].lessons.length) {
+      days[dayIndex].lessons.removeAt(slotIndex);
+      _classTimetablesMap[className] = days;
+      _firestoreService.saveClassTimetable(className, days);
+      notifyListeners();
+    }
+  }
+
+  // ✅ YENİ: Müəllimə görə cədvəl (Birgə tədris & Birləşdirilmiş dərslər dəstəyi ilə)
+  List<DayTimetable> getTeacherTimetable(String teacherId) {
+    final Map<String, List<LessonSlot>> dayMap = {};
+
+    for (final className in _classTimetablesMap.keys) {
+      final classDays = _classTimetablesMap[className]!;
+      for (final day in classDays) {
+        dayMap.putIfAbsent(day.dayName, () => []);
+
+        for (final lesson in day.lessons) {
+          // Müəllim ya əsas müəllimdir, ya da co-teacher
+          if (lesson.teacherId == teacherId || lesson.coTeacherId == teacherId) {
+            // Əgər birləşdirilmiş dərsdirsə, eyni saatda təkrar əlavə etməyək
+            final alreadyAdded = dayMap[day.dayName]!.any(
+              (existing) => existing.time == lesson.time && (existing.id == lesson.id || existing.subject == lesson.subject),
+            );
+            if (!alreadyAdded) {
+              dayMap[day.dayName]!.add(lesson);
+            }
+          }
+        }
+      }
+    }
+
+    final allDays = <DayTimetable>[];
+    const defaultDayNames = ['Bazar ertəsi', 'Çərşənbə axşamı', 'Çərşənbə', 'Cümə axşamı', 'Cümə'];
+    const shortNames = ['B.E', 'Ç.A', 'Ç.', 'C.A', 'C.'];
+
+    for (int i = 0; i < defaultDayNames.length; i++) {
+      final dName = defaultDayNames[i];
+      final lessons = dayMap[dName] ?? [];
+      allDays.add(
+        DayTimetable(
+          dayName: dName,
+          shortDay: shortNames[i],
+          lessons: lessons,
+        ),
+      );
+    }
+
+    return allDays;
+  }
+
+  // ✅ YENİ: Konflikt yoxlama (KƏSIŞƏN SAAT ARALIĞI)
+  String? checkTimetableConflict({
+    required String className,
+    required String day,
+    required String time,
+    required String teacherId,
+    List<String> allowedClassExceptions = const [],
+    String? currentLessonId,
+  }) {
+    // Saatları parse et
+    final timeParts = time.split(' - ');
+    if (timeParts.length != 2) {
+      return 'Saat formatı yanlışdır! (məs: 08:00 - 08:45)';
+    }
+
+    final newStartParts = timeParts[0].trim().split(':');
+    final newEndParts = timeParts[1].trim().split(':');
+
+    if (newStartParts.length != 2 || newEndParts.length != 2) {
+      return 'Saat formatı yanlışdır! (məs: 08:00 - 08:45)';
+    }
+
+    final newStartHour = int.tryParse(newStartParts[0]);
+    final newStartMin = int.tryParse(newStartParts[1]);
+    final newEndHour = int.tryParse(newEndParts[0]);
+    final newEndMin = int.tryParse(newEndParts[1]);
+
+    if (newStartHour == null ||
+        newStartMin == null ||
+        newEndHour == null ||
+        newEndMin == null) {
+      return 'Saat formatı yanlışdır!';
+    }
+
+    final newStart = newStartHour * 60 + newStartMin; // dəqiqə olaraq
+    final newEnd = newEndHour * 60 + newEndMin;
+
+    if (newStart >= newEnd) {
+      return 'Başlama saatı bitmə saatından böyük və ya bərabər ola bilməz!';
+    }
+
+    // Helper: Saat aralığı kəsişir?
+    bool isOverlapping(String existingTime) {
+      final parts = existingTime.split(' - ');
+      if (parts.length != 2) return false;
+
+      final startParts = parts[0].trim().split(':');
+      final endParts = parts[1].trim().split(':');
+
+      if (startParts.length != 2 || endParts.length != 2) return false;
+
+      final startHour = int.tryParse(startParts[0]);
+      final startMin = int.tryParse(startParts[1]);
+      final endHour = int.tryParse(endParts[0]);
+      final endMin = int.tryParse(endParts[1]);
+
+      if (startHour == null ||
+          startMin == null ||
+          endHour == null ||
+          endMin == null) {
+        return false;
+      }
+
+      final existingStart = startHour * 60 + startMin;
+      final existingEnd = endHour * 60 + endMin;
+
+      // Kəsişmə yoxlaması: A.start < B.end VƏ B.start < A.end
+      return newStart < existingEnd && existingStart < newEnd;
+    }
+
+    // 1. Eyni sinif + gün + kəsişən saat
+    if (!allowedClassExceptions.contains(className)) {
+      final classDays = getClassTimetable(className);
+      final targetDay = classDays.firstWhere(
+        (d) => d.dayName == day,
+        orElse: () => DayTimetable(dayName: day, shortDay: '', lessons: []),
+      );
+
+      for (final lesson in targetDay.lessons) {
+        if (currentLessonId != null && lesson.id == currentLessonId) continue;
+        if (isOverlapping(lesson.time)) {
+          return '❌ Bu saat aralığı $className sinfində artıq mövcud dərs ilə kəsişir:\n\n'
+              '📚 ${lesson.subject} (${lesson.teacher})\n'
+              '🕐 ${lesson.time}\n\n'
+              'Zəhmət olmasa fərqli saat seçin!';
+        }
+      }
+    }
+
+    // 2. Eyni müəllim + gün + kəsişən saat (birləşdirilmiş siniflər istisnadır)
+    for (final cls in _classTimetablesMap.keys) {
+      if (allowedClassExceptions.contains(cls)) continue;
+
+      final days = _classTimetablesMap[cls]!;
+      final matchDay = days.firstWhere(
+        (d) => d.dayName == day,
+        orElse: () => DayTimetable(dayName: day, shortDay: '', lessons: []),
+      );
+
+      for (final lesson in matchDay.lessons) {
+        if (currentLessonId != null && lesson.id == currentLessonId) continue;
+        if (lesson.teacherId == teacherId && isOverlapping(lesson.time)) {
+          return '❌ Bu müəllim eyni gün və saatda başqa sinifdə ($cls) dərs tədris edir:\n\n'
+              '📚 $cls sinfi - ${lesson.subject}\n'
+              '🕐 ${lesson.time}\n'
+              '👤 ${lesson.teacher}\n\n'
+              'Əgər bu sinifləri birləşdirmək istəyirsinizsə, "Sinifləri Birləşdir" seçimindən istifadə edin!';
+        }
+      }
+    }
+
+    return null; // Konflikt yoxdur ✅
+  }
+
+  // ✅ YENİ: Dərsi bir və ya bir neçə sinfə (Birləşdirilmiş) əlavə et
+  void addLessonWithMultipleClasses({
+    required List<String> targetClasses,
+    required String day,
+    required LessonSlot lesson,
+  }) {
+    if (targetClasses.isEmpty) return;
+
+    final isMerged = targetClasses.length > 1;
+    final cleanClasses = targetClasses.toSet().toList();
+    bool isEdit = false;
+
+    for (final cls in cleanClasses) {
+      final days = getClassTimetable(cls);
+      final dayIndex = days.indexWhere((d) => d.dayName == day);
+
+      final slotToSave = lesson.copyWith(
+        id: lesson.id ?? 'ls-${DateTime.now().millisecondsSinceEpoch}-${cls}',
+        isMerged: isMerged,
+        mergedClassNames: isMerged ? cleanClasses : const [],
+      );
+
+      if (dayIndex != -1) {
+        // Mövcud eyni period varsa əvəzlə, yoxsa əlavə et
+        final existingIdx = days[dayIndex].lessons.indexWhere(
+          (l) => l.period == lesson.period || l.time == lesson.time,
+        );
+        if (existingIdx != -1) {
+          isEdit = true;
+          days[dayIndex].lessons[existingIdx] = slotToSave;
+        } else {
+          days[dayIndex].lessons.add(slotToSave);
+        }
+      } else {
+        days.add(
+          DayTimetable(
+            dayName: day,
+            shortDay: day.length >= 2 ? day.substring(0, 2) : day,
+            lessons: [slotToSave],
+          ),
+        );
+      }
+
+      _classTimetablesMap[cls] = days;
+      _firestoreService.saveClassTimetable(cls, days);
+    }
+
+    if (isEdit) {
+      sendTimetableChangeNotification(
+        title: '✏️ Dərs Cədvəli Yeniləndi',
+        message: '$day günü ${lesson.period} dərsi (${lesson.subject}) üçün cədvəldə dəyişiklik edildi.',
+        targetClasses: cleanClasses,
+      );
+    }
+
+    notifyListeners();
+  }
+
+  // ✅ YENİ: Dərs cədvəli dəyişikliyi/birləşməsi üçün avtomatik bildiriş göndər
+  void sendTimetableChangeNotification({
+    required String title,
+    required String message,
+    required List<String> targetClasses,
+  }) {
+    final notif = AppNotification(
+      id: 'notif-tt-${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      message: message,
+      category: NotificationCategory.academic,
+      senderId: _currentUser?.id ?? 'admin',
+      senderName: _currentUser?.fullName ?? 'Dərs Hissə Müdiriyyəti',
+      senderRole: 'admin',
+      targetClasses: targetClasses,
+      targetRoles: ['student', 'parent', 'teacher'],
+      priority: 'important',
+      createdAt: DateTime.now(),
+    );
+    _notifications.insert(0, notif);
+    _firestoreService.saveNotification(notif);
+    notifyListeners();
+  }
+
+  // ✅ YENİ: Mövcud fərqli siniflərin dərslərini birləşdir
+  void mergeExistingClassesInTimetable({
+    required String day,
+    required String period,
+    required List<String> classNames,
+    required String primarySubject,
+    required String primaryTeacher,
+    required String primaryTeacherId,
+    String? primaryTeacherPhotoUrl,
+    required String primaryRoom,
+    String? coTeacherName,
+    String? coTeacherId,
+    String? coTeacherPhotoUrl,
+    required String time,
+    bool isRecurring = true,
+    String? dateStr,
+  }) {
+    if (classNames.length < 2) return;
+
+    final mergedId = 'merge-${DateTime.now().millisecondsSinceEpoch}';
+    final cleanClasses = classNames.toSet().toList();
+
+    if (!isRecurring && dateStr != null) {
+      // 🌟 YALNIZ SEÇİLMİŞ KONKRET TARİX ÜÇÜN BİRLƏŞDİR
+      for (final cls in cleanClasses) {
+        final days = getClassTimetable(cls);
+        var dayIndex = days.indexWhere((d) => d.dayName == day);
+        if (dayIndex == -1) {
+          days.add(
+            DayTimetable(
+              dayName: day,
+              shortDay: day.length >= 2 ? day.substring(0, 2) : day,
+              lessons: [],
+            ),
+          );
+          dayIndex = days.length - 1;
+        }
+
+        // Əgər bu sinifdə həmin period üçün təkrarlanan başqa dərs varsa, onu həmin tarix üçün istisna et
+        final recurringSlotIdx = days[dayIndex].lessons.indexWhere(
+          (l) => (l.period == period || l.time == time) && l.isRecurring,
+        );
+        if (recurringSlotIdx != -1) {
+          final old = days[dayIndex].lessons[recurringSlotIdx];
+          if (!old.excludedDates.contains(dateStr)) {
+            final updatedExclusions = List<String>.from(old.excludedDates)..add(dateStr);
+            days[dayIndex].lessons[recurringSlotIdx] = old.copyWith(excludedDates: updatedExclusions);
+          }
+        }
+
+        // Tək bu tarix üçün birgə dərs slotunu əlavə et
+        final singleDateMergedSlot = LessonSlot(
+          id: mergedId,
+          period: period,
+          time: time,
+          subject: primarySubject,
+          teacher: primaryTeacher,
+          teacherId: primaryTeacherId,
+          teacherPhotoUrl: primaryTeacherPhotoUrl,
+          room: primaryRoom,
+          isMerged: true,
+          mergedClassNames: cleanClasses,
+          coTeacherName: coTeacherName,
+          coTeacherId: coTeacherId,
+          coTeacherPhotoUrl: coTeacherPhotoUrl,
+          isRecurring: false,
+          dateStr: dateStr,
+        );
+
+        // Əvvəlki tək-tarixli slot varsa əvəzlə, yoxdursa əlavə et
+        final existingSingleIdx = days[dayIndex].lessons.indexWhere(
+          (l) => (l.period == period || l.time == time) && !l.isRecurring && l.dateStr == dateStr,
+        );
+        if (existingSingleIdx != -1) {
+          days[dayIndex].lessons[existingSingleIdx] = singleDateMergedSlot;
+        } else {
+          days[dayIndex].lessons.add(singleDateMergedSlot);
+        }
+
+        _classTimetablesMap[cls] = days;
+        _firestoreService.saveClassTimetable(cls, days);
+      }
+
+      sendTimetableChangeNotification(
+        title: '🔗 Birgə Dərs Təyin Edildi ($dateStr)',
+        message: '$dateStr tarixində ($period) $primarySubject dərsi ${cleanClasses.join(" və ")} sinifləri üçün birgə keçiriləcək.',
+        targetClasses: cleanClasses,
+      );
+    } else {
+      // 🌟 BÜTÜN HƏFTƏLƏRİN BU GÜNÜ ÜÇÜN BİRLƏŞDİR (DAİMİ)
+      for (final cls in cleanClasses) {
+        final days = getClassTimetable(cls);
+        final dayIndex = days.indexWhere((d) => d.dayName == day);
+
+        final mergedSlot = LessonSlot(
+          id: mergedId,
+          period: period,
+          time: time,
+          subject: primarySubject,
+          teacher: primaryTeacher,
+          teacherId: primaryTeacherId,
+          teacherPhotoUrl: primaryTeacherPhotoUrl,
+          room: primaryRoom,
+          isMerged: true,
+          mergedClassNames: cleanClasses,
+          coTeacherName: coTeacherName,
+          coTeacherId: coTeacherId,
+          coTeacherPhotoUrl: coTeacherPhotoUrl,
+          isRecurring: true,
+        );
+
+        if (dayIndex != -1) {
+          final existingIdx = days[dayIndex].lessons.indexWhere(
+            (l) => l.period == period || l.time == time,
+          );
+          if (existingIdx != -1) {
+            days[dayIndex].lessons[existingIdx] = mergedSlot;
+          } else {
+            days[dayIndex].lessons.add(mergedSlot);
+          }
+        } else {
+          days.add(
+            DayTimetable(
+              dayName: day,
+              shortDay: day.length >= 2 ? day.substring(0, 2) : day,
+              lessons: [mergedSlot],
+            ),
+          );
+        }
+
+        _classTimetablesMap[cls] = days;
+        _firestoreService.saveClassTimetable(cls, days);
+      }
+
+      sendTimetableChangeNotification(
+        title: '🔗 Birgə Dərs Təyin Edildi',
+        message: '$day günü $time ($period) $primarySubject dərsi ${cleanClasses.join(" və ")} sinifləri üçün otaq $primaryRoom-də birgə keçiriləcək.',
+        targetClasses: cleanClasses,
+      );
+    }
+
+    notifyListeners();
+  }
+
+  // ✅ YENİ: Birləşdirilmiş dərsi ayır (Un-merge)
+  void unmergeClassesInTimetable({
+    required String day,
+    required String period,
+    required List<String> classNames,
+    String? dateStr,
+  }) {
+    for (final cls in classNames) {
+      final days = getClassTimetable(cls);
+      final dayIndex = days.indexWhere((d) => d.dayName == day);
+      if (dayIndex != -1) {
+        if (dateStr != null) {
+          // Əgər konkret tarixli birləşmədirsə:
+          // 1. Həmin tarixdəki single-date slotu sil
+          days[dayIndex].lessons.removeWhere(
+            (l) => (l.period == period) && !l.isRecurring && l.dateStr == dateStr,
+          );
+          // 2. Əgər recurring slotda excludedDates-də bu tarix varsa, bərpa et
+          final recIdx = days[dayIndex].lessons.indexWhere((l) => l.period == period && l.isRecurring);
+          if (recIdx != -1) {
+            final old = days[dayIndex].lessons[recIdx];
+            final updatedEx = List<String>.from(old.excludedDates)..remove(dateStr);
+            days[dayIndex].lessons[recIdx] = old.copyWith(excludedDates: updatedEx);
+          }
+        } else {
+          // Daimi birləşmədirsə:
+          final lIdx = days[dayIndex].lessons.indexWhere((l) => l.period == period);
+          if (lIdx != -1) {
+            final old = days[dayIndex].lessons[lIdx];
+            days[dayIndex].lessons[lIdx] = old.copyWith(
+              isMerged: false,
+              mergedClassNames: [],
+              coTeacherName: null,
+              coTeacherId: null,
+              coTeacherPhotoUrl: null,
+            );
+          }
+        }
+        _classTimetablesMap[cls] = days;
+        _firestoreService.saveClassTimetable(cls, days);
+      }
+    }
+
+    sendTimetableChangeNotification(
+      title: 'Dərs Cədvəli Yeniləndi',
+      message: '$day günü $period üçün birgə dərs rejimi ləğv edildi.',
+      targetClasses: classNames,
+    );
+
+    notifyListeners();
+  }
+
+  // ✅ YENİ: Dərsi cədvəldən sil
+  void deleteLessonFromTimetable({
+    required String className,
+    required String day,
+    required String period,
+  }) {
+    final days = getClassTimetable(className);
+    final dayIndex = days.indexWhere((d) => d.dayName == day);
+    if (dayIndex != -1) {
+      final targetLesson = days[dayIndex].lessons.where((l) => l.period == period).firstOrNull;
+      final affectedClasses = targetLesson?.isMerged == true && targetLesson!.mergedClassNames.isNotEmpty
+          ? targetLesson.mergedClassNames
+          : [className];
+
+      if (targetLesson?.isMerged == true && targetLesson!.mergedClassNames.isNotEmpty) {
+        for (final mCls in targetLesson.mergedClassNames) {
+          final mDays = getClassTimetable(mCls);
+          final mDayIdx = mDays.indexWhere((d) => d.dayName == day);
+          if (mDayIdx != -1) {
+            mDays[mDayIdx].lessons.removeWhere((l) => l.period == period);
+            _classTimetablesMap[mCls] = mDays;
+            _firestoreService.saveClassTimetable(mCls, mDays);
+          }
+        }
+      } else {
+        days[dayIndex].lessons.removeWhere((l) => l.period == period);
+        _classTimetablesMap[className] = days;
+        _firestoreService.saveClassTimetable(className, days);
+      }
+
+      sendTimetableChangeNotification(
+        title: '🗓️ Dərs Cədvəldən Silindi',
+        message: '$day günü $period ${targetLesson?.subject ?? "Dərs"} cədvəldən silindi.',
+        targetClasses: affectedClasses,
+      );
+
+      notifyListeners();
+    }
+  }
+
+  // ✅ YENİ: Dərsi yalnız konkret bir tarix üçün ləğv et (Bütün həftələrə toxunmadan)
+  void excludeLessonFromDate({
+    required String className,
+    required String day,
+    required String period,
+    required String dateFormatted,
+  }) {
+    final days = getClassTimetable(className);
+    final dayIndex = days.indexWhere((d) => d.dayName == day);
+    if (dayIndex != -1) {
+      final targetLesson = days[dayIndex].lessons.where((l) => l.period == period).firstOrNull;
+      if (targetLesson == null) return;
+
+      final targetClasses = targetLesson.isMerged && targetLesson.mergedClassNames.isNotEmpty
+          ? targetLesson.mergedClassNames
+          : [className];
+
+      for (final cls in targetClasses) {
+        final cDays = getClassTimetable(cls);
+        final cDayIdx = cDays.indexWhere((d) => d.dayName == day);
+        if (cDayIdx != -1) {
+          final lIdx = cDays[cDayIdx].lessons.indexWhere((l) => l.period == period);
+          if (lIdx != -1) {
+            final old = cDays[cDayIdx].lessons[lIdx];
+            final updatedExclusions = List<String>.from(old.excludedDates)..add(dateFormatted);
+            cDays[cDayIdx].lessons[lIdx] = old.copyWith(excludedDates: updatedExclusions);
+            _classTimetablesMap[cls] = cDays;
+            _firestoreService.saveClassTimetable(cls, cDays);
+          }
+        }
+      }
+
+      sendTimetableChangeNotification(
+        title: '⚠️ Dərs Təxirə Salındı ($dateFormatted)',
+        message: '$dateFormatted tarixindəki $period ${targetLesson.subject} dərsi təxirə salındı.',
+        targetClasses: targetClasses,
+      );
+
+      notifyListeners();
+    }
+  }
+
+  // Legacy dəstək üçün qorunur
+  void addLessonToClassTimetable({
+    required String className,
+    required String day,
+    required LessonSlot lesson,
+  }) {
+    addLessonWithMultipleClasses(
+      targetClasses: [className],
+      day: day,
+      lesson: lesson,
+    );
+  }
+
+  // --- ADMIN: CREATE EMPLOYEE ACCOUNT (Detallı HR məlumatları ilə) ---
+  /// İşçi yaradır: tam şəxsi məlumatlar + avtomatik @idrak.edu.az mail +
+  /// (müəllim deyilsə) rol təyinatı. İstifadəçi adı = e-poçtun lokal hissəsi.
+  AppUser createEmployeeAccount({
+    required String firstName,
+    required String lastName,
+    String? fatherName,
+    required String gender,
+    DateTime? birthDate,
+    required String finCode,
+    String? address,
+    String? citizenship,
+    String? idCardSerial,
+    String? educationLevel,
+    String? bankName,
+    required String phone,
+    required String password,
+    String? photoUrl,
+    bool isTeacher = false,
+    String? position,
+    DateTime? hireDate,
+    double? salary,
+    DateTime? contractStart,
+    DateTime? contractEnd,
+    String? subject,
+    String? roomNumber,
+    List<String> assignedClasses = const [],
+    TeacherPermissions? teacherPermissions,
+    String? assignedRoleId,
+  }) {
+    final fullName = '$firstName $lastName'.trim();
+    final existingEmails = _collectEmails();
+    final email = EmailGenerator.generateStaffEmail(
+      fullName,
+      existingEmails: existingEmails,
+    );
+
+    final role = isTeacher ? UserRole.teacher : UserRole.admin;
+    final codePrefix = isTeacher ? 'IDR-TCH' : 'IDR-STF';
+    final codeNum = 100 + _users.where((u) => u.role == role).length + 1;
+    final idrakCode = '$codePrefix-$codeNum';
+
+    final newEmployee = AppUser(
+      id: 'usr-stf-${DateTime.now().millisecondsSinceEpoch}',
+      username: email.split('@').first,
+      password: password.isEmpty ? '123456' : password,
+      fullName: fullName,
+      firstName: firstName,
+      lastName: lastName,
+      fatherName: (fatherName ?? '').isEmpty ? null : fatherName,
+      finCode: finCode,
+      gender: gender,
+      birthDate: birthDate,
+      address: (address ?? '').isEmpty ? null : address,
+      citizenship: (citizenship ?? '').isEmpty ? null : citizenship,
+      idCardSerial: (idCardSerial ?? '').isEmpty ? null : idCardSerial,
+      educationLevel: (educationLevel ?? '').isEmpty ? null : educationLevel,
+      bankName: (bankName ?? '').isEmpty ? null : bankName,
+      role: role,
+      idrakCode: idrakCode,
+      phone: phone,
+      email: email,
+      photoUrl: photoUrl,
+      position: (position ?? '').isEmpty ? null : position,
+      hireDate: hireDate,
+      salary: salary,
+      contractStart: contractStart,
+      contractEnd: contractEnd,
+      subject: (subject ?? '').isEmpty ? null : subject,
+      roomNumber: (roomNumber ?? '').isEmpty ? null : roomNumber,
+      assignedClasses: assignedClasses,
+      teacherPermissions: isTeacher
+          ? (teacherPermissions ?? const TeacherPermissions())
+          : null,
+      assignedRoleId: (assignedRoleId ?? '').isEmpty ? null : assignedRoleId,
+      createdAt: DateTime.now(),
+    );
+
+    _users.insert(0, newEmployee);
+    _firestoreService.saveUser(newEmployee);
+    notifyListeners();
+    return newEmployee;
+  }
+
+  /// Mövcud istifadəçilərin e-poçtları (unikallıq yoxlaması üçün)
+  List<String> _collectEmails() {
+    return _users
+        .map((u) => (u.email ?? '').toLowerCase().trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  // --- ADMIN: REGISTER STUDENT WITH PARENT (tam məlumatlarla) ---
+  /// Şagird + veli yaradır: tam şəxsi məlumatlar, avtomatik maillər
+  /// (@idrak.edu.az), veli avtomatik şagirdə bağlanır.
+  Map<String, AppUser> registerStudentWithParent({
+    required String firstName,
+    required String lastName,
+    String? fatherName,
+    required String gender,
+    DateTime? birthDate,
+    required String finCode,
+    String? address,
+    required String className,
+    String bloodGroup = '',
+    List<String> allergies = const [],
+    required String studentPassword,
+    AppUser? existingParent, // Mövcud valideyn: yeni övlad ona bağlanır
+    required String parentName,
+    required String parentFinCode,
+    DateTime? parentBirthDate,
+    required String parentPhone,
+    String? parentAddress,
+    required String parentPassword,
+    String? studentPhotoUrl,
+  }) {
+    final studentName = '$firstName $lastName'.trim();
+    final stdIndex = _students.length + 1;
+    final stdId = 'std-${100 + stdIndex}';
+    final studentIdrakCode = 'IDR-2025-0${490 + stdIndex}';
+    final barcodeData = '994019${283740 + stdIndex}';
+
+    final existingEmails = _collectEmails();
+    // Şagird mailindəki il FIN-dən hesablanır (məktəbə başlama ili)
+    final schoolYear = EmailGenerator.getYearFromFIN(finCode);
+    final studentEmail = EmailGenerator.generateStudentEmail(
+      studentName,
+      schoolYear,
+      existingEmails: existingEmails,
+    );
+    // Mövcud valideyn seçilibsə onun maili istifadə olunur, yenisi yaradılmır
+    final parentEmail =
+        existingParent?.email ??
+        EmailGenerator.generateParentEmail(
+          existingParent?.fullName ?? parentName,
+          existingEmails: [...existingEmails, studentEmail],
+        );
+
+    // 1. Create Student Profile (tam məlumatlarla)
+    final newStudentProfile = StudentProfile(
+      id: stdId,
+      fullName: studentName,
+      studentNumber: studentIdrakCode,
+      className: className,
+      photoUrl:
+          studentPhotoUrl ??
+          'https://ui-avatars.com/api/?name=${Uri.encodeComponent(studentName)}&background=0D47A1&color=fff&size=400',
+      qrData: 'IDRAK-STUDENT-2025-$studentName-$className',
+      barcodeData: barcodeData,
+      firstName: firstName,
+      lastName: lastName,
+      fatherName: (fatherName ?? '').isEmpty ? null : fatherName,
+      finCode: finCode,
+      gender: gender,
+      birthDate: birthDate,
+      address: (address ?? '').isEmpty ? null : address,
+      email: studentEmail,
+      bloodGroup: bloodGroup.isEmpty ? null : bloodGroup,
+      parentName: existingParent?.fullName ?? parentName,
+      parentPhone: existingParent?.phone ?? parentPhone,
+      parentEmail: parentEmail,
+      parentAddress:
+          existingParent?.address ??
+          ((parentAddress ?? '').isEmpty ? null : parentAddress),
+      gpa: 0.0,
+      attendanceRate: 0,
+      academicYear: '2024 - 2025',
+    );
+    _students.add(newStudentProfile);
+    _customClasses.add(className);
+    _pendingAttendanceStudents.add(newStudentProfile);
+    _firestoreService.saveStudent(newStudentProfile);
+
+    // 2. Create Student AppUser
+    final studentUser = AppUser(
+      id: 'usr-$stdId',
+      username: studentEmail.split('@').first,
+      password: studentPassword.isEmpty ? '123456' : studentPassword,
+      fullName: studentName,
+      firstName: firstName,
+      lastName: lastName,
+      fatherName: (fatherName ?? '').isEmpty ? null : fatherName,
+      finCode: finCode,
+      gender: gender,
+      birthDate: birthDate,
+      address: (address ?? '').isEmpty ? null : address,
+      role: UserRole.student,
+      idrakCode: studentIdrakCode,
+      className: className,
+      phone: existingParent?.phone ?? parentPhone,
+      email: studentEmail,
+      photoUrl: studentPhotoUrl,
+      createdAt: DateTime.now(),
+    );
+    _users.insert(0, studentUser);
+    _firestoreService.saveUser(studentUser);
+
+    // 3. Valideyn: mövcuddursa bağla, yoxdursa yeni yarad (Övladlar modeli)
+    AppUser parentUser;
+    if (existingParent != null) {
+      // Yeni övlad mövcud valideynə əlavə olunur
+      final childIds = [...existingParent.linkedStudentIds];
+      if (!childIds.contains(stdId)) childIds.add(stdId);
+      final parentIndex = _users.indexWhere((u) => u.id == existingParent.id);
+      parentUser = existingParent.copyWith(
+        linkedStudentIds: childIds,
+        linkedStudentId: existingParent.linkedStudentId ?? stdId,
+      );
+      if (parentIndex != -1) {
+        _users[parentIndex] = parentUser;
+      } else {
+        _users.insert(0, parentUser);
+      }
+      _firestoreService.saveUser(parentUser);
+    } else {
+      final parentIdrakCode = 'IDR-PAR-0${490 + stdIndex}';
+      parentUser = AppUser(
+        id: 'usr-par-$stdId',
+        username: parentEmail.split('@').first,
+        password: parentPassword.isEmpty ? '123456' : parentPassword,
+        fullName: parentName,
+        finCode: parentFinCode,
+        birthDate: parentBirthDate,
+        role: UserRole.parent,
+        idrakCode: parentIdrakCode,
+        phone: parentPhone,
+        email: parentEmail,
+        address: (parentAddress ?? '').isEmpty ? null : parentAddress,
+        linkedStudentId: stdId,
+        linkedStudentIds: [stdId],
+        createdAt: DateTime.now(),
+      );
+      _users.insert(0, parentUser);
+      _firestoreService.saveUser(parentUser);
+    }
+
+    // 4. Create Student's Clean Medical Card
+    final allergyItems = allergies
+        .map(
+          (a) => AllergyItem(
+            name: a,
+            severity: 'Yüksək dərəcə',
+            reaction: 'Xüsusi qida / dərman həssaslığı',
+            firstAid: 'Tibb otağına məlumat verilməli və pəhriz saxlanmalıdır.',
+          ),
+        )
+        .toList();
+
+    final newMedicalCard = StudentMedicalCard(
+      bloodGroup: bloodGroup.isEmpty ? 'Məlumat daxil edilməyib' : bloodGroup,
+      heightCm: 0.0,
+      weightKg: 0.0,
+      allergies: allergyItems,
+      chronicConditions: [],
+      vaccineHistory: [],
+      emergencyContactName: parentName,
+      emergencyContactPhone: parentPhone,
+      lyceumDoctorNotes: 'Qeydiyyat zamanı həkim baxışı gözlənilir.',
+    );
+    _medicalCardsMap[stdId] = newMedicalCard;
+    _firestoreService.saveMedicalCard(stdId, newMedicalCard);
+
+    notifyListeners();
+    return {'student': studentUser, 'parent': parentUser};
+  }
+
+  void updateTeacherPermissions(String userId, TeacherPermissions permissions) {
+    final index = _users.indexWhere((u) => u.id == userId);
+    if (index != -1) {
+      _users[index] = _users[index].copyWith(teacherPermissions: permissions);
+      _firestoreService.updateTeacherPermissions(userId, permissions);
+      notifyListeners();
+    }
+  }
+
+  void toggleUserStatus(String userId) {
+    final index = _users.indexWhere((u) => u.id == userId);
+    if (index != -1) {
+      final updatedStatus = !_users[index].isActive;
+      _users[index] = _users[index].copyWith(isActive: updatedStatus);
+      _firestoreService.updateUserStatus(userId, updatedStatus);
+      notifyListeners();
+    }
+  }
+
+  /// İstənilən istifadəçinin (işçi/müəllim/şagird/valideyn) məlumatlarını
+  /// yeniləşdirir — admin və edit_users səlahiyyəti olanlar üçün.
+  void updateUserAccount(AppUser updated) {
+    final index = _users.indexWhere((u) => u.id == updated.id);
+    if (index != -1) {
+      _users[index] = updated;
+      _firestoreService.saveUser(updated);
+      // Cari istifadəçinin öz məlumatı yenilənibsə panel də yenilənsin
+      if (_currentUser?.id == updated.id) {
+        _currentUser = updated;
+      }
+      notifyListeners();
+    }
+  }
+
+  /// Şagird profilini (students kolleksiyası) yeniləşdirir
+  void updateStudentRecord(StudentProfile updated) {
+    final index = _students.indexWhere((s) => s.id == updated.id);
+    if (index != -1) {
+      _students[index] = updated;
+      _firestoreService.saveStudent(updated);
+      notifyListeners();
+    }
+  }
+
+  /// İstifadəçinin profil fotosunu yeniləyir (Cloudinary URL)
+  void updateUserPhoto(String userId, String newPhotoUrl) {
+    final userIndex = _users.indexWhere((u) => u.id == userId);
+    if (userIndex != -1) {
+      _users[userIndex] = _users[userIndex].copyWith(photoUrl: newPhotoUrl);
+      _firestoreService.saveUser(_users[userIndex]);
+    }
+    // Əgər tələbədirsə, StudentProfile-ı da yenilə
+    final stdId = userId.replaceFirst('usr-', '');
+    final stdIndex = _students.indexWhere((s) => s.id == stdId);
+    if (stdIndex != -1) {
+      _students[stdIndex] = _students[stdIndex].copyWith(photoUrl: newPhotoUrl);
+      _firestoreService.saveStudent(_students[stdIndex]);
+    }
+    notifyListeners();
+  }
+
+  void deleteUser(String userId) {
+    _users.removeWhere((u) => u.id == userId);
+    notifyListeners();
+  }
+
+  // --- TIMETABLE (DƏRS CƏDVƏLİ) ---
+  List<DayTimetable> get weeklyTimetable {
+    final cls = student.className.isNotEmpty ? student.className : '9B';
+    return getClassTimetable(cls);
+  }
+
+  // --- GRADES & LIVE GPA CALCULATION ---
+  final List<GradeRecord> _grades = [];
+  List<GradeRecord> get grades => _grades;
+
+  void recalculateStudentGpa(String targetStdId) {
+    final stdIndex = _students.indexWhere((s) => s.id == targetStdId);
+    if (stdIndex == -1) return;
+
+    final studentGrades = _grades
+        .where((g) => g.studentId == targetStdId)
+        .toList();
+    if (studentGrades.isEmpty) {
+      final old = _students[stdIndex];
+      _students[stdIndex] = StudentProfile(
+        id: old.id,
+        fullName: old.fullName,
+        studentNumber: old.studentNumber,
+        className: old.className,
+        photoUrl: old.photoUrl,
+        qrData: old.qrData,
+        barcodeData: old.barcodeData,
+        parentName: old.parentName,
+        parentPhone: old.parentPhone,
+        gpa: 0.0,
+        attendanceRate: old.attendanceRate,
+        academicYear: old.academicYear,
+      );
+      _firestoreService.updateStudentGPA(targetStdId, 0.0, old.attendanceRate);
+      return;
+    }
+
+    final validPcts = studentGrades.map((g) => g.percentage).toList();
+    final avgPct = validPcts.reduce((a, b) => a + b) / validPcts.length;
+    final calculatedGpa = double.parse(
+      ((avgPct / 100.0) * 5.0).clamp(0.0, 5.0).toStringAsFixed(2),
+    );
+
+    final old = _students[stdIndex];
+    _students[stdIndex] = StudentProfile(
+      id: old.id,
+      fullName: old.fullName,
+      studentNumber: old.studentNumber,
+      className: old.className,
+      photoUrl: old.photoUrl,
+      qrData: old.qrData,
+      barcodeData: old.barcodeData,
+      parentName: old.parentName,
+      parentPhone: old.parentPhone,
+      gpa: calculatedGpa,
+      attendanceRate: old.attendanceRate,
+      academicYear: old.academicYear,
+    );
+    _firestoreService.updateStudentGPA(
+      targetStdId,
+      calculatedGpa,
+      old.attendanceRate,
+    );
+  }
+
+  void addGrade(GradeRecord grade, [String? studentId]) {
+    final targetStdId = studentId ?? grade.studentId ?? student.id;
+    final stdIndex = _students.indexWhere((s) => s.id == targetStdId);
+    final stdName = stdIndex != -1
+        ? _students[stdIndex].fullName
+        : student.fullName;
+
+    // Sanitize score if out of bounds
+    double sanitizedScore = grade.score;
+    if (grade.maxScore == 100.0 &&
+        sanitizedScore > 100.0 &&
+        sanitizedScore <= 1000.0) {
+      sanitizedScore = sanitizedScore / 10.0;
+    } else if (sanitizedScore > grade.maxScore) {
+      sanitizedScore = grade.maxScore;
+    }
+
+    final completeGrade = GradeRecord(
+      id: grade.id,
+      studentId: targetStdId,
+      studentName: stdName,
+      subject: grade.subject,
+      type: grade.type,
+      title: grade.title,
+      score: sanitizedScore,
+      maxScore: grade.maxScore,
+      gradeLetter: grade.gradeLetter,
+      date: grade.date,
+      teacherFeedback: grade.teacherFeedback,
+    );
+
+    _grades.insert(0, completeGrade);
+    _firestoreService.saveGrade(completeGrade, targetStdId, stdName);
+
+    recalculateStudentGpa(targetStdId);
+    notifyListeners();
+  }
+
+  void deleteGrade(String gradeId, [String? studentId]) {
+    final targetGrade = _grades.firstWhere(
+      (g) => g.id == gradeId,
+      orElse: () => GradeRecord(
+        id: '',
+        subject: '',
+        type: AssessmentType.ksq,
+        title: '',
+        score: 0,
+        gradeLetter: '',
+        date: DateTime.now(),
+      ),
+    );
+    final targetStdId = studentId ?? targetGrade.studentId ?? student.id;
+
+    _grades.removeWhere((g) => g.id == gradeId);
+    _firestoreService.deleteGrade(gradeId);
+
+    recalculateStudentGpa(targetStdId);
+    notifyListeners();
+  }
+
+  // Attendance: studentId -> (dayOfMonth -> DayAttendance)
+  final Map<String, Map<int, DayAttendance>> _studentAttendanceMap = {};
+
+  Map<int, DayAttendance> getStudentAttendance(String studentId) {
+    if (_studentAttendanceMap.containsKey(studentId)) {
+      return _studentAttendanceMap[studentId]!;
+    }
+    final emptyMap = <int, DayAttendance>{};
+    _studentAttendanceMap[studentId] = emptyMap;
+    return emptyMap;
+  }
+
+  Map<int, DayAttendance> get attendance => getStudentAttendance(student.id);
+
+  // --- MEDICAL CARD & PHYSICAL STATS (BOY / ÇƏKİ & BMI) ---
+  StudentMedicalCard getMedicalCardForStudent(String studentId) {
+    if (_medicalCardsMap.containsKey(studentId)) {
+      return _medicalCardsMap[studentId]!;
+    }
+    final cleanCard = StudentMedicalCard(
+      bloodGroup: 'Məlumat yoxdur',
+      heightCm: 0.0,
+      weightKg: 0.0,
+      allergies: [],
+      chronicConditions: [],
+      vaccineHistory: [],
+      emergencyContactName: '',
+      emergencyContactPhone: '',
+      lyceumDoctorNotes: 'Həkim qeydi yoxdur.',
+    );
+    _medicalCardsMap[studentId] = cleanCard;
+    return cleanCard;
+  }
+
+  StudentMedicalCard get medicalCard => getMedicalCardForStudent(student.id);
+
+  void updateStudentPhysicalStats({
+    required String studentId,
+    required double heightCm,
+    required double weightKg,
+    String? bloodGroup,
+    String? doctorNote,
+  }) {
+    final card = getMedicalCardForStudent(studentId);
+    final updatedCard = card.copyWith(
+      heightCm: heightCm,
+      weightKg: weightKg,
+      bloodGroup: bloodGroup ?? card.bloodGroup,
+      lyceumDoctorNotes: doctorNote ?? card.lyceumDoctorNotes,
+    );
+    _medicalCardsMap[studentId] = updatedCard;
+    _firestoreService.saveMedicalCard(studentId, updatedCard);
+    notifyListeners();
+  }
+
+  void addAllergyToStudent(String studentId, AllergyItem allergy) {
+    final card = getMedicalCardForStudent(studentId);
+    card.allergies.insert(0, allergy);
+    _medicalCardsMap[studentId] = card;
+    _firestoreService.saveMedicalCard(studentId, card);
+    notifyListeners();
+  }
+
+  void addAllergy(AllergyItem allergy) {
+    addAllergyToStudent(student.id, allergy);
+  }
+
+  void addVaccineRecordToStudent(String studentId, VaccineRecord vaccine) {
+    final card = getMedicalCardForStudent(studentId);
+    card.vaccineHistory.insert(0, vaccine);
+    _medicalCardsMap[studentId] = card;
+    _firestoreService.saveMedicalCard(studentId, card);
+    notifyListeners();
+  }
+
+  void addVaccineRecord(VaccineRecord vaccine) {
+    addVaccineRecordToStudent(student.id, vaccine);
+  }
+
+  void addParentMedicalNote(String studentId, String noteText) {
+    final card = getMedicalCardForStudent(studentId);
+    final parName = _currentUser?.fullName ?? 'Valideyn';
+    final newNote = ParentMedicalNote(
+      id: 'pnote-${DateTime.now().millisecondsSinceEpoch}',
+      note: noteText,
+      date: DateTime.now(),
+      parentName: parName,
+    );
+    final updatedList = List<ParentMedicalNote>.from(card.parentNotes)
+      ..insert(0, newNote);
+    final updatedCard = card.copyWith(parentNotes: updatedList);
+    _medicalCardsMap[studentId] = updatedCard;
+    _firestoreService.saveMedicalCard(studentId, updatedCard);
+    notifyListeners();
+  }
+
+  // QR Inventory Items
+  final List<InventoryItem> _inventoryItems = [];
+  List<InventoryItem> get inventoryItems => _inventoryItems;
+
+  /// Resolves a scanned QR payload to its registered equipment, if any.
+  InventoryItem? findInventoryItemByQr(String qrCode) {
+    final clean = qrCode.trim();
+    for (final item in _inventoryItems) {
+      if (item.qrCode.trim() == clean) return item;
+    }
+    return null;
+  }
+
+  void addInventoryItem(InventoryItem item) {
+    _inventoryItems.insert(0, item);
+    _firestoreService.saveInventoryItem(item);
+    notifyListeners();
+  }
+
+  void updateInventoryItem(InventoryItem item) {
+    final index = _inventoryItems.indexWhere((i) => i.id == item.id);
+    if (index != -1) {
+      _inventoryItems[index] = item;
+      _firestoreService.saveInventoryItem(item);
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteInventoryItem(String id) async {
+    _inventoryItems.removeWhere((i) => i.id == id);
+    await _firestoreService.deleteInventoryItem(id);
+    notifyListeners();
+  }
+
+  // Tickets
+  final List<HelpdeskTicket> _tickets = [];
+  List<HelpdeskTicket> get tickets => _tickets;
+
+  void addTicket(HelpdeskTicket ticket) {
+    _tickets.insert(0, ticket);
+    _firestoreService.saveTicket(ticket);
+    notifyListeners();
+  }
+
+  void addTicketMessage(String ticketId, TicketMessage message) {
+    final index = _tickets.indexWhere((t) => t.id == ticketId);
+    if (index != -1) {
+      final ticket = _tickets[index];
+      final updatedMessages = List<TicketMessage>.from(ticket.messages)
+        ..add(message);
+      final updatedTicket = HelpdeskTicket(
+        id: ticket.id,
+        title: ticket.title,
+        category: ticket.category,
+        status: ticket.status,
+        priority: ticket.priority,
+        senderName: ticket.senderName,
+        senderRole: ticket.senderRole,
+        senderId: ticket.senderId,
+        description: ticket.description,
+        createdAt: ticket.createdAt,
+        roomNumber: ticket.roomNumber,
+        inventoryCode: ticket.inventoryCode,
+        attachedImage: ticket.attachedImage,
+        messages: updatedMessages,
+      );
+      _tickets[index] = updatedTicket;
+      _firestoreService.saveTicket(updatedTicket);
+      notifyListeners();
+    }
+  }
+
+  /// Biletin statusunu dəyişir (helpdesk / admin — manage_tickets)
+  void updateTicketStatus(String ticketId, TicketStatus status) {
+    final index = _tickets.indexWhere((t) => t.id == ticketId);
+    if (index != -1) {
+      _tickets[index] = _tickets[index].copyWith(status: status);
+      _firestoreService.updateTicketStatus(ticketId, status);
+      notifyListeners();
+    }
+  }
+
+  // Assignments
+  final List<HomeworkAssignment> _assignments = [];
+  List<HomeworkAssignment> get assignments => _assignments;
+
+  // Filtered assignments for currently logged in teacher (Admin sees all)
+  List<HomeworkAssignment> get currentTeacherAssignments {
+    if (_currentUser == null || _currentUser!.role == UserRole.admin) {
+      return _assignments;
+    }
+    final teacherName = _currentUser!.fullName.trim().toLowerCase();
+    return _assignments.where((a) {
+      final aTeacher = a.teacherName.trim().toLowerCase();
+      return aTeacher == teacherName ||
+          aTeacher.contains(teacherName) ||
+          teacherName.contains(aTeacher);
+    }).toList();
+  }
+
+  void createAssignment(HomeworkAssignment assignment) {
+    _assignments.insert(0, assignment);
+    _firestoreService.saveAssignment(assignment);
+    notifyListeners();
+  }
+
+  void submitHomework({
+    required String assignmentId,
+    required String studentId,
+    required String studentName,
+    required List<String> images,
+    required String note,
+  }) {
+    final index = _assignments.indexWhere((a) => a.id == assignmentId);
+    if (index != -1) {
+      final old = _assignments[index];
+      final newSubmissions = Map<String, AssignmentSubmission>.from(
+        old.submissions,
+      );
+      newSubmissions[studentId] = AssignmentSubmission(
+        studentId: studentId,
+        studentName: studentName,
+        submittedAt: DateTime.now(),
+        scannedImages: images,
+        studentNote: note,
+      );
+
+      final updated = HomeworkAssignment(
+        id: old.id,
+        subject: old.subject,
+        title: old.title,
+        teacherName: old.teacherName,
+        instructions: old.instructions,
+        assignedDate: old.assignedDate,
+        dueDate: old.dueDate,
+        attachmentDocUrl: old.attachmentDocUrl,
+        assignedClass: old.assignedClass,
+        assignedStudentIds: old.assignedStudentIds,
+        submissions: newSubmissions,
+      );
+      _assignments[index] = updated;
+      _firestoreService.saveAssignment(updated);
+      notifyListeners();
+    }
+  }
+
+  void gradeHomework({
+    required String assignmentId,
+    required String studentId,
+    required double score,
+    required String comment,
+  }) {
+    final index = _assignments.indexWhere((a) => a.id == assignmentId);
+    if (index != -1) {
+      final old = _assignments[index];
+      final oldSub = old.submissions[studentId];
+      if (oldSub != null) {
+        final sanitizedScore = (score > 100.0)
+            ? (score / 10.0).clamp(0.0, 100.0)
+            : score.clamp(0.0, 100.0);
+        final newSubmissions = Map<String, AssignmentSubmission>.from(
+          old.submissions,
+        );
+        newSubmissions[studentId] = AssignmentSubmission(
+          studentId: oldSub.studentId,
+          studentName: oldSub.studentName,
+          submittedAt: oldSub.submittedAt,
+          scannedImages: oldSub.scannedImages,
+          studentNote: oldSub.studentNote,
+          score: sanitizedScore,
+          teacherComment: comment,
+          gradedAt: DateTime.now(),
+        );
+
+        final updated = HomeworkAssignment(
+          id: old.id,
+          subject: old.subject,
+          title: old.title,
+          teacherName: old.teacherName,
+          instructions: old.instructions,
+          assignedDate: old.assignedDate,
+          dueDate: old.dueDate,
+          attachmentDocUrl: old.attachmentDocUrl,
+          assignedClass: old.assignedClass,
+          assignedStudentIds: old.assignedStudentIds,
+          submissions: newSubmissions,
+        );
+
+        _assignments[index] = updated;
+        _firestoreService.saveAssignment(updated);
+
+        // Auto-sync into student GradeRecords so parents see the grade and GPA is updated
+        final targetStd = _students.firstWhere(
+          (s) => s.id == studentId,
+          orElse: () => student,
+        );
+
+        final gradeRecord = GradeRecord(
+          id: 'gr-hw-${old.id}-$studentId',
+          studentId: targetStd.id,
+          studentName: targetStd.fullName,
+          subject: old.subject,
+          type: AssessmentType.ksq,
+          title: 'Tapşırıq: ${old.title}',
+          score: sanitizedScore,
+          maxScore: 100.0,
+          gradeLetter: sanitizedScore >= 90
+              ? 'A'
+              : (sanitizedScore >= 80
+                    ? 'B'
+                    : (sanitizedScore >= 70
+                          ? 'C'
+                          : (sanitizedScore >= 60 ? 'D' : 'E'))),
+          date: DateTime.now(),
+          teacherFeedback: comment.isNotEmpty
+              ? comment
+              : 'Müəllim (${old.teacherName}) tərəfindən yoxlanıldı.',
+        );
+
+        final existingGradeIdx = _grades.indexWhere(
+          (g) => g.id == 'gr-hw-${old.id}-$studentId',
+        );
+        if (existingGradeIdx != -1) {
+          _grades[existingGradeIdx] = gradeRecord;
+        } else {
+          _grades.insert(0, gradeRecord);
+        }
+        _firestoreService.saveGrade(
+          gradeRecord,
+          targetStd.id,
+          targetStd.fullName,
+        );
+        recalculateStudentGpa(targetStd.id);
+
+        notifyListeners();
+      }
+    }
+  }
+
+  void deleteAssignment(String assignmentId) {
+    _assignments.removeWhere((a) => a.id == assignmentId);
+    _firestoreService.deleteAssignment(assignmentId);
+    notifyListeners();
+  }
+
+  // --- MEET İDRAK (VOICE ROOMS) ---
+  final List<MeetRoom> _meetRooms = [];
+  List<MeetRoom> get meetRooms => _meetRooms;
+
+  List<MeetRoom> get onlineLessons => getMeetRoomsForCurrentUser();
+
+  List<MeetRoom> getMeetRoomsForCurrentUser() {
+    final user = _currentUser;
+    if (user == null) return _meetRooms;
+
+    if (user.role == UserRole.admin) {
+      return _meetRooms;
+    }
+
+    if (user.role == UserRole.teacher) {
+      return _meetRooms.where((room) {
+        if (room.hostId == user.id) return true;
+        if (room.allowTeachers) return true;
+        return false;
+      }).toList();
+    }
+
+    if (user.role == UserRole.student) {
+      final studentClass = user.className ?? student.className;
+      return _meetRooms.where((room) {
+        if (!room.allowStudents) return false;
+        if (room.targetClasses.isEmpty) return true;
+        return room.targetClasses.contains(studentClass);
+      }).toList();
+    }
+
+    if (user.role == UserRole.parent) {
+      final childClass = student.className;
+      return _meetRooms.where((room) {
+        if (!room.allowStudents) return false;
+        if (room.targetClasses.isEmpty) return true;
+        return room.targetClasses.contains(childClass);
+      }).toList();
+    }
+
+    return _meetRooms;
+  }
+
+  Future<MeetRoom> createMeetRoom({
+    required String title,
+    required String subject,
+    List<String> targetClasses = const [],
+    bool allowTeachers = true,
+    bool allowStudents = true,
+    DateTime? scheduledTime,
+  }) async {
+    final host = _currentUser;
+    final hostId = host?.id ?? 'usr-tch-1';
+    final hostName = host?.fullName ?? 'Fənn Müəllimi';
+    final hostPhoto = host?.photoUrl;
+    final roomId = 'meet-${DateTime.now().millisecondsSinceEpoch}';
+    final channelName =
+        'idrak_meet_${DateTime.now().millisecondsSinceEpoch % 100000}';
+
+    // Host is automatically the first participant
+    final hostParticipant = MeetParticipant(
+      userId: hostId,
+      fullName: hostName,
+      role: 'host',
+      photoUrl: hostPhoto,
+      className: host?.className,
+      isMuted: false,
+      isMutedByHost: false,
+      isSpeaking: false,
+    );
+
+    final room = MeetRoom(
+      id: roomId,
+      title: title,
+      hostId: hostId,
+      hostName: hostName,
+      hostPhotoUrl: hostPhoto,
+      subject: subject,
+      targetClasses: targetClasses,
+      allowTeachers: allowTeachers,
+      allowStudents: allowStudents,
+      status: 'live',
+      scheduledTime: scheduledTime,
+      participants: [hostParticipant],
+    );
+
+    _meetRooms.insert(0, room);
+    await _firestoreService.saveMeetRoom(room);
+    notifyListeners();
+    return room;
+  }
+
+  Future<void> endMeetRoom(String roomId) async {
+    final index = _meetRooms.indexWhere((r) => r.id == roomId);
+    if (index != -1) {
+      _meetRooms[index] = _meetRooms[index].copyWith(status: 'ended');
+      await _firestoreService.setMeetRoomStatus(roomId, 'ended');
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteMeetRoom(String roomId) async {
+    _meetRooms.removeWhere((r) => r.id == roomId);
+    await _firestoreService.deleteMeetRoom(roomId);
+    notifyListeners();
+  }
+
+  Future<void> joinMeetRoom(String roomId) async {
+    final index = _meetRooms.indexWhere((r) => r.id == roomId);
+    if (index == -1) return;
+
+    final room = _meetRooms[index];
+    final user = _currentUser;
+    final userId = user?.id ?? student.id;
+    final userName = user?.fullName ?? student.fullName;
+    final userRole = user?.role == UserRole.teacher
+        ? 'teacher'
+        : (user?.role == UserRole.admin ? 'admin' : 'student');
+    final userPhoto = user?.photoUrl ?? student.photoUrl;
+    final userClass = user?.className ?? student.className;
+
+    final newParticipant = MeetParticipant(
+      userId: userId,
+      fullName: userName,
+      role: room.hostId == userId ? 'host' : userRole,
+      photoUrl: userPhoto,
+      className: userClass,
+      isMuted: false,
+      isMutedByHost: false,
+    );
+
+    // Immediately update local state for responsive UI
+    final localParticipants = List<MeetParticipant>.from(room.participants);
+    final existingIndex = localParticipants.indexWhere(
+      (p) => p.userId == userId,
+    );
+    if (existingIndex == -1) {
+      localParticipants.add(newParticipant);
+    } else {
+      localParticipants[existingIndex] = newParticipant;
+    }
+    _meetRooms[index] = room.copyWith(participants: localParticipants);
+    notifyListeners();
+
+    // Sync to Firestore in background (don't block UI)
+    try {
+      final updatedParticipants = await _firestoreService.joinMeetParticipant(
+        roomId,
+        newParticipant,
+      );
+      final currentIndex = _meetRooms.indexWhere((r) => r.id == roomId);
+      if (currentIndex != -1) {
+        _meetRooms[currentIndex] = _meetRooms[currentIndex].copyWith(
+          participants: updatedParticipants,
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('⚠️ Firestore sync failed (local state preserved): $e');
+    }
+  }
+
+  Future<void> leaveMeetRoom(String roomId) async {
+    final index = _meetRooms.indexWhere((r) => r.id == roomId);
+    if (index == -1) return;
+
+    final room = _meetRooms[index];
+    final userId = _currentUser?.id ?? student.id;
+
+    // Immediately update local state
+    final localParticipants = List<MeetParticipant>.from(room.participants);
+    localParticipants.removeWhere((p) => p.userId == userId);
+    _meetRooms[index] = room.copyWith(participants: localParticipants);
+    notifyListeners();
+
+    // Sync to Firestore in background
+    try {
+      final updatedParticipants = await _firestoreService.leaveMeetParticipant(
+        roomId,
+        userId,
+      );
+      final currentIndex = _meetRooms.indexWhere((r) => r.id == roomId);
+      if (currentIndex != -1) {
+        _meetRooms[currentIndex] = _meetRooms[currentIndex].copyWith(
+          participants: updatedParticipants,
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('⚠️ Firestore leave sync failed (local state preserved): $e');
+    }
+  }
+
+  Future<void> toggleMyMuteInRoom(String roomId) async {
+    final index = _meetRooms.indexWhere((r) => r.id == roomId);
+    if (index == -1) return;
+
+    final room = _meetRooms[index];
+    final userId = _currentUser?.id ?? student.id;
+
+    final currentParticipant = room.participants
+        .where((p) => p.userId == userId)
+        .firstOrNull;
+    if (currentParticipant?.isMutedByHost ?? false) return;
+    final updatedParticipants = await _firestoreService.setMeetParticipantMuted(
+      roomId,
+      userId,
+      !(currentParticipant?.isMuted ?? false),
+    );
+
+    _meetRooms[index] = room.copyWith(participants: updatedParticipants);
+    notifyListeners();
+  }
+
+  Future<void> setParticipantMuteByHost(
+    String roomId,
+    String targetUserId,
+    bool mute,
+  ) async {
+    final index = _meetRooms.indexWhere((r) => r.id == roomId);
+    if (index == -1) return;
+
+    final room = _meetRooms[index];
+    final updatedParticipants = await _firestoreService.setMeetParticipantMuted(
+      roomId,
+      targetUserId,
+      mute,
+      mutedByHost: mute,
+    );
+
+    _meetRooms[index] = room.copyWith(participants: updatedParticipants);
+    notifyListeners();
+  }
+
+  Future<void> muteAllInRoom(String roomId, bool mute) async {
+    final index = _meetRooms.indexWhere((r) => r.id == roomId);
+    if (index == -1) return;
+
+    final room = _meetRooms[index];
+    final updatedParticipants = await _firestoreService.muteAllMeetParticipants(
+      roomId,
+      mute,
+    );
+
+    _meetRooms[index] = room.copyWith(participants: updatedParticipants);
+    notifyListeners();
+  }
+
+  void updateParticipantSpeaking(
+    String roomId,
+    String userId,
+    bool isSpeaking,
+  ) {
+    final index = _meetRooms.indexWhere((r) => r.id == roomId);
+    if (index == -1) return;
+
+    final room = _meetRooms[index];
+    final updatedParticipants = room.participants.map((p) {
+      if (p.userId == userId) {
+        return p.copyWith(isSpeaking: isSpeaking);
+      }
+      return p;
+    }).toList();
+
+    _meetRooms[index] = room.copyWith(participants: updatedParticipants);
+    notifyListeners();
+  }
+
+  // Library
+  final List<BookItem> _books = [];
+  List<BookItem> get books => _books;
+
+  void addBook(BookItem book) {
+    _books.insert(0, book);
+    _firestoreService.saveBook(book);
+    notifyListeners();
+  }
+
+  void toggleBorrowBook(String bookId) {
+    final index = _books.indexWhere((b) => b.id == bookId);
+    if (index != -1) {
+      final old = _books[index];
+      final newBorrowed = !old.isBorrowedByMe;
+      final updated = BookItem(
+        id: old.id,
+        title: old.title,
+        author: old.author,
+        category: old.category,
+        coverUrl: old.coverUrl,
+        type: old.type,
+        pageCount: old.pageCount,
+        language: old.language,
+        availableCopies: newBorrowed
+            ? old.availableCopies - 1
+            : old.availableCopies + 1,
+        isBorrowedByMe: newBorrowed,
+        returnDeadline: newBorrowed
+            ? DateTime.now().add(const Duration(days: 14))
+            : null,
+        description: old.description,
+        rating: old.rating,
+      );
+      _books[index] = updated;
+      _firestoreService.saveBook(updated);
+      notifyListeners();
+    }
+  }
+
+  // Cafeteria Menu
+  final List<DailyMenu> _weeklyMenu = List.from(MockData.weeklyMenu);
+  List<DailyMenu> get weeklyMenu => _weeklyMenu;
+
+  void addMenuItemToDay(int dayIndex, MenuItem item) {
+    if (dayIndex >= 0 && dayIndex < _weeklyMenu.length) {
+      _weeklyMenu[dayIndex].items.add(item);
+      _weeklyMenu[dayIndex] = DailyMenu(
+        dayName: _weeklyMenu[dayIndex].dayName,
+        date: _weeklyMenu[dayIndex].date,
+        mealTime: _weeklyMenu[dayIndex].mealTime,
+        totalCalories: _weeklyMenu[dayIndex].totalCalories + item.calories,
+        items: _weeklyMenu[dayIndex].items,
+      );
+      _firestoreService.saveWeeklyMenu(_weeklyMenu);
+      notifyListeners();
+    }
+  }
+
+  void removeMenuItemFromDay(int dayIndex, int itemIndex) {
+    if (dayIndex >= 0 && dayIndex < _weeklyMenu.length) {
+      if (itemIndex >= 0 && itemIndex < _weeklyMenu[dayIndex].items.length) {
+        final removed = _weeklyMenu[dayIndex].items.removeAt(itemIndex);
+        _weeklyMenu[dayIndex] = DailyMenu(
+          dayName: _weeklyMenu[dayIndex].dayName,
+          date: _weeklyMenu[dayIndex].date,
+          mealTime: _weeklyMenu[dayIndex].mealTime,
+          totalCalories:
+              (_weeklyMenu[dayIndex].totalCalories - removed.calories).clamp(
+                0,
+                99999,
+              ),
+          items: _weeklyMenu[dayIndex].items,
+        );
+        _firestoreService.saveWeeklyMenu(_weeklyMenu);
+        notifyListeners();
+      }
+    }
+  }
+
+  // --- TEACHER HUB: SMART ATTENDANCE TINDER-STYLE STATE ---
+  late List<StudentProfile> _pendingAttendanceStudents = List.from(_students);
+  List<StudentProfile> get pendingAttendanceStudents =>
+      _pendingAttendanceStudents;
+
+  final Map<String, AttendanceStatus> _currentSessionAttendance = {};
+  Map<String, AttendanceStatus> get currentSessionAttendance =>
+      _currentSessionAttendance;
+
+  final List<MapEntry<String, AttendanceStatus>> _attendanceHistory = [];
+
+  String _currentSessionClass = '';
+  String get currentSessionClass => _currentSessionClass;
+  String _currentSessionSubject = '';
+  String get currentSessionSubject => _currentSessionSubject;
+  List<String> _currentSessionClasses = [];
+  List<String> get currentSessionClasses => _currentSessionClasses;
+
+  void startAttendanceForLesson({
+    String? className,
+    List<String>? classNames,
+    required String subject,
+    required String time,
+  }) {
+    final targets = classNames ?? (className != null ? [className] : <String>[]);
+    _currentSessionClasses = List.from(targets);
+    _currentSessionClass = targets.isNotEmpty ? targets.join(' & ') : (className ?? '');
+    _currentSessionSubject = subject;
+
+    final allStudents = <StudentProfile>[];
+    for (final cls in targets) {
+      allStudents.addAll(getStudentsForClass(cls));
+    }
+    if (allStudents.isEmpty && className != null) {
+      allStudents.addAll(getStudentsForClass(className));
+    }
+
+    _pendingAttendanceStudents = List.from(allStudents);
+    _currentSessionAttendance.clear();
+    _attendanceHistory.clear();
+    notifyListeners();
+  }
+
+  void recordSwipeAttendance(String studentId, AttendanceStatus status) {
+    _currentSessionAttendance[studentId] = status;
+    _attendanceHistory.add(MapEntry(studentId, status));
+    _pendingAttendanceStudents.removeWhere((s) => s.id == studentId);
+    notifyListeners();
+  }
+
+  final Map<String, DateTime> _attendanceLockTimestamps = {};
+
+  bool isAttendanceLocked(String className, String subject) {
+    if (_currentUser?.role == UserRole.admin) return false;
+    final now = DateTime.now();
+
+    // Check both individual class and merged classes
+    final classesToCheck = className.contains(' & ')
+        ? className.split(' & ').map((c) => c.trim()).toList()
+        : [className.trim()];
+
+    for (final cls in classesToCheck) {
+      final key =
+          '${cls.toLowerCase()}_${subject.trim().toLowerCase()}_${now.year}_${now.month}_${now.day}';
+      final submittedTime = _attendanceLockTimestamps[key];
+      if (submittedTime != null) {
+        final diff = now.difference(submittedTime);
+        if (diff.inMinutes >= 5) return true;
+      }
+    }
+    return false;
+  }
+
+  DateTime? getAttendanceSubmittedTime(String className, String subject) {
+    final now = DateTime.now();
+    final classesToCheck = className.contains(' & ')
+        ? className.split(' & ').map((c) => c.trim()).toList()
+        : [className.trim()];
+
+    for (final cls in classesToCheck) {
+      final key =
+          '${cls.toLowerCase()}_${subject.trim().toLowerCase()}_${now.year}_${now.month}_${now.day}';
+      if (_attendanceLockTimestamps[key] != null) {
+        return _attendanceLockTimestamps[key];
+      }
+    }
+    return null;
+  }
+
+  void completeAttendanceSession() {
+    final now = DateTime.now();
+    final dayNum = now.day;
+    final subjectName = _currentSessionSubject.isNotEmpty
+        ? _currentSessionSubject
+        : 'Dərs';
+    final timeStr =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+    final targets = _currentSessionClasses.isNotEmpty
+        ? _currentSessionClasses
+        : [_currentSessionClass];
+
+    for (final cls in targets) {
+      final lockKey =
+          '${cls.trim().toLowerCase()}_${_currentSessionSubject.trim().toLowerCase()}_${now.year}_${now.month}_${now.day}';
+      _attendanceLockTimestamps[lockKey] = now;
+    }
+
+    _currentSessionAttendance.forEach((studentId, status) {
+      final studentAttMap = _studentAttendanceMap.putIfAbsent(
+        studentId,
+        () => {},
+      );
+      final existingDay = studentAttMap[dayNum];
+
+      List<PeriodAttendance> periods = [];
+      if (existingDay != null) {
+        periods = List<PeriodAttendance>.from(existingDay.periodDetails);
+      }
+
+      // Check if this subject already exists in today's lesson list; if so, update, otherwise append!
+      final existingPeriodIndex = periods.indexWhere(
+        (p) => p.subject.toLowerCase() == subjectName.toLowerCase(),
+      );
+      final newPeriod = PeriodAttendance(
+        period:
+            '${existingPeriodIndex != -1 ? existingPeriodIndex + 1 : periods.length + 1}-ci dərs',
+        subject: subjectName,
+        status: status,
+        time: timeStr,
+      );
+
+      if (existingPeriodIndex != -1) {
+        periods[existingPeriodIndex] = newPeriod;
+      } else {
+        periods.add(newPeriod);
+      }
+
+      // Overall status for the day:
+      // If any period is absent -> absent, else if any is late -> late, else present!
+      AttendanceStatus overallStatus = AttendanceStatus.present;
+      if (periods.any((p) => p.status == AttendanceStatus.absent)) {
+        overallStatus = AttendanceStatus.absent;
+      } else if (periods.any((p) => p.status == AttendanceStatus.late)) {
+        overallStatus = AttendanceStatus.late;
+      }
+
+      final hasLate = periods.any((p) => p.status == AttendanceStatus.late);
+      final hasAbsent = periods.any((p) => p.status == AttendanceStatus.absent);
+      final noteText = hasAbsent
+          ? 'Qayıb dərslər var'
+          : (hasLate
+                ? 'Dərsə gecikmə qeydə alınıb'
+                : 'Bütün dərslərdə tam iştirak edib');
+
+      final dayAtt = DayAttendance(
+        date: now,
+        status: overallStatus,
+        note: noteText,
+        periodDetails: periods,
+      );
+
+      studentAttMap[dayNum] = dayAtt;
+      _firestoreService.saveStudentDayAttendance(studentId, dayNum, dayAtt);
+    });
+
+    // Recalculate attendance rate for students
+    for (final studentId in _currentSessionAttendance.keys) {
+      final stdIndex = _students.indexWhere((s) => s.id == studentId);
+      if (stdIndex != -1) {
+        final stdAttMap = _studentAttendanceMap[studentId] ?? {};
+        if (stdAttMap.isNotEmpty) {
+          int totalPeriods = 0;
+          int attendedPeriods = 0;
+          for (final d in stdAttMap.values) {
+            totalPeriods += d.periodDetails.length;
+            attendedPeriods += d.periodDetails
+                .where(
+                  (p) =>
+                      p.status == AttendanceStatus.present ||
+                      p.status == AttendanceStatus.late,
+                )
+                .length;
+          }
+          final rate = totalPeriods > 0
+              ? ((attendedPeriods / totalPeriods) * 100).round()
+              : 100;
+          final old = _students[stdIndex];
+          _students[stdIndex] = StudentProfile(
+            id: old.id,
+            fullName: old.fullName,
+            studentNumber: old.studentNumber,
+            className: old.className,
+            photoUrl: old.photoUrl,
+            qrData: old.qrData,
+            barcodeData: old.barcodeData,
+            parentName: old.parentName,
+            parentPhone: old.parentPhone,
+            gpa: old.gpa,
+            attendanceRate: rate,
+            academicYear: old.academicYear,
+          );
+          _firestoreService.updateStudentGPA(studentId, old.gpa, rate);
+        }
+      }
+    }
+
+    notifyListeners();
+  }
+
+  void undoLastSwipe() {
+    if (_attendanceHistory.isNotEmpty) {
+      final last = _attendanceHistory.removeLast();
+      _currentSessionAttendance.remove(last.key);
+      final restoredStudent = _students.firstWhere(
+        (s) => s.id == last.key,
+        orElse: () => MockData.currentStudent,
+      );
+      if (restoredStudent.id != 'std-empty') {
+        _pendingAttendanceStudents.insert(0, restoredStudent);
+      }
+      notifyListeners();
+    }
+  }
+
+  void resetAttendanceSession() {
+    _pendingAttendanceStudents = _currentSessionClass.isNotEmpty
+        ? List.from(getStudentsForClass(_currentSessionClass))
+        : List.from(_students);
+    _currentSessionAttendance.clear();
+    _attendanceHistory.clear();
+    notifyListeners();
+  }
+
+  // --- NOTIFICATIONS & ANNOUNCEMENTS ---
+  final List<AppNotification> _notifications = [];
+  List<AppNotification> get notifications => _notifications;
+
+  List<AppNotification> get notificationsForCurrentUser {
+    final user = _currentUser;
+    if (user == null) return [];
+
+    final userId = user.id;
+    final userRole = user.role;
+
+    if (userRole == UserRole.admin) {
+      return _notifications;
+    }
+
+    return _notifications.where((n) {
+      // 1. Direct message targeted to this user or sent by this user
+      if (n.targetParentId == userId ||
+          n.targetStudentId == userId ||
+          n.senderId == userId) {
+        return true;
+      }
+
+      // 2. Teacher filtering
+      if (userRole == UserRole.teacher) {
+        if (n.targetRoles.isNotEmpty && !n.targetRoles.contains('teacher')) {
+          return false;
+        }
+        return true;
+      }
+
+      // 3. Student filtering
+      if (userRole == UserRole.student) {
+        if (n.targetStudentId != null &&
+            n.targetStudentId != userId &&
+            n.targetStudentId != student.id) {
+          return false;
+        }
+        if (n.targetRoles.isNotEmpty && !n.targetRoles.contains('student')) {
+          return false;
+        }
+        final sClass = user.className ?? student.className;
+        if (n.targetClasses.isNotEmpty && !n.targetClasses.contains(sClass)) {
+          return false;
+        }
+        return true;
+      }
+
+      // 4. Parent filtering — Övladlar modelinə görə bütün uşaqlar
+      if (userRole == UserRole.parent) {
+        final kids = children;
+        final childIds = kids.map((c) => c.id).toSet();
+        final childClasses = kids.map((c) => c.className).toSet();
+
+        if (n.targetStudentId != null &&
+            !childIds.contains(n.targetStudentId)) {
+          return false;
+        }
+        if (n.targetParentId != null && n.targetParentId != userId) {
+          return false;
+        }
+        if (n.targetRoles.isNotEmpty && !n.targetRoles.contains('parent')) {
+          return false;
+        }
+        if (n.targetClasses.isNotEmpty &&
+            !n.targetClasses.any((c) => childClasses.contains(c))) {
+          return false;
+        }
+        return true;
+      }
+
+      return false;
+    }).toList();
+  }
+
+  int get unreadNotificationCount {
+    final user = _currentUser;
+    if (user == null) return 0;
+    final userId = user.id;
+    return notificationsForCurrentUser.where((n) => !n.isReadBy(userId)).length;
+  }
+
+  Future<AppNotification> sendNotification({
+    required String title,
+    required String message,
+    NotificationCategory category = NotificationCategory.general,
+    String? targetStudentId,
+    String? targetStudentName,
+    String? targetParentId,
+    List<String> targetClasses = const [],
+    List<String> targetRoles = const [],
+    String priority = 'normal',
+  }) async {
+    final user = _currentUser;
+    final senderId = user?.id ?? 'school';
+    final senderName = user?.fullName ?? 'İdrak Liseyi Rəhbərliyi';
+    final senderRole = user?.role == UserRole.teacher
+        ? 'teacher'
+        : (user?.role == UserRole.admin ? 'admin' : 'school');
+    final senderSubject = user?.subject;
+    final senderPhoto = user?.photoUrl;
+    final notifId = 'notif-${DateTime.now().millisecondsSinceEpoch}';
+
+    final notif = AppNotification(
+      id: notifId,
+      title: title,
+      message: message,
+      category: category,
+      senderId: senderId,
+      senderName: senderName,
+      senderPhotoUrl: senderPhoto,
+      senderRole: senderRole,
+      senderSubject: senderSubject,
+      targetStudentId: targetStudentId,
+      targetStudentName: targetStudentName,
+      targetParentId: targetParentId,
+      targetClasses: targetClasses,
+      targetRoles: targetRoles,
+      priority: priority,
+    );
+
+    _notifications.insert(0, notif);
+    await _firestoreService.saveNotification(notif);
+    notifyListeners();
+    return notif;
+  }
+
+  Future<void> markNotificationAsRead(String notifId) async {
+    final user = _currentUser;
+    if (user == null) return;
+    final userId = user.id;
+
+    final idx = _notifications.indexWhere((n) => n.id == notifId);
+    if (idx != -1) {
+      if (!_notifications[idx].readByUserIds.contains(userId)) {
+        final updatedIds = List<String>.from(_notifications[idx].readByUserIds)
+          ..add(userId);
+        _notifications[idx] = _notifications[idx].copyWith(
+          readByUserIds: updatedIds,
+        );
+        await _firestoreService.markNotificationRead(notifId, userId);
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> markAllNotificationsAsRead() async {
+    final user = _currentUser;
+    if (user == null) return;
+    final userId = user.id;
+
+    for (int i = 0; i < _notifications.length; i++) {
+      if (!_notifications[i].readByUserIds.contains(userId)) {
+        final updatedIds = List<String>.from(_notifications[i].readByUserIds)
+          ..add(userId);
+        _notifications[i] = _notifications[i].copyWith(
+          readByUserIds: updatedIds,
+        );
+        _firestoreService.markNotificationRead(_notifications[i].id, userId);
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> deleteNotification(String notifId) async {
+    _notifications.removeWhere((n) => n.id == notifId);
+    await _firestoreService.deleteNotification(notifId);
+    notifyListeners();
+  }
+}
