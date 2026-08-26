@@ -6,9 +6,6 @@ workflows:
     integrations:
       app_store_connect: Idrak Liseyi
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: az.idrak.liseyi
       vars:
         XCODE_WORKSPACE: "Runner.xcworkspace"
         XCODE_SCHEME: "Runner"
