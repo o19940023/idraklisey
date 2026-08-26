@@ -431,8 +431,7 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
   }
 
   void _showStudentDetailsModal(BuildContext context, AppState appState, StudentProfile student) {
-    final canEditMedical = appState.currentUser?.role == UserRole.admin ||
-        (appState.currentUser?.teacherPermissions?.canManageMedical ?? false);
+    final canEditMedical = appState.hasPermission('manage_medical');
 
     showModalBottomSheet(
       context: context,

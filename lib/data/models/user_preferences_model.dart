@@ -232,8 +232,9 @@ class UserPreferences {
           const ModuleItem(id: 'teacher_assignments', title: 'Tapşırıq Yoxlanışı', subtitle: 'Ev tapşırıqları', icon: 'assignment_turned_in_rounded', accentColor: '#0D9488', routeName: 'ReviewSubmissionsScreen', orderIndex: 3),
           const ModuleItem(id: 'teacher_grading', title: 'Sürətli Qiymət', subtitle: 'Voice-to-Text rəy', icon: 'mic_rounded', accentColor: '#9333EA', routeName: 'QuickGradingScreen', orderIndex: 4),
           const ModuleItem(id: 'teacher_library', title: 'E-Kitabxana', subtitle: 'Kitab axtarışı', icon: 'local_library_rounded', accentColor: '#D97706', routeName: 'LibraryScreen', orderIndex: 5),
-          const ModuleItem(id: 'teacher_notifications', title: 'Bildiriş Göndər', subtitle: 'Sinif & Valideyn', icon: 'notifications_active_rounded', accentColor: '#E11D48', routeName: 'NotificationsScreen', orderIndex: 6),
-          const ModuleItem(id: 'teacher_inventory', title: 'Avadanlıq Ticket', subtitle: 'QR inventar şikayəti', icon: 'qr_code_scanner_rounded', accentColor: '#EF4444', routeName: 'QrInventoryTicketScreen', orderIndex: 7),
+          const ModuleItem(id: 'teacher_medical', title: 'Tibbi Kartlar', subtitle: 'Şagird sağlamlıq qeydləri', icon: 'favorite_rounded', accentColor: '#EF4444', routeName: 'MedicalCardScreen', orderIndex: 6),
+          const ModuleItem(id: 'teacher_notifications', title: 'Bildiriş Göndər', subtitle: 'Sinif & Valideyn', icon: 'notifications_active_rounded', accentColor: '#E11D48', routeName: 'NotificationsScreen', orderIndex: 7),
+          const ModuleItem(id: 'teacher_inventory', title: 'Avadanlıq Ticket', subtitle: 'QR inventar şikayəti', icon: 'qr_code_scanner_rounded', accentColor: '#EF4444', routeName: 'QrInventoryTicketScreen', orderIndex: 8),
         ];
       case 'student':
         return [
@@ -275,7 +276,8 @@ class UserPreferences {
           const NavigationItem(id: 'teacher_students', label: 'Şagirdlər', icon: 'groups_outlined', activeIcon: 'groups_rounded', orderIndex: 1, isPinned: true),
           const NavigationItem(id: 'teacher_timetable', label: 'Davamiyyət', icon: 'calendar_month_outlined', activeIcon: 'calendar_month_rounded', orderIndex: 2, isPinned: true),
           const NavigationItem(id: 'teacher_grading', label: 'Qiymətlər', icon: 'edit_note_outlined', activeIcon: 'edit_note_rounded', orderIndex: 3, isPinned: true),
-          const NavigationItem(id: 'teacher_inventory', label: 'İnventar', icon: 'qr_code_scanner_outlined', activeIcon: 'qr_code_scanner_rounded', orderIndex: 4, isPinned: false),
+          const NavigationItem(id: 'teacher_medical', label: 'Tibb', icon: 'favorite_outline_rounded', activeIcon: 'favorite_rounded', orderIndex: 4, isPinned: false),
+          const NavigationItem(id: 'teacher_inventory', label: 'İnventar', icon: 'qr_code_scanner_outlined', activeIcon: 'qr_code_scanner_rounded', orderIndex: 5, isPinned: false),
         ];
       case 'student':
         return [

@@ -10,7 +10,7 @@ class AuthStorageService {
 
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
+      resetOnError: true,
     ),
   );
 
@@ -70,10 +70,6 @@ class AuthStorageService {
       
       return await _localAuth.authenticate(
         localizedReason: 'İDRAK Liseyi tətbiqinə daxil olmaq üçün $biometricName istifadə edin',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: false, // Allow device passcode as fallback
-        ),
       );
     } catch (e) {
       debugPrint('[AuthStorage] Biometric auth error: $e');

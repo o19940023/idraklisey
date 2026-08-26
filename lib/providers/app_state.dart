@@ -417,6 +417,19 @@ class AppState extends ChangeNotifier {
     }
     final role = getRoleById(roleId);
     if (role == null) return true;
+
+    // Teacher navigation ID mapping to Permission IDs
+    if (user.role == UserRole.teacher) {
+      if (permissionId == 'teacher_students') return role.permissionIds.contains('view_students');
+      if (permissionId == 'teacher_timetable') return role.permissionIds.contains('view_timetable');
+      if (permissionId == 'teacher_grading') return role.permissionIds.contains('view_grades');
+      if (permissionId == 'teacher_inventory') return role.permissionIds.contains('view_inventory');
+      if (permissionId == 'teacher_medical') return role.permissionIds.contains('view_medical');
+      if (permissionId == 'teacher_library') return role.permissionIds.contains('view_library');
+      if (permissionId == 'teacher_notifications') return role.permissionIds.contains('view_settings');
+      if (permissionId == 'teacher_meet') return role.permissionIds.contains('view_meet');
+    }
+
     return role.permissionIds.contains(permissionId);
   }
 
@@ -2417,8 +2430,6 @@ class AppState extends ChangeNotifier {
     final hostName = host?.fullName ?? 'Fənn Müəllimi';
     final hostPhoto = host?.photoUrl;
     final roomId = 'meet-${DateTime.now().millisecondsSinceEpoch}';
-    final channelName =
-        'idrak_meet_${DateTime.now().millisecondsSinceEpoch % 100000}';
 
     // Host is automatically the first participant
     final hostParticipant = MeetParticipant(

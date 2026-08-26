@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_shadows.dart';
 import '../../../data/models/timetable_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../providers/app_state.dart';

@@ -165,6 +165,9 @@ class _MainScreenState extends State<MainScreen> {
           case 'teacher_library':
           case 'library':
             return const LibraryScreen(isTeacherView: true);
+          case 'teacher_medical':
+          case 'medical':
+            return const MedicalCardScreen();
           case 'teacher_notifications':
             return const NotificationsScreen();
           default:
@@ -712,19 +715,20 @@ class _MainScreenState extends State<MainScreen> {
                       ],
                     ),
                   ),
-                BottomNavigationBar(
-                  currentIndex: _currentTabIndex,
-                  onTap: (index) => setState(() => _currentTabIndex = index),
-                  type: BottomNavigationBarType.fixed,
-                  backgroundColor: AppColors.surface,
-                  selectedItemColor: AppColors.primaryAccent,
-                  unselectedItemColor: AppColors.textMuted,
-                  selectedFontSize: 11,
-                  unselectedFontSize: 11,
-                  selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-                  elevation: 0,
-                  items: navItems,
-                ),
+                if (navItems.length >= 2)
+                  BottomNavigationBar(
+                    currentIndex: _currentTabIndex,
+                    onTap: (index) => setState(() => _currentTabIndex = index),
+                    type: BottomNavigationBarType.fixed,
+                    backgroundColor: AppColors.surface,
+                    selectedItemColor: AppColors.primaryAccent,
+                    unselectedItemColor: AppColors.textMuted,
+                    selectedFontSize: 11,
+                    unselectedFontSize: 11,
+                    selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                    elevation: 0,
+                    items: navItems,
+                  ),
               ],
             ),
           );

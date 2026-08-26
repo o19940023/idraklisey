@@ -5,7 +5,6 @@ import '../../../data/models/role_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_radius.dart';
-import '../../../core/widgets/glass_card.dart';
 
 /// Yeni Rol Yaratma Dialoqu
 class CreateRoleDialog extends StatefulWidget {
@@ -307,7 +306,6 @@ class _PermissionCategoryCardState extends State<_PermissionCategoryCard>
   bool _isExpanded = false;
   late AnimationController _animationController;
   late Animation<double> _rotationAnimation;
-  late Animation<double> _heightFactorAnimation;
 
   @override
   void initState() {
@@ -318,10 +316,6 @@ class _PermissionCategoryCardState extends State<_PermissionCategoryCard>
     );
     _rotationAnimation = Tween<double>(begin: 0, end: 0.5).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-    _heightFactorAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
     );
   }
 

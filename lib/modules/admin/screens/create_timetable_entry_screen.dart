@@ -40,14 +40,6 @@ class _CreateTimetableEntryScreenState extends State<CreateTimetableEntryScreen>
   final TextEditingController _roomCtrl = TextEditingController();
   final TextEditingController _noteCtrl = TextEditingController();
 
-  final List<String> _days = [
-    'Bazar ertəsi',
-    'Çərşənbə axşamı',
-    'Çərşənbə',
-    'Cümə axşamı',
-    'Cümə',
-  ];
-
   final Map<String, String> _lessonPeriods = {
     '1-ci dərs': '08:00 - 08:45',
     '2-ci dərs': '08:55 - 09:40',

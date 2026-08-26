@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../data/models/timetable_model.dart';
-import '../../../data/models/user_model.dart';
 import '../../../providers/app_state.dart';
 import '../widgets/merge_classes_sheet.dart';
 import 'create_timetable_entry_screen.dart';

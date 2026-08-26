@@ -5,7 +5,6 @@ import '../../../data/models/role_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_radius.dart';
-import '../../../core/widgets/glass_card.dart';
 
 /// Rol Redaktə Dialoqu
 class EditRoleDialog extends StatefulWidget {

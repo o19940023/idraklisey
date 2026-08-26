@@ -18,6 +18,7 @@ android {
     namespace = "az.idrak.liseyi"
     compileSdk = 37
     buildToolsVersion = "37.0.0"
+    ndkVersion = "28.2.13676358"
     
     packagingOptions {
         resources {

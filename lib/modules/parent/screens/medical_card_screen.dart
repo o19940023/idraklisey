@@ -18,10 +18,7 @@ class MedicalCardScreen extends StatelessWidget {
     final med = appState.getMedicalCardForStudent(student.id);
     final dateFormat = DateFormat('dd.MM.yyyy');
 
-    final currentUser = appState.currentUser;
-    final canManageMedical = currentUser?.role == UserRole.admin ||
-        (currentUser?.role == UserRole.teacher &&
-            (currentUser?.teacherPermissions?.canManageMedical ?? false));
+    final canManageMedical = appState.hasPermission('manage_medical');
 
     return Scaffold(
       backgroundColor: AppColors.background,
