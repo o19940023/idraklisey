@@ -58,8 +58,8 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyA_placeholder_ios_key_idrak',
-    appId: '1:948909504681:ios:a812398418bf7234',
+    apiKey: 'AIzaSyALoY9meNKyOZD7w2P70c_8QyqQh70lQOI',
+    appId: '1:948909504681:ios:61980cebac3afb31c2d1b8',
     messagingSenderId: '948909504681',
     projectId: 'idraklisey-aafd7',
     storageBucket: 'idraklisey-aafd7.firebasestorage.app',
@@ -67,8 +67,8 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyA_placeholder_macos_key_idrak',
-    appId: '1:948909504681:ios:a812398418bf7234',
+    apiKey: 'AIzaSyALoY9meNKyOZD7w2P70c_8QyqQh70lQOI',
+    appId: '1:948909504681:ios:61980cebac3afb31c2d1b8',
     messagingSenderId: '948909504681',
     projectId: 'idraklisey-aafd7',
     storageBucket: 'idraklisey-aafd7.firebasestorage.app',
