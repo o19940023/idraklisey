@@ -520,16 +520,6 @@ class _MainScreenState extends State<MainScreen> {
     final appState = Provider.of<AppState>(context);
     final updateService = Provider.of<AppUpdateService>(context);
 
-    // iOS için güvenlik: Eğer veriler henüz yüklenmediyse loading göster
-    if (appState.currentUser != null && appState.userPreferences == null) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF0F172A),
-        body: Center(
-          child: CircularProgressIndicator(color: Color(0xFF6C5CE7)),
-        ),
-      );
-    }
-
     if (!appState.isAuthenticated) {
       return const LoginScreen();
     }
