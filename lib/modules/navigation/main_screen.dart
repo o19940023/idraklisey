@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -6,8 +7,10 @@ import '../../core/theme/app_shadows.dart';
 import '../../core/widgets/idrak_logo.dart';
 import '../../data/models/user_preferences_model.dart';
 import '../../providers/app_state.dart';
+import '../../services/app_update_service.dart';
 import '../auth/screens/login_screen.dart';
 import '../shared/screens/notifications_screen.dart';
+import '../shared/widgets/app_update_banner.dart';
 
 // Admin Screens
 import '../admin/screens/admin_dashboard_screen.dart';
@@ -50,7 +53,6 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _currentTabIndex = 0;
   bool _isDragHoveredOnDock = false;
 
   IconData _getIconFromString(String iconName) {
@@ -247,7 +249,9 @@ class _MainScreenState extends State<MainScreen> {
               height: MediaQuery.of(context).size.height * 0.78,
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
                 boxShadow: AppShadows.lg,
               ),
               child: Column(
@@ -265,7 +269,10 @@ class _MainScreenState extends State<MainScreen> {
 
                   // Header
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -314,7 +321,10 @@ class _MainScreenState extends State<MainScreen> {
                   // Content Tabs List
                   Expanded(
                     child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       children: [
                         // Currently pinned
                         Container(
@@ -322,16 +332,26 @@ class _MainScreenState extends State<MainScreen> {
                           decoration: BoxDecoration(
                             color: AppColors.primaryAccent.withAlpha(12),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppColors.primaryAccent.withAlpha(40)),
+                            border: Border.all(
+                              color: AppColors.primaryAccent.withAlpha(40),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.primaryAccent),
+                              const Icon(
+                                Icons.info_outline_rounded,
+                                size: 16,
+                                color: AppColors.primaryAccent,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   'Aktiv tablar: ${activeNav.length} / 5 (Dəyişmək üçün modulları seçin)',
-                                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.primaryAccent),
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primaryAccent,
+                                  ),
                                 ),
                               ),
                             ],
@@ -352,29 +372,44 @@ class _MainScreenState extends State<MainScreen> {
                         for (final module in availableModules) ...[
                           Builder(
                             builder: (context) {
-                              final isPinned = activeNav.any((n) => n.id == module.id);
+                              final isPinned = activeNav.any(
+                                (n) => n.id == module.id,
+                              );
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 8),
                                 decoration: BoxDecoration(
-                                  color: isPinned ? AppColors.surface : AppColors.cardBorder.withAlpha(20),
+                                  color: isPinned
+                                      ? AppColors.surface
+                                      : AppColors.cardBorder.withAlpha(20),
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: isPinned ? AppColors.primaryAccent.withAlpha(60) : AppColors.cardBorder,
+                                    color: isPinned
+                                        ? AppColors.primaryAccent.withAlpha(60)
+                                        : AppColors.cardBorder,
                                     width: isPinned ? 1.5 : 1,
                                   ),
                                 ),
                                 child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 2,
+                                  ),
                                   leading: Container(
                                     width: 36,
                                     height: 36,
                                     decoration: BoxDecoration(
-                                      color: isPinned ? AppColors.primaryAccent.withAlpha(20) : Colors.grey.withAlpha(25),
+                                      color: isPinned
+                                          ? AppColors.primaryAccent.withAlpha(
+                                              20,
+                                            )
+                                          : Colors.grey.withAlpha(25),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Icon(
                                       _getIconFromString(module.icon),
-                                      color: isPinned ? AppColors.primaryAccent : AppColors.textSecondary,
+                                      color: isPinned
+                                          ? AppColors.primaryAccent
+                                          : AppColors.textSecondary,
                                       size: 18,
                                     ),
                                   ),
@@ -382,30 +417,49 @@ class _MainScreenState extends State<MainScreen> {
                                     module.title,
                                     style: TextStyle(
                                       fontSize: 13.5,
-                                      fontWeight: isPinned ? FontWeight.w800 : FontWeight.w600,
-                                      color: isPinned ? AppColors.textPrimary : AppColors.textSecondary,
+                                      fontWeight: isPinned
+                                          ? FontWeight.w800
+                                          : FontWeight.w600,
+                                      color: isPinned
+                                          ? AppColors.textPrimary
+                                          : AppColors.textSecondary,
                                     ),
                                   ),
                                   subtitle: Text(
                                     module.subtitle,
-                                    style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textMuted,
+                                    ),
                                   ),
                                   trailing: IconButton(
                                     icon: Icon(
-                                      isPinned ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded,
-                                      color: isPinned ? AppColors.primaryAccent : AppColors.textMuted,
+                                      isPinned
+                                          ? Icons.check_circle_rounded
+                                          : Icons.add_circle_outline_rounded,
+                                      color: isPinned
+                                          ? AppColors.primaryAccent
+                                          : AppColors.textMuted,
                                       size: 22,
                                     ),
                                     onPressed: () async {
                                       if (isPinned) {
-                                        await appState.removeNavigationItem(module.id);
+                                        await appState.removeNavigationItem(
+                                          module.id,
+                                        );
                                       } else {
-                                        final success = await appState.pinModuleToNavigation(module);
+                                        final success = await appState
+                                            .pinModuleToNavigation(module);
                                         if (!success && context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             const SnackBar(
-                                              content: Text('Maksimum 5 alt menyu tabı seçilə bilər.'),
-                                              backgroundColor: AppColors.warning,
+                                              content: Text(
+                                                'Maksimum 5 alt menyu tabı seçilə bilər.',
+                                              ),
+                                              backgroundColor:
+                                                  AppColors.warning,
                                               duration: Duration(seconds: 2),
                                             ),
                                           );
@@ -435,12 +489,18 @@ class _MainScreenState extends State<MainScreen> {
                           onPressed: () => Navigator.pop(ctx),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryAccent,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                             elevation: 0,
                           ),
                           child: const Text(
                             'Tamamla',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       ),
@@ -458,6 +518,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final updateService = Provider.of<AppUpdateService>(context);
 
     if (!appState.isAuthenticated) {
       return const LoginScreen();
@@ -496,245 +557,443 @@ class _MainScreenState extends State<MainScreen> {
       ];
     }
 
-    if (_currentTabIndex >= screens.length) {
-      _currentTabIndex = 0;
-    }
-
+    final activeTabIndex = appState.currentTabIndex >= screens.length
+        ? 0
+        : appState.currentTabIndex;
     final isDark = appState.isDarkMode;
 
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 56,
-        backgroundColor: isDark ? AppColors.darkSurface : AppColors.primary,
-        elevation: 0,
-        leading: const Padding(
-          padding: EdgeInsets.only(left: 12),
-          child: Center(child: IdrakLogo(size: 32)),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'İDRAK LİSEYİ',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14.5,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.0,
-              ),
-            ),
-            Text(
-              currentUser.fullName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.primaryAccent,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          // Alt menyunu fərdiləşdir düyməsi
-          IconButton(
-            icon: const Icon(
-              Icons.tune_rounded,
-              color: Colors.white70,
-              size: 20,
-            ),
-            tooltip: 'Alt Menyunu Fərdiləşdir',
-            onPressed: () => _showCustomizeNavSheet(context, appState),
+    return PopScope(
+      canPop: activeTabIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (activeTabIndex != 0) {
+          appState.resetToDashboard();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          toolbarHeight: 56,
+          backgroundColor: isDark ? AppColors.darkSurface : AppColors.primary,
+          elevation: 0,
+          leading: const Padding(
+            padding: EdgeInsets.only(left: 12),
+            child: Center(child: IdrakLogo(size: 32)),
           ),
-          IconButton(
-            icon: Icon(
-              appState.isDarkMode
-                  ? Icons.light_mode_rounded
-                  : Icons.dark_mode_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-            tooltip: appState.isDarkMode ? 'Açıq rejim' : 'Tünd rejim',
-            onPressed: () => appState.toggleTheme(),
-          ),
-          Stack(
-            alignment: Alignment.center,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.notifications_none_rounded,
+              const Text(
+                'İDRAK LİSEYİ',
+                style: TextStyle(
                   color: Colors.white,
-                  size: 22,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.0,
                 ),
-                tooltip: 'Bildirişlər & Elanlar',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotificationsScreen(),
-                    ),
-                  );
-                },
               ),
-              if (appState.unreadNotificationCount > 0)
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: AppColors.danger,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 15,
-                      minHeight: 15,
-                    ),
-                    child: Text(
-                      '${appState.unreadNotificationCount}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 8.5,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
+              Text(
+                currentUser.fullName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.primaryAccent,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
                 ),
+              ),
             ],
           ),
-          IconButton(
-            icon: const Icon(
-              Icons.logout_rounded,
-              color: Colors.white70,
-              size: 20,
-            ),
-            tooltip: 'Hesabdan Çıxış',
-            onPressed: () => appState.logout(),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: IndexedStack(index: _currentTabIndex, children: screens),
-      // 🆕 Sürükle-Bırak Alt Menyu Hədəfi (Dock DragTarget)
-      bottomNavigationBar: DragTarget<ModuleItem>(
-        onWillAcceptWithDetails: (details) {
-          setState(() {
-            _isDragHoveredOnDock = true;
-          });
-          HapticFeedback.selectionClick();
-          return true;
-        },
-        onLeave: (data) {
-          setState(() {
-            _isDragHoveredOnDock = false;
-          });
-        },
-        onAcceptWithDetails: (details) async {
-          setState(() {
-            _isDragHoveredOnDock = false;
-          });
-          final module = details.data;
-          final success = await appState.pinModuleToNavigation(module);
-          if (success) {
-            HapticFeedback.heavyImpact();
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                      const SizedBox(width: 10),
-                      Text('✓ "${module.title}" alt menyuya bərkidildi!'),
-                    ],
-                  ),
-                  backgroundColor: AppColors.success,
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            }
-          } else {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Bu modul artıq alt menyudadır və ya limit (5 tab) dolub.'),
-                  backgroundColor: AppColors.warning,
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            }
-          }
-        },
-        builder: (context, candidateData, rejectedData) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: _isDragHoveredOnDock
-                  ? AppColors.primaryAccent.withAlpha(40)
-                  : AppColors.surface,
-              border: Border(
-                top: BorderSide(
-                  color: _isDragHoveredOnDock
-                      ? AppColors.primaryAccent
-                      : AppColors.cardBorder,
-                  width: _isDragHoveredOnDock ? 2.5 : 1.0,
-                ),
+          actions: [
+            // Alt menyunu fərdiləşdir düyməsi
+            IconButton(
+              icon: const Icon(
+                Icons.tune_rounded,
+                color: Colors.white70,
+                size: 20,
               ),
-              boxShadow: _isDragHoveredOnDock
-                  ? [
-                      BoxShadow(
-                        color: AppColors.primaryAccent.withAlpha(80),
-                        blurRadius: 16,
-                        spreadRadius: 2,
-                      ),
-                    ]
-                  : null,
+              tooltip: 'Alt Menyunu Fərdiləşdir',
+              onPressed: () => _showCustomizeNavSheet(context, appState),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            IconButton(
+              icon: Icon(
+                appState.isDarkMode
+                    ? Icons.light_mode_rounded
+                    : Icons.dark_mode_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+              tooltip: appState.isDarkMode ? 'Açıq rejim' : 'Tünd rejim',
+              onPressed: () => appState.toggleTheme(),
+            ),
+            Stack(
+              alignment: Alignment.center,
               children: [
-                if (_isDragHoveredOnDock)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    color: AppColors.primaryAccent,
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.push_pin_rounded, color: Colors.white, size: 14),
-                        SizedBox(width: 6),
-                        Text(
-                          '📌 Alt menyuya bərkitmək üçün buraxın',
-                          style: TextStyle(
+                IconButton(
+                  icon: const Icon(
+                    Icons.notifications_none_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                  tooltip: 'Bildirişlər & Elanlar',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                if (appState.unreadNotificationCount > 0)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: AppColors.danger,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 15,
+                        minHeight: 15,
+                      ),
+                      child: Text(
+                        '${appState.unreadNotificationCount}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            IconButton(
+              icon: const Icon(
+                Icons.logout_rounded,
+                color: Colors.white70,
+                size: 20,
+              ),
+              tooltip: 'Hesabdan Çıxış',
+              onPressed: () => appState.logout(),
+            ),
+            const SizedBox(width: 4),
+          ],
+        ),
+        body: Stack(
+          children: [
+            IndexedStack(index: activeTabIndex, children: screens),
+            // 🆕 Yeni versiya banner-i — tətbiq işləməyə davam edir,
+            // amma banner mağazadan yenilənənə qədər hər açılışda göstərilir.
+            if (updateService.updateAvailable)
+              Positioned(
+                top: 8,
+                left: 16,
+                right: 16,
+                child: AppUpdateBanner(updateService: updateService),
+              ),
+          ],
+        ),
+        // 🆕 iOS Liquid Glass Sürüşən / Üzən Alt Menyu Dok Hədəfi (Dock DragTarget)
+        bottomNavigationBar: Padding(
+          padding: const EdgeInsets.only(left: 14, right: 14, bottom: 6),
+          child: DragTarget<ModuleItem>(
+            onWillAcceptWithDetails: (details) {
+              setState(() {
+                _isDragHoveredOnDock = true;
+              });
+              HapticFeedback.selectionClick();
+              return true;
+            },
+            onLeave: (data) {
+              setState(() {
+                _isDragHoveredOnDock = false;
+              });
+            },
+            onAcceptWithDetails: (details) async {
+              setState(() {
+                _isDragHoveredOnDock = false;
+              });
+              final module = details.data;
+              final success = await appState.pinModuleToNavigation(module);
+              if (success) {
+                HapticFeedback.heavyImpact();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          const Icon(
+                            Icons.check_circle_rounded,
                             color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
+                            size: 20,
                           ),
+                          const SizedBox(width: 10),
+                          Text('✓ "${module.title}" alt menyuya bərkidildi!'),
+                        ],
+                      ),
+                      backgroundColor: AppColors.success,
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  );
+                }
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text(
+                        'Bu modul artıq alt menyudadır və ya limit (5 tab) dolub.',
+                      ),
+                      backgroundColor: AppColors.warning,
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  );
+                }
+              }
+            },
+            builder: (context, candidateData, rejectedData) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          isDark
+                              ? const Color(0xFF10172A).withValues(alpha: 0.75)
+                              : Colors.black.withValues(alpha: 0.65),
+                          isDark
+                              ? const Color(0xFF0F172A).withValues(alpha: 0.70)
+                              : Colors.black.withValues(alpha: 0.60),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: _isDragHoveredOnDock
+                            ? AppColors.primaryAccent
+                            : Colors.white.withValues(alpha: 0.5),
+                        width: _isDragHoveredOnDock ? 2.2 : 1.0,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                        if (_isDragHoveredOnDock)
+                          BoxShadow(
+                            color: AppColors.primaryAccent.withAlpha(120),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        // iOS Liquid Glass üst parlama çizgisi
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: Align(
+                            alignment: Alignment.topCenter,
+                            child: FractionallySizedBox(
+                              widthFactor: 0.55,
+                              child: Container(
+                                height: 1,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.white.withValues(alpha: 0.85),
+                                      Colors.transparent,
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_isDragHoveredOnDock)
+                              Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(bottom: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  gradient: AppColors.accentGradient,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.push_pin_rounded,
+                                      color: Colors.white,
+                                      size: 13,
+                                    ),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      '📌 Alt menyuya bərkitmək üçün buraxın',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (orderedNavItems.isNotEmpty)
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                children: List.generate(
+                                  orderedNavItems.length,
+                                  (index) {
+                                    final item = orderedNavItems[index];
+                                    final isSelected = activeTabIndex == index;
+                                    final iconData = isSelected
+                                        ? _getIconFromString(item.activeIcon)
+                                        : _getIconFromString(item.icon);
+
+                                    return Expanded(
+                                      child: GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: () {
+                                          HapticFeedback.selectionClick();
+                                          appState.setCurrentTabIndex(index);
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 2,
+                                            horizontal: 2,
+                                          ),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                              milliseconds: 220,
+                                            ),
+                                            curve: Curves.easeOutCubic,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 6,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? AppColors.primaryAccent
+                                                        .withAlpha(
+                                                          isDark ? 35 : 22,
+                                                        )
+                                                  : Colors.transparent,
+                                              borderRadius:
+                                                  BorderRadius.circular(18),
+                                              border: isSelected
+                                                  ? Border.all(
+                                                      color: AppColors
+                                                          .primaryAccent
+                                                          .withAlpha(
+                                                            isDark ? 70 : 45,
+                                                          ),
+                                                      width: 1.0,
+                                                    )
+                                                  : null,
+                                            ),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                AnimatedScale(
+                                                  scale: isSelected
+                                                      ? 1.15
+                                                      : 1.0,
+                                                  duration: const Duration(
+                                                    milliseconds: 200,
+                                                  ),
+                                                  child: Icon(
+                                                    iconData,
+                                                    size: 20,
+                                                    color: isSelected
+                                                        ? AppColors
+                                                              .primaryAccent
+                                                        : Colors.white
+                                                              .withValues(
+                                                                alpha: 0.85,
+                                                              ),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 3),
+                                                AnimatedDefaultTextStyle(
+                                                  duration: const Duration(
+                                                    milliseconds: 200,
+                                                  ),
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: isSelected
+                                                        ? FontWeight.w900
+                                                        : FontWeight.w500,
+                                                    color: isSelected
+                                                        ? AppColors
+                                                              .primaryAccent
+                                                        : Colors.white
+                                                              .withValues(
+                                                                alpha: 0.85,
+                                                              ),
+                                                    letterSpacing: isSelected
+                                                        ? -0.2
+                                                        : 0,
+                                                  ),
+                                                  child: Text(
+                                                    item.label,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                if (navItems.length >= 2)
-                  BottomNavigationBar(
-                    currentIndex: _currentTabIndex,
-                    onTap: (index) => setState(() => _currentTabIndex = index),
-                    type: BottomNavigationBarType.fixed,
-                    backgroundColor: AppColors.surface,
-                    selectedItemColor: AppColors.primaryAccent,
-                    unselectedItemColor: AppColors.textMuted,
-                    selectedFontSize: 11,
-                    unselectedFontSize: 11,
-                    selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-                    elevation: 0,
-                    items: navItems,
-                  ),
-              ],
-            ),
-          );
-        },
+                ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }
 }
-
