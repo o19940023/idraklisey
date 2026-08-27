@@ -124,6 +124,24 @@ class AppState extends ChangeNotifier {
   List<Role> _roles = [];
   List<Role> get roles => _roles;
 
+  // --- NAVIGATION TAB INDEX (Alt Menyu Aktiv Tabı) ---
+  int _currentTabIndex = 0;
+  int get currentTabIndex => _currentTabIndex;
+
+  void setCurrentTabIndex(int index) {
+    if (_currentTabIndex != index) {
+      _currentTabIndex = index;
+      notifyListeners();
+    }
+  }
+
+  void resetToDashboard() {
+    if (_currentTabIndex != 0) {
+      _currentTabIndex = 0;
+      notifyListeners();
+    }
+  }
+
   // --- USER PREFERENCES (Modül Sıralama & Navigation Özelleştirme) ---
   UserPreferences? _userPreferences;
   UserPreferences? get userPreferences => _userPreferences;
@@ -800,6 +818,7 @@ class AppState extends ChangeNotifier {
 
   void logout() async {
     _currentUser = null;
+    _currentTabIndex = 0;
     await _authStorage.clearAll();
     notifyListeners();
   }
@@ -810,6 +829,7 @@ class AppState extends ChangeNotifier {
       orElse: () => _users.first,
     );
     _currentUser = matchingUser;
+    _currentTabIndex = 0;
     loadUserPreferences();
     notifyListeners();
   }
