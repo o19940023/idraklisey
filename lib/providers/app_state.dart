@@ -150,28 +150,42 @@ class AppState extends ChangeNotifier {
   Future<void> loadUserPreferences() async {
     if (_currentUser == null) return;
 
+    // Never block the first authenticated frame on Firestore. This is
+    // especially important on iOS where the initial network request can be
+    // delayed while the app is resuming from the splash screen.
+    final user = _currentUser!;
+    _userPreferences ??= UserPreferences.createDefault(
+      userId: user.id,
+      userRole: user.role.name,
+    );
+    notifyListeners();
+
     try {
       final prefs = await _firestoreService.fetchUserPreferences(
-        _currentUser!.id,
+        user.id,
       );
-      if (prefs != null && prefs.userRole == _currentUser!.role.name) {
+      if (prefs != null && prefs.userRole == user.role.name) {
         _userPreferences = prefs;
       } else {
         // Varsayılan tercihleri oluştur
         _userPreferences = UserPreferences.createDefault(
-          userId: _currentUser!.id,
-          userRole: _currentUser!.role.name,
+          userId: user.id,
+          userRole: user.role.name,
         );
-        // Firestore'a kaydet
-        await _firestoreService.saveUserPreferences(_userPreferences!);
+        // Firestore'a kaydet; kayıt gecikmesi UI'ı bloke etmemeli.
+        try {
+          await _firestoreService.saveUserPreferences(_userPreferences!);
+        } catch (e) {
+          debugPrint('User preferences save notice: $e');
+        }
       }
       notifyListeners();
     } catch (e) {
       debugPrint('User preferences load error: $e');
       // Hata durumunda varsayılan değerleri kullan
       _userPreferences = UserPreferences.createDefault(
-        userId: _currentUser!.id,
-        userRole: _currentUser!.role.name,
+        userId: user.id,
+        userRole: user.role.name,
       );
       notifyListeners();
     }
