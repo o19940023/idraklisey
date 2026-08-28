@@ -56,8 +56,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         headerTitle = assignedRole.name;
         headerBadge = assignedRole.name.toUpperCase();
       } else {
-        headerTitle = currentUser?.position ?? currentUser?.role.displayName ?? 'Panel';
-        headerBadge = currentUser?.position?.toUpperCase() ?? currentUser?.role.displayName.toUpperCase() ?? 'PANEL';
+        headerTitle =
+            currentUser?.position ?? currentUser?.role.displayName ?? 'Panel';
+        headerBadge =
+            currentUser?.position?.toUpperCase() ??
+            currentUser?.role.displayName.toUpperCase() ??
+            'PANEL';
       }
     }
 
@@ -532,9 +536,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     isReorderMode: _isReorderMode,
                     dynamicData: {
                       'view_students': '$studentCount qeydiyyatda şagird',
-                      'view_classes': '${appState.allDistinctClasses.length} Sinif yüksəlişi',
+                      'view_classes':
+                          '${appState.allDistinctClasses.length} Sinif yüksəlişi',
                       'view_timetable': 'Cədvəl təyini',
-                      'view_users': '${users.where((u) => u.role == UserRole.teacher || u.role == UserRole.admin).length} İşçi hesabı',
+                      'view_users':
+                          '${users.where((u) => u.role == UserRole.teacher || u.role == UserRole.admin).length} İşçi hesabı',
                       'view_roles': 'Səlahiyyət təyini',
                       'view_tickets': '$activeTickets Müraciət',
                       'view_reports': 'KSQ / BSQ / IB',

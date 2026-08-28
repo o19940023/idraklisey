@@ -570,32 +570,12 @@ class _MainScreenState extends State<MainScreen> {
     // İstifadəçi seçimlərindən sıralı navigation items
     final orderedNavItems = appState.getOrderedNavigation();
 
-    List<Widget> screens;
-    List<BottomNavigationBarItem> navItems;
-
-    if (orderedNavItems.isNotEmpty) {
-      screens = orderedNavItems.map((navItem) {
-        return _getScreenForNavItem(navItem.id, currentRole);
-      }).toList();
-
-      navItems = orderedNavItems.map((navItem) {
-        return BottomNavigationBarItem(
-          icon: Icon(_getIconFromString(navItem.icon)),
-          activeIcon: Icon(_getIconFromString(navItem.activeIcon)),
-          label: navItem.label,
-        );
-      }).toList();
-    } else {
-      // Fallback
-      screens = [_getScreenForNavItem('dashboard', currentRole)];
-      navItems = [
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard_outlined),
-          activeIcon: Icon(Icons.dashboard_rounded),
-          label: 'Əsas',
-        ),
-      ];
-    }
+    final screens = orderedNavItems.isNotEmpty
+        ? orderedNavItems
+              .map((navItem) => _getScreenForNavItem(navItem.id, currentRole))
+              .toList()
+        // Fallback
+        : <Widget>[_getScreenForNavItem('dashboard', currentRole)];
 
     final activeTabIndex = appState.currentTabIndex >= screens.length
         ? 0
