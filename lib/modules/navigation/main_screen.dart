@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -280,7 +280,7 @@ class _MainScreenState extends State<MainScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Alt Menyu və Sürətli Tablar',
+                              'Alt Menyu vÉ™ SÃ¼rÉ™tli Tablar',
                               style: TextStyle(
                                 fontSize: 16.5,
                                 fontWeight: FontWeight.w900,
@@ -289,7 +289,7 @@ class _MainScreenState extends State<MainScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Aşağıda görünəcək düymələri seçin və sıralayın',
+                              'AÅŸaÄŸÄ±da gÃ¶rÃ¼nÉ™cÉ™k dÃ¼ymÉ™lÉ™ri seÃ§in vÉ™ sÄ±ralayÄ±n',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 color: AppColors.textSecondary,
@@ -304,7 +304,7 @@ class _MainScreenState extends State<MainScreen> {
                             if (mounted) setState(() {});
                           },
                           child: const Text(
-                            'Sıfırla',
+                            'SÄ±fÄ±rla',
                             style: TextStyle(
                               color: AppColors.primaryAccent,
                               fontWeight: FontWeight.w700,
@@ -346,7 +346,7 @@ class _MainScreenState extends State<MainScreen> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Aktiv tablar: ${activeNav.length} / 5 (Dəyişmək üçün modulları seçin)',
+                                  'Aktiv tablar: ${activeNav.length} / 5 (DÉ™yiÅŸmÉ™k Ã¼Ã§Ã¼n modullarÄ± seÃ§in)',
                                   style: const TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
@@ -360,7 +360,7 @@ class _MainScreenState extends State<MainScreen> {
                         const SizedBox(height: 16),
 
                         Text(
-                          'Mövcud Bütün Modullar',
+                          'MÃ¶vcud BÃ¼tÃ¼n Modullar',
                           style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w800,
@@ -456,7 +456,7 @@ class _MainScreenState extends State<MainScreen> {
                                           ).showSnackBar(
                                             const SnackBar(
                                               content: Text(
-                                                'Maksimum 5 alt menyu tabı seçilə bilər.',
+                                                'Maksimum 5 alt menyu tabÄ± seÃ§ilÉ™ bilÉ™r.',
                                               ),
                                               backgroundColor:
                                                   AppColors.warning,
@@ -524,10 +524,50 @@ class _MainScreenState extends State<MainScreen> {
       return const LoginScreen();
     }
 
+    // iOS FIX: currentUser null ise loading göster (beyaz ekran donma fix)
+    if (appState.currentUser == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF0F172A),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              CircularProgressIndicator(color: Color(0xFF6C5CE7)),
+              SizedBox(height: 20),
+              Text(
+                'Yuklenir...',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // iOS FIX: currentUser null ise loading göster (beyaz ekran donma fix)
+    if (appState.currentUser == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF0F172A),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              CircularProgressIndicator(color: Color(0xFF6C5CE7)),
+              SizedBox(height: 20),
+              Text(
+                'Yuklenir...',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final currentUser = appState.currentUser!;
     final currentRole = currentUser.role;
 
-    // İstifadəçi seçimlərindən sıralı navigation items
+    // Ä°stifadÉ™Ã§i seÃ§imlÉ™rindÉ™n sÄ±ralÄ± navigation items
     final orderedNavItems = appState.getOrderedNavigation();
 
     List<Widget> screens;
@@ -552,7 +592,7 @@ class _MainScreenState extends State<MainScreen> {
         const BottomNavigationBarItem(
           icon: Icon(Icons.dashboard_outlined),
           activeIcon: Icon(Icons.dashboard_rounded),
-          label: 'Əsas',
+          label: 'Æsas',
         ),
       ];
     }
@@ -584,7 +624,7 @@ class _MainScreenState extends State<MainScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Text(
-                'İDRAK LİSEYİ',
+                'Ä°DRAK LÄ°SEYÄ°',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 14.5,
@@ -605,14 +645,14 @@ class _MainScreenState extends State<MainScreen> {
             ],
           ),
           actions: [
-            // Alt menyunu fərdiləşdir düyməsi
+            // Alt menyunu fÉ™rdilÉ™ÅŸdir dÃ¼ymÉ™si
             IconButton(
               icon: const Icon(
                 Icons.tune_rounded,
                 color: Colors.white70,
                 size: 20,
               ),
-              tooltip: 'Alt Menyunu Fərdiləşdir',
+              tooltip: 'Alt Menyunu FÉ™rdilÉ™ÅŸdir',
               onPressed: () => _showCustomizeNavSheet(context, appState),
             ),
             IconButton(
@@ -623,7 +663,7 @@ class _MainScreenState extends State<MainScreen> {
                 color: Colors.white,
                 size: 20,
               ),
-              tooltip: appState.isDarkMode ? 'Açıq rejim' : 'Tünd rejim',
+              tooltip: appState.isDarkMode ? 'AÃ§Ä±q rejim' : 'TÃ¼nd rejim',
               onPressed: () => appState.toggleTheme(),
             ),
             Stack(
@@ -635,7 +675,7 @@ class _MainScreenState extends State<MainScreen> {
                     color: Colors.white,
                     size: 22,
                   ),
-                  tooltip: 'Bildirişlər & Elanlar',
+                  tooltip: 'BildiriÅŸlÉ™r & Elanlar',
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -678,7 +718,7 @@ class _MainScreenState extends State<MainScreen> {
                 color: Colors.white70,
                 size: 20,
               ),
-              tooltip: 'Hesabdan Çıxış',
+              tooltip: 'Hesabdan Ã‡Ä±xÄ±ÅŸ',
               onPressed: () => appState.logout(),
             ),
             const SizedBox(width: 4),
@@ -687,8 +727,8 @@ class _MainScreenState extends State<MainScreen> {
         body: Stack(
           children: [
             IndexedStack(index: activeTabIndex, children: screens),
-            // 🆕 Yeni versiya banner-i — tətbiq işləməyə davam edir,
-            // amma banner mağazadan yenilənənə qədər hər açılışda göstərilir.
+            // ðŸ†• Yeni versiya banner-i â€” tÉ™tbiq iÅŸlÉ™mÉ™yÉ™ davam edir,
+            // amma banner maÄŸazadan yenilÉ™nÉ™nÉ™ qÉ™dÉ™r hÉ™r aÃ§Ä±lÄ±ÅŸda gÃ¶stÉ™rilir.
             if (updateService.updateAvailable)
               Positioned(
                 top: 8,
@@ -698,7 +738,7 @@ class _MainScreenState extends State<MainScreen> {
               ),
           ],
         ),
-        // 🆕 iOS Liquid Glass Sürüşən / Üzən Alt Menyu Dok Hədəfi (Dock DragTarget)
+        // ðŸ†• iOS Liquid Glass SÃ¼rÃ¼ÅŸÉ™n / ÃœzÉ™n Alt Menyu Dok HÉ™dÉ™fi (Dock DragTarget)
         bottomNavigationBar: Padding(
           padding: const EdgeInsets.only(left: 14, right: 14, bottom: 6),
           child: DragTarget<ModuleItem>(
@@ -733,7 +773,9 @@ class _MainScreenState extends State<MainScreen> {
                             size: 20,
                           ),
                           const SizedBox(width: 10),
-                          Text('✓ "${module.title}" alt menyuya bərkidildi!'),
+                          Text(
+                            'âœ“ "${module.title}" alt menyuya bÉ™rkidildi!',
+                          ),
                         ],
                       ),
                       backgroundColor: AppColors.success,
@@ -750,7 +792,7 @@ class _MainScreenState extends State<MainScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: const Text(
-                        'Bu modul artıq alt menyudadır və ya limit (5 tab) dolub.',
+                        'Bu modul artÄ±q alt menyudadÄ±r vÉ™ ya limit (5 tab) dolub.',
                       ),
                       backgroundColor: AppColors.warning,
                       duration: const Duration(seconds: 2),
@@ -811,7 +853,7 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                     child: Stack(
                       children: [
-                        // iOS Liquid Glass üst parlama çizgisi
+                        // iOS Liquid Glass Ã¼st parlama Ã§izgisi
                         Positioned(
                           top: 0,
                           left: 0,
@@ -859,7 +901,7 @@ class _MainScreenState extends State<MainScreen> {
                                     ),
                                     SizedBox(width: 6),
                                     Text(
-                                      '📌 Alt menyuya bərkitmək üçün buraxın',
+                                      'ðŸ“Œ Alt menyuya bÉ™rkitmÉ™k Ã¼Ã§Ã¼n buraxÄ±n',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 10.5,

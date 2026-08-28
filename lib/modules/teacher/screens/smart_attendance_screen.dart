@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/app_state.dart';
+import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/student_model.dart';
 import '../../../data/models/attendance_model.dart';
 
@@ -194,7 +195,7 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     GestureDetector(
-                      onTap: () => Navigator.pop(context),
+                      onTap: () => handleBackNavigation(context),
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(

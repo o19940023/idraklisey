@@ -20,6 +20,7 @@ class ParentDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final student = appState.student;
+    final isDark = appState.isDarkMode;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -28,27 +29,51 @@ class ParentDashboardScreen extends StatelessWidget {
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // Floating Parent Header Bar
+            // Modern Teal-Emerald Parent Header Bar
             SliverAppBar(
-              expandedHeight: 130.0,
+              expandedHeight: 140.0,
               floating: false,
               pinned: true,
               elevation: 0,
-              backgroundColor: AppColors.primary,
+              backgroundColor: isDark ? AppColors.darkSurface : AppColors.primary,
+              surfaceTintColor: Colors.transparent,
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.primaryGradient,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isDark
+                          ? [
+                              const Color(0xFF0F172A),
+                              const Color(0xFF064E3B),
+                              const Color(0xFF1E293B),
+                            ]
+                          : [
+                              const Color(0xFF132A25),
+                              const Color(0xFF0D5C4B),
+                              const Color(0xFF1A1B2E),
+                            ],
+                    ),
                   ),
-                  padding: const EdgeInsets.only(left: 20, right: 20, top: 48, bottom: 14),
+                  padding: const EdgeInsets.only(left: 20, right: 20, top: 44, bottom: 12),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(2),
+                        padding: const EdgeInsets.all(2.5),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.primaryAccent, width: 2),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF34D399), Color(0xFF059669), Color(0xFF10B981)],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF10B981).withAlpha(80),
+                              blurRadius: 14,
+                              spreadRadius: 1,
+                            ),
+                          ],
                         ),
                         child: CircleAvatar(
                           radius: 26,
@@ -63,43 +88,44 @@ class ParentDashboardScreen extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                const IdrakLogo(size: 15),
+                                const IdrakLogo(size: 14),
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1.5),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primaryAccent.withAlpha(30),
+                                    color: const Color(0xFF10B981).withAlpha(35),
                                     borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFF34D399).withAlpha(50)),
                                   ),
                                   child: const Text(
                                     'VALİDEYN KABİNETİ',
                                     style: TextStyle(
-                                      color: AppColors.primaryAccent,
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.8,
+                                      color: Color(0xFF34D399),
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.9,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 5),
                             Text(
                               student.fullName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 16.5,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.2,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.3,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               'Övladınız: ${student.className} • ${student.studentNumber}',
                               style: TextStyle(
-                                color: Colors.white.withAlpha(190),
+                                color: Colors.white.withAlpha(180),
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -113,28 +139,28 @@ class ParentDashboardScreen extends StatelessWidget {
               ),
             ),
 
-            // Övlad keçidi (birdən çox uşaq varsa — Övladlar modeli)
+            // Övlad keçidi (birdən çox uşaq varsa)
             if (appState.children.length > 1)
               SliverToBoxAdapter(
                 child: Container(
-                  color: AppColors.primary,
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFF132A25),
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.diversity_3_rounded, color: Colors.white70, size: 13),
-                          const SizedBox(width: 5),
+                          const Icon(Icons.diversity_3_rounded, color: Color(0xFF34D399), size: 14),
+                          const SizedBox(width: 6),
                           Text(
-                            'Övladlarınız (${appState.children.length}) — keçid üçün seçin:',
-                            style: TextStyle(color: Colors.white.withAlpha(190), fontSize: 10.5, fontWeight: FontWeight.w700),
+                            'Övladlarınız (${appState.children.length}) — keçid üçün toxunun:',
+                            style: TextStyle(color: Colors.white.withAlpha(190), fontSize: 11, fontWeight: FontWeight.w700),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 7),
+                      const SizedBox(height: 8),
                       SizedBox(
-                        height: 38,
+                        height: 40,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: appState.children.length,
@@ -146,20 +172,34 @@ class ParentDashboardScreen extends StatelessWidget {
                               onTap: () => appState.setActiveChild(child.id),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 180),
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
                                 decoration: BoxDecoration(
-                                  color: isActive ? AppColors.primaryAccent : Colors.white.withAlpha(25),
-                                  borderRadius: BorderRadius.circular(11),
+                                  gradient: isActive
+                                      ? const LinearGradient(
+                                          colors: [Color(0xFF059669), Color(0xFF10B981)],
+                                        )
+                                      : null,
+                                  color: !isActive ? Colors.white.withAlpha(18) : null,
+                                  borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: isActive ? AppColors.primaryAccent : Colors.white.withAlpha(60),
+                                    color: isActive ? const Color(0xFF34D399) : Colors.white.withAlpha(40),
                                     width: isActive ? 1.5 : 1,
                                   ),
+                                  boxShadow: isActive
+                                      ? [
+                                          BoxShadow(
+                                            color: const Color(0xFF10B981).withAlpha(80),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ]
+                                      : [],
                                 ),
                                 child: Row(
                                   children: [
                                     Icon(
                                       isActive ? Icons.child_care_rounded : Icons.child_care_outlined,
-                                      size: 15,
+                                      size: 16,
                                       color: isActive ? Colors.white : Colors.white70,
                                     ),
                                     const SizedBox(width: 6),
@@ -167,7 +207,7 @@ class ParentDashboardScreen extends StatelessWidget {
                                       '${child.fullName.split(' ').first} • ${child.className}',
                                       style: TextStyle(
                                         color: isActive ? Colors.white : Colors.white.withAlpha(200),
-                                        fontSize: 11.5,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w800,
                                       ),
                                     ),
@@ -185,18 +225,18 @@ class ParentDashboardScreen extends StatelessWidget {
 
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Quick Stats Bar
                     Row(
                       children: [
-                        _buildParentStatChip('GPA Balı', '${student.gpa}', Icons.star_rounded, AppColors.goldDark),
-                        const SizedBox(width: 8),
-                        _buildParentStatChip('Davamiyyət', '${student.attendanceRate}%', Icons.check_circle_rounded, AppColors.success),
-                        const SizedBox(width: 8),
-                        _buildParentStatChip('Qan Qrupu', student.bloodGroup ?? '—', Icons.favorite_rounded, AppColors.danger),
+                        _buildParentStatCard('GPA Balı', '${student.gpa}', Icons.star_rounded, const Color(0xFFF59E0B)),
+                        const SizedBox(width: 10),
+                        _buildParentStatCard('Davamiyyət', '${student.attendanceRate}%', Icons.check_circle_rounded, const Color(0xFF10B981)),
+                        const SizedBox(width: 10),
+                        _buildParentStatCard('Qan Qrupu', student.bloodGroup ?? '—', Icons.favorite_rounded, const Color(0xFFEF4444)),
                       ],
                     ),
 
@@ -257,40 +297,43 @@ class ParentDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildParentStatChip(String title, String value, IconData icon, Color color) {
+  Widget _buildParentStatCard(String title, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.cardBorder),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.cardBorder.withAlpha(70)),
           boxShadow: AppShadows.sm,
         ),
         child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: color, size: 13),
-                const SizedBox(width: 4),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ],
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withAlpha(20),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 16),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.2,
+              ),
+            ),
+            const SizedBox(height: 1),
             Text(
               title,
               style: TextStyle(
-                fontSize: 9.5,
+                fontSize: 10.5,
                 color: AppColors.textSecondary,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],

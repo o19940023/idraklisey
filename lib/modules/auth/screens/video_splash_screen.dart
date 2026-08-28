@@ -12,7 +12,8 @@ class VideoSplashScreen extends StatefulWidget {
   State<VideoSplashScreen> createState() => _VideoSplashScreenState();
 }
 
-class _VideoSplashScreenState extends State<VideoSplashScreen> with SingleTickerProviderStateMixin {
+class _VideoSplashScreenState extends State<VideoSplashScreen>
+    with SingleTickerProviderStateMixin {
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
   bool _isFadingOut = false;
@@ -40,11 +41,17 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> with SingleTicker
     );
 
     _scaleAnimation = Tween<double>(begin: 0.9, end: 1.05).animate(
-      CurvedAnimation(parent: _fallbackAnimController, curve: Curves.easeOutCubic),
+      CurvedAnimation(
+        parent: _fallbackAnimController,
+        curve: Curves.easeOutCubic,
+      ),
     );
 
     _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fallbackAnimController, curve: const Interval(0.0, 0.6, curve: Curves.easeIn)),
+      CurvedAnimation(
+        parent: _fallbackAnimController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+      ),
     );
 
     _initVideo();
@@ -68,12 +75,25 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> with SingleTicker
         _videoController!.addListener(() {
           if (_videoController != null &&
               _videoController!.value.isInitialized &&
-              _videoController!.value.position >= _videoController!.value.duration &&
+              _videoController!.value.position >=
+                  _videoController!.value.duration &&
               !_isFadingOut &&
               !_hasNavigated) {
             _onVideoComplete();
           }
         });
+
+        // AVPlayer on iOS does not always publish a final position update at
+        // the end of a local asset. Keep a time-based completion fallback so
+        // the splash can never get stuck on its final video frame.
+        final duration = controller.value.duration;
+        if (duration > Duration.zero) {
+          Future.delayed(duration + const Duration(milliseconds: 500), () {
+            if (mounted && !_hasNavigated) {
+              _onVideoComplete();
+            }
+          });
+        }
         return;
       } catch (_) {}
     }
@@ -88,8 +108,12 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> with SingleTicker
     }
   }
 
-  void _onVideoComplete() {
+  Future<void> _onVideoComplete() async {
     if (_hasNavigated || !mounted) return;
+
+    // Lock immediately. The video listener and the fallback timer can both
+    // complete at almost the same time on iOS.
+    _hasNavigated = true;
 
     setState(() {
       _isFadingOut = true;
@@ -97,23 +121,29 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> with SingleTicker
 
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted && !_hasNavigated) {
-        _hasNavigated = true;
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 600),
-            pageBuilder: (context, animation, secondaryAnimation) => const MainScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(
-                opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
-                child: child,
-              );
-            },
-          ),
-        );
-      }
+    // Release the native AVPlayer texture before replacing the route. Keeping
+    // it alive during a route fade can leave Flutter's iOS view blank after a
+    // local video finishes.
+    final controller = _videoController;
+    setState(() {
+      _videoController = null;
+      _isVideoInitialized = false;
     });
+    try {
+      await controller?.pause();
+      await controller?.dispose();
+    } catch (error) {
+      // A failed native cleanup must not prevent navigation to the login flow.
+      debugPrint('Video splash cleanup notice: $error');
+    }
+
+    // Let the dark splash overlay render once after its video texture is gone.
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(builder: (_) => const MainScreen()),
+    );
   }
 
   @override
@@ -176,13 +206,19 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> with SingleTicker
                                   color: AppColors.primaryAccent.withAlpha(25),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppColors.primaryAccent.withAlpha(50),
+                                      color: AppColors.primaryAccent.withAlpha(
+                                        50,
+                                      ),
                                       blurRadius: 36,
                                       spreadRadius: 8,
                                     ),
                                   ],
                                 ),
-                                child: const IdrakLogo(size: 84, showText: false, isLightText: true),
+                                child: const IdrakLogo(
+                                  size: 84,
+                                  showText: false,
+                                  isLightText: true,
+                                ),
                               ),
                               const SizedBox(height: 20),
                               const Text(
@@ -196,11 +232,18 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> with SingleTicker
                               ),
                               const SizedBox(height: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppColors.primaryAccent.withAlpha(25),
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: AppColors.primaryAccent.withAlpha(60)),
+                                  border: Border.all(
+                                    color: AppColors.primaryAccent.withAlpha(
+                                      60,
+                                    ),
+                                  ),
                                 ),
                                 child: const Text(
                                   'BEYNƏLXALQ TƏHSİL PORTALI',
@@ -233,7 +276,10 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> with SingleTicker
                   onTap: _onVideoComplete,
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withAlpha(80),
                       borderRadius: BorderRadius.circular(20),
@@ -244,10 +290,18 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> with SingleTicker
                       children: [
                         Text(
                           'Keç',
-                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         SizedBox(width: 4),
-                        Icon(Icons.fast_forward_rounded, color: Colors.white70, size: 14),
+                        Icon(
+                          Icons.fast_forward_rounded,
+                          color: Colors.white70,
+                          size: 14,
+                        ),
                       ],
                     ),
                   ),
@@ -263,9 +317,7 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> with SingleTicker
               opacity: _isFadingOut ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 550),
               curve: Curves.easeInOut,
-              child: Container(
-                color: AppColors.primaryDark,
-              ),
+              child: Container(color: AppColors.primaryDark),
             ),
           ),
         ],

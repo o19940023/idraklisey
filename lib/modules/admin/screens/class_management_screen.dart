@@ -6,6 +6,7 @@ import '../../../core/theme/app_shadows.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../data/models/user_model.dart';
 import '../../../providers/app_state.dart';
+import '../../../core/utils/navigation_utils.dart';
 
 class ClassManagementScreen extends StatefulWidget {
   const ClassManagementScreen({super.key});
@@ -50,7 +51,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                 ),
                 child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
               ),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => handleBackNavigation(context),
             ),
             actions: [
               Padding(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_state.dart';
+import 'services/app_update_service.dart';
 import 'modules/auth/screens/video_splash_screen.dart';
 
 void main() async {
@@ -28,9 +31,18 @@ void main() async {
   await appState.loadThemeMode();
   appState.initFirebaseData();
 
+  // Yeni versiya yoxlaması (banner üçün) — arxa planda, gecikmə yaratmır
+  final appUpdateService = AppUpdateService();
+  unawaited(Future.delayed(const Duration(seconds: 3), () {
+    appUpdateService.checkForUpdate();
+  }));
+
   runApp(
-    ChangeNotifierProvider.value(
-      value: appState,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: appState),
+        ChangeNotifierProvider.value(value: appUpdateService),
+      ],
       child: const IdrakLiseyiApp(),
     ),
   );

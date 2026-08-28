@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../providers/app_state.dart';
+import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/models/role_model.dart';
 import '../widgets/edit_employee_sheet.dart';
@@ -69,7 +70,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 ),
                 child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
               ),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => handleBackNavigation(context),
             ),
             actions: [
               Padding(

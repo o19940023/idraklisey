@@ -149,7 +149,7 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
   @override
   Widget build(BuildContext context) {
     if (widget.isReorderMode) {
-      // Siyahı Şəklində Sıralama Rejimi (Alternativ ReorderableListView)
+      // Siyahı Şəklində Sıralama Rejimi
       return ReorderableListView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -163,9 +163,9 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
               return Transform.scale(
                 scale: scale,
                 child: Material(
-                  elevation: 10,
-                  shadowColor: Colors.black45,
-                  borderRadius: BorderRadius.circular(18),
+                  elevation: 12,
+                  shadowColor: Colors.black38,
+                  borderRadius: BorderRadius.circular(20),
                   child: child,
                 ),
               );
@@ -180,11 +180,11 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
       );
     }
 
-    // Telefon Tərzi Canlı Sürükle-Bırak Qrid (Home Screen Grid Drag & Drop)
+    // Telefon Tərzi Canlı Sürükle-Bırak Qrid (iOS Squircle App Grid)
     return LayoutBuilder(
       builder: (context, constraints) {
         final itemWidth = (constraints.maxWidth - 12) / 2;
-        final itemHeight = itemWidth / 1.2;
+        final itemHeight = itemWidth / 1.18;
 
         return GridView.builder(
           shrinkWrap: true,
@@ -193,7 +193,7 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.2,
+            childAspectRatio: 1.18,
           ),
           itemCount: _modules.length,
           itemBuilder: (context, index) {
@@ -254,28 +254,28 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
               _hoveredTargetId = null;
             });
           },
-          // Sürüklənərkən barmaq altında görünən vizual kart (Smartphone icon lift effect)
+          // Sürüklənərkən barmaq altında görünən vizual kart (iOS App Icon Lift)
           feedback: Material(
             color: Colors.transparent,
             child: SizedBox(
               width: width,
               height: height,
               child: Transform.scale(
-                scale: 1.06,
+                scale: 1.08,
                 child: Container(
                   decoration: BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(22),
                     border: Border.all(
                       color: AppColors.primaryAccent,
                       width: 2.0,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primaryAccent.withAlpha(80),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 8),
+                        color: AppColors.primaryAccent.withAlpha(90),
+                        blurRadius: 24,
+                        spreadRadius: 3,
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
@@ -288,11 +288,18 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Container(
-                            width: 38,
-                            height: 38,
+                            width: 44,
+                            height: 44,
                             decoration: BoxDecoration(
-                              color: _getColorFromHex(module.accentColor).withAlpha(30),
-                              borderRadius: BorderRadius.circular(12),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  _getColorFromHex(module.accentColor).withAlpha(40),
+                                  _getColorFromHex(module.accentColor).withAlpha(15),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: _getColorFromHex(module.accentColor).withAlpha(80),
                               ),
@@ -300,14 +307,14 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
                             child: Icon(
                               _getIconFromString(module.icon),
                               color: _getColorFromHex(module.accentColor),
-                              size: 20,
+                              size: 22,
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.all(4),
+                            padding: const EdgeInsets.all(5),
                             decoration: BoxDecoration(
                               color: AppColors.primaryAccent.withAlpha(30),
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(
                               Icons.drag_indicator_rounded,
@@ -325,10 +332,10 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
                               color: AppColors.textPrimary,
-                              letterSpacing: -0.2,
+                              letterSpacing: -0.3,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -337,7 +344,7 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 10.5,
+                              fontSize: 11,
                               color: AppColors.textSecondary,
                             ),
                           ),
@@ -352,18 +359,17 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
           // Sürüklənərkən arxada qalan yer
           childWhenDragging: Container(
             decoration: BoxDecoration(
-              color: AppColors.cardBorder.withAlpha(25),
-              borderRadius: BorderRadius.circular(18),
+              color: AppColors.cardBorder.withAlpha(20),
+              borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: AppColors.primaryAccent.withAlpha(80),
+                color: AppColors.primaryAccent.withAlpha(70),
                 width: 1.5,
-                style: BorderStyle.solid,
               ),
             ),
             child: Center(
               child: Icon(
                 Icons.add_circle_outline_rounded,
-                color: AppColors.primaryAccent.withAlpha(120),
+                color: AppColors.primaryAccent.withAlpha(100),
                 size: 28,
               ),
             ),
@@ -384,30 +390,38 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
       duration: const Duration(milliseconds: 180),
       decoration: BoxDecoration(
         color: isHovered
-            ? accentColor.withAlpha(20)
+            ? accentColor.withAlpha(15)
             : AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
           color: isHovered
               ? accentColor
-              : AppColors.cardBorder,
-          width: isHovered ? 2.0 : 1.0,
+              : AppColors.cardBorder.withAlpha(70),
+          width: isHovered ? 2.0 : 1.2,
         ),
-        boxShadow: isHovered ? AppShadows.md : AppShadows.sm,
+        boxShadow: isHovered
+            ? [
+                BoxShadow(
+                  color: accentColor.withAlpha(40),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : AppShadows.sm,
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
+            HapticFeedback.lightImpact();
             if (widget.onModuleTap != null) {
               widget.onModuleTap!(module.id, context);
             }
           },
           onLongPress: () {
-            // Haptic Feedback for long press
             HapticFeedback.mediumImpact();
           },
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(22),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -417,35 +431,45 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    // Squircle Gradient Icon Badge
                     Container(
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
-                        color: accentColor.withAlpha(18),
-                        borderRadius: BorderRadius.circular(12),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            accentColor.withAlpha(35),
+                            accentColor.withAlpha(15),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: accentColor.withAlpha(35),
-                          width: 1,
+                          color: accentColor.withAlpha(45),
+                          width: 1.2,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: accentColor.withAlpha(25),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      child: Icon(iconData, color: accentColor, size: 20),
+                      child: Icon(iconData, color: accentColor, size: 22),
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: AppColors.cardBorder.withAlpha(60),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Icon(
-                            Icons.arrow_outward_rounded,
-                            size: 12,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ],
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBorder.withAlpha(40),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.arrow_outward_rounded,
+                        size: 13,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -458,9 +482,9 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w900,
                         color: AppColors.textPrimary,
-                        letterSpacing: -0.2,
+                        letterSpacing: -0.3,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -491,10 +515,10 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
 
     return Container(
       key: ValueKey(module.id),
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.cardBorder),
         boxShadow: AppShadows.sm,
       ),
@@ -506,30 +530,35 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
           decoration: BoxDecoration(
             color: accentColor.withAlpha(20),
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: accentColor.withAlpha(40)),
           ),
           child: Icon(iconData, color: accentColor, size: 22),
         ),
         title: Text(
           module.title,
           style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
+            fontSize: 14.5,
             color: AppColors.textPrimary,
           ),
         ),
         subtitle: Text(
           subtitleText,
-          style: TextStyle(
-            fontSize: 11,
-            color: AppColors.textSecondary,
-          ),
+          style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
         ),
-        trailing: Icon(
-          Icons.drag_handle_rounded,
-          color: AppColors.textSecondary,
+        trailing: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: AppColors.primaryAccent.withAlpha(20),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(
+            Icons.drag_handle_rounded,
+            color: AppColors.primaryAccent,
+            size: 20,
+          ),
         ),
       ),
     );
   }
 }
-

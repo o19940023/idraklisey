@@ -10,6 +10,7 @@ import '../../../core/utils/fin_code_formatter.dart';
 import '../../../core/widgets/profile_photo_picker.dart';
 import '../../../data/models/user_model.dart';
 import '../../../providers/app_state.dart';
+import '../../../core/utils/navigation_utils.dart';
 import '../widgets/credentials_result_dialog.dart';
 
 /// Şagird qeydiyyatı — 3 səhifəli addım-addım forma:
@@ -250,7 +251,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
             if (_step > 0) {
               setState(() => _step--);
             } else {
-              Navigator.pop(context);
+              handleBackNavigation(context);
             }
           },
         ),

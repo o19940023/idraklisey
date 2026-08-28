@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../providers/app_state.dart';
+import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/notification_model.dart';
 import '../dialogs/send_notification_dialog.dart';
 
@@ -73,7 +74,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
                 child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
               ),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => handleBackNavigation(context),
             ),
             actions: [
               if (unreadCount > 0)

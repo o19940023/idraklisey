@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../providers/app_state.dart';
+import '../../../core/utils/navigation_utils.dart';
 import '../../shared/screens/voice_room_screen.dart';
 
 class CreateMeetScreen extends StatefulWidget {
@@ -173,7 +174,7 @@ class _CreateMeetScreenState extends State<CreateMeetScreen> {
                 ),
                 child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
               ),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => handleBackNavigation(context),
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(

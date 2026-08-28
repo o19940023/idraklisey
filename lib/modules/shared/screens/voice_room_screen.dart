@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/app_state.dart';
+import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/meet_model.dart';
 
 class VoiceRoomScreen extends StatefulWidget {
@@ -118,7 +119,7 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
 
   void _leaveRoom() async {
     await _appState.leaveMeetRoom(widget.room.id);
-    if (mounted) Navigator.pop(context);
+    if (mounted) handleBackNavigation(context);
   }
 
   void _showParticipantOptions(
