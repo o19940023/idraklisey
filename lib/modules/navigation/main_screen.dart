@@ -2,9 +2,13 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:adaptive_platform_ui/adaptive_platform_ui.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/widgets/idrak_logo.dart';
+import '../../core/widgets/glass_container.dart';
+import '../../core/widgets/animated_button.dart';
+import '../../core/utils/haptic_helper.dart';
 import '../../data/models/user_preferences_model.dart';
 import '../../providers/app_state.dart';
 import '../../services/app_update_service.dart';
@@ -245,27 +249,23 @@ class _MainScreenState extends State<MainScreen> {
           builder: (modalContext, setModalState) {
             final activeNav = appState.getOrderedNavigation();
 
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.78,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(24),
-                ),
-                boxShadow: AppShadows.lg,
-              ),
-              child: Column(
-                children: [
-                  // Handle
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(top: 12, bottom: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.cardBorder,
-                      borderRadius: BorderRadius.circular(2),
+            return GlassModalSheet(
+              borderRadius: 28,
+              blur: 25,
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.78,
+                child: Column(
+                  children: [
+                    // Handle
+                    Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
 
                   // Header
                   Padding(
@@ -297,18 +297,22 @@ class _MainScreenState extends State<MainScreen> {
                             ),
                           ],
                         ),
-                        TextButton(
-                          onPressed: () async {
+                        AnimatedButton(
+                          onTap: () async {
+                            await HapticHelper.medium();
                             await appState.resetUserPreferences();
                             setModalState(() {});
                             if (mounted) setState(() {});
                           },
-                          child: const Text(
-                            'Sıfırla',
-                            style: TextStyle(
-                              color: AppColors.primaryAccent,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12.5,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: const Text(
+                              'Sıfırla',
+                              style: TextStyle(
+                                color: AppColors.primaryAccent,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12.5,
+                              ),
                             ),
                           ),
                         ),
@@ -739,301 +743,180 @@ class _MainScreenState extends State<MainScreen> {
           ],
         ),
         // 🆕 iOS Liquid Glass Sürüşən / Üzən Alt Menyu Dok Hədəfi (Dock DragTarget)
-        bottomNavigationBar: Padding(
-          padding: const EdgeInsets.only(left: 14, right: 14, bottom: 6),
-          child: DragTarget<ModuleItem>(
-            onWillAcceptWithDetails: (details) {
-              setState(() {
-                _isDragHoveredOnDock = true;
-              });
-              HapticFeedback.selectionClick();
-              return true;
-            },
-            onLeave: (data) {
-              setState(() {
-                _isDragHoveredOnDock = false;
-              });
-            },
-            onAcceptWithDetails: (details) async {
-              setState(() {
-                _isDragHoveredOnDock = false;
-              });
-              final module = details.data;
-              final success = await appState.pinModuleToNavigation(module);
-              if (success) {
-                HapticFeedback.heavyImpact();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          const Icon(
-                            Icons.check_circle_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 10),
-                          Text('✓ "${module.title}" alt menyuya bərkidildi!'),
-                        ],
-                      ),
-                      backgroundColor: AppColors.success,
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  );
-                }
-              } else {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text(
-                        'Bu modul artıq alt menyudadır və ya limit (5 tab) dolub.',
-                      ),
-                      backgroundColor: AppColors.warning,
-                      duration: const Duration(seconds: 2),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  );
-                }
-              }
-            },
-            builder: (context, candidateData, rejectedData) {
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(28),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeOutCubic,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          isDark
-                              ? const Color(0xFF10172A).withValues(alpha: 0.75)
-                              : Colors.black.withValues(alpha: 0.65),
-                          isDark
-                              ? const Color(0xFF0F172A).withValues(alpha: 0.70)
-                              : Colors.black.withValues(alpha: 0.60),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(
-                        color: _isDragHoveredOnDock
-                            ? AppColors.primaryAccent
-                            : Colors.white.withValues(alpha: 0.5),
-                        width: _isDragHoveredOnDock ? 2.2 : 1.0,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.25),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                        if (_isDragHoveredOnDock)
-                          BoxShadow(
-                            color: AppColors.primaryAccent.withAlpha(120),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          ),
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        // iOS Liquid Glass ust parlama cizgisi
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: Align(
-                            alignment: Alignment.topCenter,
-                            child: FractionallySizedBox(
-                              widthFactor: 0.55,
-                              child: Container(
-                                height: 1,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.transparent,
-                                      Colors.white.withValues(alpha: 0.85),
-                                      Colors.transparent,
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (_isDragHoveredOnDock)
-                              Container(
-                                width: double.infinity,
-                                margin: const EdgeInsets.only(bottom: 4),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: AppColors.accentGradient,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.push_pin_rounded,
-                                      color: Colors.white,
-                                      size: 13,
-                                    ),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      '📌 Alt menyuya bərkitmək üçün buraxın',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            if (orderedNavItems.isNotEmpty)
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceAround,
-                                children: List.generate(
-                                  orderedNavItems.length,
-                                  (index) {
-                                    final item = orderedNavItems[index];
-                                    final isSelected = activeTabIndex == index;
-                                    final iconData = isSelected
-                                        ? _getIconFromString(item.activeIcon)
-                                        : _getIconFromString(item.icon);
+        bottomNavigationBar: _buildBottomNavBar(appState, isDark),
+      ),
+    );
+  }
 
-                                    return Expanded(
-                                      child: GestureDetector(
-                                        behavior: HitTestBehavior.opaque,
-                                        onTap: () {
-                                          HapticFeedback.selectionClick();
-                                          appState.setCurrentTabIndex(index);
-                                        },
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 2,
-                                            horizontal: 2,
-                                          ),
-                                          child: AnimatedContainer(
-                                            duration: const Duration(
-                                              milliseconds: 220,
-                                            ),
-                                            curve: Curves.easeOutCubic,
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 6,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: isSelected
-                                                  ? AppColors.primaryAccent
-                                                        .withAlpha(
-                                                          isDark ? 35 : 22,
-                                                        )
-                                                  : Colors.transparent,
-                                              borderRadius:
-                                                  BorderRadius.circular(18),
-                                              border: isSelected
-                                                  ? Border.all(
-                                                      color: AppColors
-                                                          .primaryAccent
-                                                          .withAlpha(
-                                                            isDark ? 70 : 45,
-                                                          ),
-                                                      width: 1.0,
-                                                    )
-                                                  : null,
-                                            ),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                AnimatedScale(
-                                                  scale: isSelected
-                                                      ? 1.15
-                                                      : 1.0,
-                                                  duration: const Duration(
-                                                    milliseconds: 200,
-                                                  ),
-                                                  child: Icon(
-                                                    iconData,
-                                                    size: 20,
-                                                    color: isSelected
-                                                        ? AppColors
-                                                              .primaryAccent
-                                                        : Colors.white
-                                                              .withValues(
-                                                                alpha: 0.85,
-                                                              ),
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 3),
-                                                AnimatedDefaultTextStyle(
-                                                  duration: const Duration(
-                                                    milliseconds: 200,
-                                                  ),
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight: isSelected
-                                                        ? FontWeight.w900
-                                                        : FontWeight.w500,
-                                                    color: isSelected
-                                                        ? AppColors
-                                                              .primaryAccent
-                                                        : Colors.white
-                                                              .withValues(
-                                                                alpha: 0.85,
-                                                              ),
-                                                    letterSpacing: isSelected
-                                                        ? -0.2
-                                                        : 0,
-                                                  ),
-                                                  child: Text(
-                                                    item.label,
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
+  /// Build iPhone-style liquid glass bottom navigation with drag-drop support
+  Widget _buildBottomNavBar(AppState appState, bool isDark) {
+    final orderedNavItems = appState.orderedNavigationItems;
+    final activeTabIndex = appState.currentTabIndex;
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 14, right: 14, bottom: 6),
+      child: DragTarget<ModuleItem>(
+        onWillAcceptWithDetails: (details) {
+          setState(() {
+            _isDragHoveredOnDock = true;
+          });
+          HapticFeedback.selectionClick();
+          return true;
+        },
+        onLeave: (data) {
+          setState(() {
+            _isDragHoveredOnDock = false;
+          });
+        },
+        onAcceptWithDetails: (details) async {
+          setState(() {
+            _isDragHoveredOnDock = false;
+          });
+          final module = details.data;
+          final success = await appState.pinModuleToNavigation(module);
+          if (success) {
+            HapticFeedback.heavyImpact();
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Text('✓ "${module.title}" alt menyuya bərkidildi!'),
+                    ],
+                  ),
+                  backgroundColor: AppColors.success,
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               );
-            },
-          ),
-        ),
+            }
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text(
+                    'Bu modul artıq alt menyudadır və ya limit (5 tab) dolub.',
+                  ),
+                  backgroundColor: AppColors.warning,
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              );
+            }
+          }
+        },
+        builder: (context, candidateData, rejectedData) {
+          // Use AdaptiveBottomNavigationBar for TRUE iPhone liquid glass effect
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+              child: Stack(
+                children: [
+                  // Native iOS liquid glass bottom navigation
+                  AdaptiveBottomNavigationBar(
+                    selectedIndex: activeTabIndex,
+                    onTap: (index) {
+                      HapticHelper.light();
+                      appState.setCurrentTabIndex(index);
+                    },
+                    items: orderedNavItems.map((item) {
+                      final iconName = item.icon;
+                      final activeIconName = item.activeIcon;
+                      return AdaptiveNavigationDestination(
+                        icon: _getSFSymbolFromIconName(iconName),
+                        selectedIcon: _getSFSymbolFromIconName(activeIconName, filled: true),
+                        label: item.label,
+                      );
+                    }).toList(),
+                    useNativeBottomBar: true, // Enable native iOS 26 liquid glass
+                  ),
+                  // Drag-drop hover effect overlay
+                  if (_isDragHoveredOnDock)
+                    Positioned.fill(
+                      child: Container(
+                        margin: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: AppColors.accentGradient,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.primaryAccent,
+                            width: 2.2,
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.push_pin_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              '📌 Alt menyuya bərkitmək üçün buraxın',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
+  }
+
+  /// SF Symbol mapping for iOS native navigation
+  String _getSFSymbolFromIconName(String iconName, {bool filled = false}) {
+    final iconMap = {
+      'Icons.dashboard': filled ? 'square.grid.2x2.fill' : 'square.grid.2x2',
+      'Icons.dashboard_rounded': filled ? 'square.grid.2x2.fill' : 'square.grid.2x2',
+      'Icons.home': filled ? 'house.fill' : 'house',
+      'Icons.home_rounded': filled ? 'house.fill' : 'house',
+      'Icons.people': filled ? 'person.2.fill' : 'person.2',
+      'Icons.people_rounded': filled ? 'person.2.fill' : 'person.2',
+      'Icons.person': filled ? 'person.fill' : 'person',
+      'Icons.person_rounded': filled ? 'person.fill' : 'person',
+      'Icons.school': filled ? 'graduationcap.fill' : 'graduationcap',
+      'Icons.school_rounded': filled ? 'graduationcap.fill' : 'graduationcap',
+      'Icons.menu_book': filled ? 'book.fill' : 'book',
+      'Icons.menu_book_rounded': filled ? 'book.fill' : 'book',
+      'Icons.calendar_today': filled ? 'calendar.fill' : 'calendar',
+      'Icons.calendar_month': filled ? 'calendar.fill' : 'calendar',
+      'Icons.bar_chart': filled ? 'chart.bar.fill' : 'chart.bar',
+      'Icons.assessment': filled ? 'chart.bar.fill' : 'chart.bar',
+      'Icons.assignment': filled ? 'doc.text.fill' : 'doc.text',
+      'Icons.description': filled ? 'doc.text.fill' : 'doc.text',
+      'Icons.settings': filled ? 'gearshape.fill' : 'gearshape',
+      'Icons.settings_rounded': filled ? 'gearshape.fill' : 'gearshape',
+      'Icons.badge': filled ? 'person.crop.rectangle.fill' : 'person.crop.rectangle',
+      'Icons.badge_rounded': filled ? 'person.crop.rectangle.fill' : 'person.crop.rectangle',
+      'Icons.menu': filled ? 'line.3.horizontal.fill' : 'line.3.horizontal',
+      'Icons.more_horiz': filled ? 'ellipsis.circle.fill' : 'ellipsis.circle',
+      'Icons.explore': filled ? 'safari.fill' : 'safari',
+    };
+    
+    return iconMap[iconName] ?? (filled ? 'app.fill' : 'app');
   }
 }

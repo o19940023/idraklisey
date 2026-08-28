@@ -21,6 +21,9 @@ class ParentDashboardScreen extends StatelessWidget {
     final appState = Provider.of<AppState>(context);
     final student = appState.student;
     final isDark = appState.isDarkMode;
+    final parentHeaderBase = isDark
+        ? const Color(0xFF0F172A)
+        : const Color(0xFF132A25);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -29,15 +32,23 @@ class ParentDashboardScreen extends StatelessWidget {
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // Modern Teal-Emerald Parent Header Bar
+            // Keep the original collapsing header animation. Stretching its
+            // background also prevents the scaffold color showing on pull-down.
             SliverAppBar(
-              expandedHeight: 140.0,
+              expandedHeight: 140,
               floating: false,
-              pinned: true,
+              pinned: false,
+              stretch: true,
+              // This is a nested header below MainScreen's app bar. It should
+              // collapse fully instead of leaving an empty green toolbar.
+              primary: false,
+              toolbarHeight: 0,
+              collapsedHeight: 0,
               elevation: 0,
-              backgroundColor: isDark ? AppColors.darkSurface : AppColors.primary,
+              backgroundColor: parentHeaderBase,
               surfaceTintColor: Colors.transparent,
               flexibleSpace: FlexibleSpaceBar(
+                stretchModes: const [StretchMode.zoomBackground],
                 background: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -47,16 +58,21 @@ class ParentDashboardScreen extends StatelessWidget {
                           ? [
                               const Color(0xFF0F172A),
                               const Color(0xFF064E3B),
-                              const Color(0xFF1E293B),
+                              parentHeaderBase,
                             ]
                           : [
                               const Color(0xFF132A25),
                               const Color(0xFF0D5C4B),
-                              const Color(0xFF1A1B2E),
+                              parentHeaderBase,
                             ],
                     ),
                   ),
-                  padding: const EdgeInsets.only(left: 20, right: 20, top: 44, bottom: 12),
+                  padding: const EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 44,
+                    bottom: 12,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -65,7 +81,11 @@ class ParentDashboardScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF34D399), Color(0xFF059669), Color(0xFF10B981)],
+                            colors: [
+                              Color(0xFF34D399),
+                              Color(0xFF059669),
+                              Color(0xFF10B981),
+                            ],
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -91,11 +111,20 @@ class ParentDashboardScreen extends StatelessWidget {
                                 const IdrakLogo(size: 14),
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF10B981).withAlpha(35),
+                                    color: const Color(
+                                      0xFF10B981,
+                                    ).withAlpha(35),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFF34D399).withAlpha(50)),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFF34D399,
+                                      ).withAlpha(50),
+                                    ),
                                   ),
                                   child: const Text(
                                     'VALİDEYN KABİNETİ',
@@ -143,18 +172,26 @@ class ParentDashboardScreen extends StatelessWidget {
             if (appState.children.length > 1)
               SliverToBoxAdapter(
                 child: Container(
-                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFF132A25),
+                  color: parentHeaderBase,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.diversity_3_rounded, color: Color(0xFF34D399), size: 14),
+                          const Icon(
+                            Icons.diversity_3_rounded,
+                            color: Color(0xFF34D399),
+                            size: 14,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             'Övladlarınız (${appState.children.length}) — keçid üçün toxunun:',
-                            style: TextStyle(color: Colors.white.withAlpha(190), fontSize: 11, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              color: Colors.white.withAlpha(190),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ],
                       ),
@@ -164,7 +201,7 @@ class ParentDashboardScreen extends StatelessWidget {
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: appState.children.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
                           itemBuilder: (context, index) {
                             final child = appState.children[index];
                             final isActive = child.id == student.id;
@@ -172,23 +209,34 @@ class ParentDashboardScreen extends StatelessWidget {
                               onTap: () => appState.setActiveChild(child.id),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 180),
-                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                ),
                                 decoration: BoxDecoration(
                                   gradient: isActive
                                       ? const LinearGradient(
-                                          colors: [Color(0xFF059669), Color(0xFF10B981)],
+                                          colors: [
+                                            Color(0xFF059669),
+                                            Color(0xFF10B981),
+                                          ],
                                         )
                                       : null,
-                                  color: !isActive ? Colors.white.withAlpha(18) : null,
+                                  color: !isActive
+                                      ? Colors.white.withAlpha(18)
+                                      : null,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: isActive ? const Color(0xFF34D399) : Colors.white.withAlpha(40),
+                                    color: isActive
+                                        ? const Color(0xFF34D399)
+                                        : Colors.white.withAlpha(40),
                                     width: isActive ? 1.5 : 1,
                                   ),
                                   boxShadow: isActive
                                       ? [
                                           BoxShadow(
-                                            color: const Color(0xFF10B981).withAlpha(80),
+                                            color: const Color(
+                                              0xFF10B981,
+                                            ).withAlpha(80),
                                             blurRadius: 8,
                                             offset: const Offset(0, 2),
                                           ),
@@ -198,15 +246,21 @@ class ParentDashboardScreen extends StatelessWidget {
                                 child: Row(
                                   children: [
                                     Icon(
-                                      isActive ? Icons.child_care_rounded : Icons.child_care_outlined,
+                                      isActive
+                                          ? Icons.child_care_rounded
+                                          : Icons.child_care_outlined,
                                       size: 16,
-                                      color: isActive ? Colors.white : Colors.white70,
+                                      color: isActive
+                                          ? Colors.white
+                                          : Colors.white70,
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
                                       '${child.fullName.split(' ').first} • ${child.className}',
                                       style: TextStyle(
-                                        color: isActive ? Colors.white : Colors.white.withAlpha(200),
+                                        color: isActive
+                                            ? Colors.white
+                                            : Colors.white.withAlpha(200),
                                         fontSize: 12,
                                         fontWeight: FontWeight.w800,
                                       ),
@@ -224,19 +278,40 @@ class ParentDashboardScreen extends StatelessWidget {
               ),
 
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 90),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Quick Stats Bar
                     Row(
                       children: [
-                        _buildParentStatCard('GPA Balı', '${student.gpa}', Icons.star_rounded, const Color(0xFFF59E0B)),
+                        _buildParentStatCard(
+                          'GPA Balı',
+                          '${student.gpa}',
+                          Icons.star_rounded,
+                          const Color(0xFFF59E0B),
+                        ),
                         const SizedBox(width: 10),
-                        _buildParentStatCard('Davamiyyət', '${student.attendanceRate}%', Icons.check_circle_rounded, const Color(0xFF10B981)),
+                        _buildParentStatCard(
+                          'Davamiyyət',
+                          '${student.attendanceRate}%',
+                          Icons.check_circle_rounded,
+                          const Color(0xFF10B981),
+                        ),
                         const SizedBox(width: 10),
-                        _buildParentStatCard('Qan Qrupu', student.bloodGroup ?? '—', Icons.favorite_rounded, const Color(0xFFEF4444)),
+                        _buildParentStatCard(
+                          'Qan Qrupu',
+                          student.bloodGroup ?? '—',
+                          Icons.favorite_rounded,
+                          const Color(0xFFEF4444),
+                        ),
                       ],
                     ),
 
@@ -244,7 +319,8 @@ class ParentDashboardScreen extends StatelessWidget {
 
                     const SectionHeader(
                       title: 'Nəzarət və İzləmə Modulları',
-                      subtitle: 'Qiymətlər, davamiyyət, tibb və müəllim əlaqəsi',
+                      subtitle:
+                          'Qiymətlər, davamiyyət, tibb və müəllim əlaqəsi',
                       padding: EdgeInsets.zero,
                     ),
 
@@ -267,22 +343,53 @@ class ParentDashboardScreen extends StatelessWidget {
                       onModuleTap: (moduleId, ctx) {
                         switch (moduleId) {
                           case 'parent_timetable':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const TimetableMatrixScreen()));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) => const TimetableMatrixScreen(),
+                              ),
+                            );
                             break;
                           case 'parent_grades':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const GradesAnalyticsScreen()));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) => const GradesAnalyticsScreen(),
+                              ),
+                            );
                             break;
                           case 'parent_attendance':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const AttendanceCalendarScreen()));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const AttendanceCalendarScreen(),
+                              ),
+                            );
                             break;
                           case 'parent_medical':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const MedicalCardScreen()));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) => const MedicalCardScreen(),
+                              ),
+                            );
                             break;
                           case 'parent_tickets':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const ParentTicketsScreen()));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) => const ParentTicketsScreen(),
+                              ),
+                            );
                             break;
                           case 'parent_cafeteria':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const CafeteriaMenuScreen()));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) => const CafeteriaMenuScreen(),
+                              ),
+                            );
                             break;
                         }
                       },
@@ -297,7 +404,12 @@ class ParentDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildParentStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildParentStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
