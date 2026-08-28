@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -280,7 +280,7 @@ class _MainScreenState extends State<MainScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Alt Menyu vÉ™ SÃ¼rÉ™tli Tablar',
+                              'Alt Menyu və Sürətli Tablar',
                               style: TextStyle(
                                 fontSize: 16.5,
                                 fontWeight: FontWeight.w900,
@@ -289,7 +289,7 @@ class _MainScreenState extends State<MainScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'AÅŸaÄŸÄ±da gÃ¶rÃ¼nÉ™cÉ™k dÃ¼ymÉ™lÉ™ri seÃ§in vÉ™ sÄ±ralayÄ±n',
+                              'Aşağıda görünəcək düymələri seçin və sıralayın',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 color: AppColors.textSecondary,
@@ -304,7 +304,7 @@ class _MainScreenState extends State<MainScreen> {
                             if (mounted) setState(() {});
                           },
                           child: const Text(
-                            'SÄ±fÄ±rla',
+                            'Sıfırla',
                             style: TextStyle(
                               color: AppColors.primaryAccent,
                               fontWeight: FontWeight.w700,
@@ -346,7 +346,7 @@ class _MainScreenState extends State<MainScreen> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Aktiv tablar: ${activeNav.length} / 5 (DÉ™yiÅŸmÉ™k Ã¼Ã§Ã¼n modullarÄ± seÃ§in)',
+                                  'Aktiv tablar: ${activeNav.length} / 5 (Dəyişmək üçün modulları seçin)',
                                   style: const TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
@@ -360,7 +360,7 @@ class _MainScreenState extends State<MainScreen> {
                         const SizedBox(height: 16),
 
                         Text(
-                          'MÃ¶vcud BÃ¼tÃ¼n Modullar',
+                          'Mövcud Bütün Modullar',
                           style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w800,
@@ -456,7 +456,7 @@ class _MainScreenState extends State<MainScreen> {
                                           ).showSnackBar(
                                             const SnackBar(
                                               content: Text(
-                                                'Maksimum 5 alt menyu tabÄ± seÃ§ilÉ™ bilÉ™r.',
+                                                'Maksimum 5 alt menyu tabı seçilə bilər.',
                                               ),
                                               backgroundColor:
                                                   AppColors.warning,
@@ -567,7 +567,7 @@ class _MainScreenState extends State<MainScreen> {
     final currentUser = appState.currentUser!;
     final currentRole = currentUser.role;
 
-    // Ä°stifadÉ™Ã§i seÃ§imlÉ™rindÉ™n sÄ±ralÄ± navigation items
+    // İstifadəçi seçimlərindən sıralı navigation items
     final orderedNavItems = appState.getOrderedNavigation();
 
     List<Widget> screens;
@@ -592,7 +592,7 @@ class _MainScreenState extends State<MainScreen> {
         const BottomNavigationBarItem(
           icon: Icon(Icons.dashboard_outlined),
           activeIcon: Icon(Icons.dashboard_rounded),
-          label: 'Æsas',
+          label: 'Əsas',
         ),
       ];
     }
@@ -624,7 +624,7 @@ class _MainScreenState extends State<MainScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Text(
-                'Ä°DRAK LÄ°SEYÄ°',
+                'İDRAK LİSEYİ',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 14.5,
@@ -645,14 +645,14 @@ class _MainScreenState extends State<MainScreen> {
             ],
           ),
           actions: [
-            // Alt menyunu fÉ™rdilÉ™ÅŸdir dÃ¼ymÉ™si
+            // Alt menyunu fərdiləşdir düyməsi
             IconButton(
               icon: const Icon(
                 Icons.tune_rounded,
                 color: Colors.white70,
                 size: 20,
               ),
-              tooltip: 'Alt Menyunu FÉ™rdilÉ™ÅŸdir',
+              tooltip: 'Alt Menyunu Fərdiləşdir',
               onPressed: () => _showCustomizeNavSheet(context, appState),
             ),
             IconButton(
@@ -663,7 +663,7 @@ class _MainScreenState extends State<MainScreen> {
                 color: Colors.white,
                 size: 20,
               ),
-              tooltip: appState.isDarkMode ? 'AÃ§Ä±q rejim' : 'TÃ¼nd rejim',
+              tooltip: appState.isDarkMode ? 'Açıq rejim' : 'Tünd rejim',
               onPressed: () => appState.toggleTheme(),
             ),
             Stack(
@@ -675,7 +675,7 @@ class _MainScreenState extends State<MainScreen> {
                     color: Colors.white,
                     size: 22,
                   ),
-                  tooltip: 'BildiriÅŸlÉ™r & Elanlar',
+                  tooltip: 'Bildirişlər & Elanlar',
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -718,7 +718,7 @@ class _MainScreenState extends State<MainScreen> {
                 color: Colors.white70,
                 size: 20,
               ),
-              tooltip: 'Hesabdan Ã‡Ä±xÄ±ÅŸ',
+              tooltip: 'Hesabdan Çıxış',
               onPressed: () => appState.logout(),
             ),
             const SizedBox(width: 4),
@@ -727,8 +727,8 @@ class _MainScreenState extends State<MainScreen> {
         body: Stack(
           children: [
             IndexedStack(index: activeTabIndex, children: screens),
-            // ðŸ†• Yeni versiya banner-i â€” tÉ™tbiq iÅŸlÉ™mÉ™yÉ™ davam edir,
-            // amma banner maÄŸazadan yenilÉ™nÉ™nÉ™ qÉ™dÉ™r hÉ™r aÃ§Ä±lÄ±ÅŸda gÃ¶stÉ™rilir.
+            // 🆕 Yeni versiya banner-i — tətbiq işləməyə davam edir,
+            // amma banner mağazadan yenilənənə qədər hər açılışda göstərilir.
             if (updateService.updateAvailable)
               Positioned(
                 top: 8,
@@ -738,7 +738,7 @@ class _MainScreenState extends State<MainScreen> {
               ),
           ],
         ),
-        // ðŸ†• iOS Liquid Glass SÃ¼rÃ¼ÅŸÉ™n / ÃœzÉ™n Alt Menyu Dok HÉ™dÉ™fi (Dock DragTarget)
+        // 🆕 iOS Liquid Glass Sürüşən / Üzən Alt Menyu Dok Hədəfi (Dock DragTarget)
         bottomNavigationBar: Padding(
           padding: const EdgeInsets.only(left: 14, right: 14, bottom: 6),
           child: DragTarget<ModuleItem>(
@@ -773,9 +773,7 @@ class _MainScreenState extends State<MainScreen> {
                             size: 20,
                           ),
                           const SizedBox(width: 10),
-                          Text(
-                            'âœ“ "${module.title}" alt menyuya bÉ™rkidildi!',
-                          ),
+                          Text('✓ "${module.title}" alt menyuya bərkidildi!'),
                         ],
                       ),
                       backgroundColor: AppColors.success,
@@ -792,7 +790,7 @@ class _MainScreenState extends State<MainScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: const Text(
-                        'Bu modul artÄ±q alt menyudadÄ±r vÉ™ ya limit (5 tab) dolub.',
+                        'Bu modul artıq alt menyudadır və ya limit (5 tab) dolub.',
                       ),
                       backgroundColor: AppColors.warning,
                       duration: const Duration(seconds: 2),
@@ -853,7 +851,7 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                     child: Stack(
                       children: [
-                        // iOS Liquid Glass Ã¼st parlama Ã§izgisi
+                        // iOS Liquid Glass ust parlama cizgisi
                         Positioned(
                           top: 0,
                           left: 0,
@@ -901,7 +899,7 @@ class _MainScreenState extends State<MainScreen> {
                                     ),
                                     SizedBox(width: 6),
                                     Text(
-                                      'ðŸ“Œ Alt menyuya bÉ™rkitmÉ™k Ã¼Ã§Ã¼n buraxÄ±n',
+                                      '📌 Alt menyuya bərkitmək üçün buraxın',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 10.5,
