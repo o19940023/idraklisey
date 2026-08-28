@@ -115,7 +115,7 @@ class SettingsScreen extends StatelessWidget {
             trailing: Switch(
               value: appState.isDarkMode,
               onChanged: (_) => appState.toggleTheme(),
-              activeColor: AppColors.primary,
+              activeThumbColor: AppColors.primary,
             ),
             onTap: () => appState.toggleTheme(),
           ),
@@ -197,10 +197,7 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Versiyon 2.0.0 • 2025',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textTertiary,
-                  ),
+                  style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
                 ),
               ],
             ),
@@ -265,17 +262,12 @@ class SettingsScreen extends StatelessWidget {
         subtitle: subtitle != null
             ? Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               )
             : null,
-        trailing: trailing ??
-            Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.textTertiary,
-            ),
+        trailing:
+            trailing ??
+            Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
       ),
     );
   }
@@ -328,10 +320,10 @@ class SettingsScreen extends StatelessWidget {
             ),
             onPressed: () async {
               Navigator.pop(context);
-              
+
               // Sadece modülleri sıfırla
               await appState.resetUserPreferences();
-              
+
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -397,9 +389,9 @@ class SettingsScreen extends StatelessWidget {
             ),
             onPressed: () async {
               Navigator.pop(context);
-              
+
               await appState.resetUserPreferences();
-              
+
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -465,9 +457,9 @@ class SettingsScreen extends StatelessWidget {
             ),
             onPressed: () async {
               Navigator.pop(context);
-              
+
               await appState.resetUserPreferences();
-              
+
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(

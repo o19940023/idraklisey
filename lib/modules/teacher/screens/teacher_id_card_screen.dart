@@ -80,14 +80,21 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
     });
   }
 
-  void _showZoomedQrModal(BuildContext context, String data, String title, String subtitle) {
+  void _showZoomedQrModal(
+    BuildContext context,
+    String data,
+    String title,
+    String subtitle,
+  ) {
     HapticFeedback.selectionClick();
     showModalBottomSheet(
       context: context,
@@ -100,7 +107,9 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 36),
             decoration: BoxDecoration(
               color: const Color(0xFF0C101C).withAlpha(245),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
               border: Border.all(color: const Color(0xFFD4AF37).withAlpha(60)),
             ),
             child: Column(
@@ -127,7 +136,10 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: const TextStyle(color: Color(0xFFFFDF79), fontSize: 13),
+                  style: const TextStyle(
+                    color: Color(0xFFFFDF79),
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Container(
@@ -152,16 +164,25 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                 ),
                 const SizedBox(height: 20),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFD4AF37).withAlpha(20),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFD4AF37).withAlpha(40)),
+                    border: Border.all(
+                      color: const Color(0xFFD4AF37).withAlpha(40),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.verified_rounded, color: Color(0xFFFFDF79), size: 16),
+                      const Icon(
+                        Icons.verified_rounded,
+                        color: Color(0xFFFFDF79),
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'KOD: $data',
@@ -204,7 +225,11 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
       appBar: AppBar(
         title: const Text(
           'Rəqəmsal Müəllim Vəsiqəsi',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16.5, letterSpacing: -0.2),
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 16.5,
+            letterSpacing: -0.2,
+          ),
         ),
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
@@ -216,7 +241,11 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
               color: Colors.white.withAlpha(15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
+            child: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 16,
+              color: Colors.white,
+            ),
           ),
           onPressed: () => handleBackNavigation(context),
         ),
@@ -227,9 +256,15 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
               decoration: BoxDecoration(
                 color: const Color(0xFFD4AF37).withAlpha(25),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFD4AF37).withAlpha(60)),
+                border: Border.all(
+                  color: const Color(0xFFD4AF37).withAlpha(60),
+                ),
               ),
-              child: const Icon(Icons.qr_code_rounded, color: Color(0xFFFFDF79), size: 18),
+              child: const Icon(
+                Icons.qr_code_rounded,
+                color: Color(0xFFFFDF79),
+                size: 18,
+              ),
             ),
             tooltip: 'Böyük QR Göstər',
             onPressed: () => _showZoomedQrModal(
@@ -304,18 +339,26 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                             },
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 250),
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 9),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 9,
+                              ),
                               decoration: BoxDecoration(
                                 gradient: !_showBack
                                     ? const LinearGradient(
-                                        colors: [Color(0xFFD4AF37), Color(0xFFAA7A1E)],
+                                        colors: [
+                                          Color(0xFFD4AF37),
+                                          Color(0xFFAA7A1E),
+                                        ],
                                       )
                                     : null,
                                 borderRadius: BorderRadius.circular(25),
                                 boxShadow: !_showBack
                                     ? [
                                         BoxShadow(
-                                          color: const Color(0xFFD4AF37).withAlpha(80),
+                                          color: const Color(
+                                            0xFFD4AF37,
+                                          ).withAlpha(80),
                                           blurRadius: 12,
                                           offset: const Offset(0, 3),
                                         ),
@@ -327,13 +370,17 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                                   Icon(
                                     Icons.badge_rounded,
                                     size: 15,
-                                    color: !_showBack ? Colors.black87 : Colors.white60,
+                                    color: !_showBack
+                                        ? Colors.black87
+                                        : Colors.white60,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     'Ön Tərəf',
                                     style: TextStyle(
-                                      color: !_showBack ? Colors.black87 : Colors.white60,
+                                      color: !_showBack
+                                          ? Colors.black87
+                                          : Colors.white60,
                                       fontWeight: FontWeight.w900,
                                       fontSize: 12.5,
                                     ),
@@ -348,18 +395,26 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                             },
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 250),
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 9),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 9,
+                              ),
                               decoration: BoxDecoration(
                                 gradient: _showBack
                                     ? const LinearGradient(
-                                        colors: [Color(0xFFD4AF37), Color(0xFFAA7A1E)],
+                                        colors: [
+                                          Color(0xFFD4AF37),
+                                          Color(0xFFAA7A1E),
+                                        ],
                                       )
                                     : null,
                                 borderRadius: BorderRadius.circular(25),
                                 boxShadow: _showBack
                                     ? [
                                         BoxShadow(
-                                          color: const Color(0xFFD4AF37).withAlpha(80),
+                                          color: const Color(
+                                            0xFFD4AF37,
+                                          ).withAlpha(80),
                                           blurRadius: 12,
                                           offset: const Offset(0, 3),
                                         ),
@@ -371,13 +426,17 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                                   Icon(
                                     Icons.admin_panel_settings_rounded,
                                     size: 15,
-                                    color: _showBack ? Colors.black87 : Colors.white60,
+                                    color: _showBack
+                                        ? Colors.black87
+                                        : Colors.white60,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     'Arxa Tərəf (Səlahiyyətlər)',
                                     style: TextStyle(
-                                      color: _showBack ? Colors.black87 : Colors.white60,
+                                      color: _showBack
+                                          ? Colors.black87
+                                          : Colors.white60,
                                       fontWeight: FontWeight.w900,
                                       fontSize: 12.5,
                                     ),
@@ -424,7 +483,10 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
 
                 // Tap & Flip Hint Pill
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha(8),
                     borderRadius: BorderRadius.circular(20),
@@ -433,7 +495,11 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.screen_rotation_rounded, color: Color(0xFFFFDF79), size: 15),
+                      const Icon(
+                        Icons.screen_rotation_rounded,
+                        color: Color(0xFFFFDF79),
+                        size: 15,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Səlahiyyət və qeydlərə baxmaq üçün vəsiqəyə toxunun',
@@ -456,15 +522,15 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                       child: GestureDetector(
                         onTap: _triggerNfc,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                            horizontal: 12,
+                          ),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF221E14),
-                                Color(0xFF131109),
-                              ],
+                              colors: [Color(0xFF221E14), Color(0xFF131109)],
                             ),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
@@ -494,19 +560,28 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                                 ),
                                 child: Icon(
                                   Icons.nfc_rounded,
-                                  color: _isNfcActive ? Colors.black87 : const Color(0xFFFFDF79),
+                                  color: _isNfcActive
+                                      ? Colors.black87
+                                      : const Color(0xFFFFDF79),
                                   size: 22,
                                 ),
                               ),
                               const SizedBox(height: 8),
                               const Text(
                                 'Müəllim NFC',
-                                style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 _isNfcActive ? 'Oxunur...' : 'Turniket & Otaq',
-                                style: TextStyle(color: Colors.white.withAlpha(140), fontSize: 10.5),
+                                style: TextStyle(
+                                  color: Colors.white.withAlpha(140),
+                                  fontSize: 10.5,
+                                ),
                               ),
                             ],
                           ),
@@ -523,18 +598,20 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                           '$teacherName • $teacherPosition',
                         ),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                            horizontal: 12,
+                          ),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF131A29),
-                                Color(0xFF0B101E),
-                              ],
+                              colors: [Color(0xFF131A29), Color(0xFF0B101E)],
                             ),
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: Colors.white.withAlpha(15)),
+                            border: Border.all(
+                              color: Colors.white.withAlpha(15),
+                            ),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withAlpha(60),
@@ -560,12 +637,19 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                               const SizedBox(height: 8),
                               const Text(
                                 'QR Skaner',
-                                style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 'Böyük ekranda aç',
-                                style: TextStyle(color: Colors.white.withAlpha(140), fontSize: 10.5),
+                                style: TextStyle(
+                                  color: Colors.white.withAlpha(140),
+                                  fontSize: 10.5,
+                                ),
                               ),
                             ],
                           ),
@@ -583,7 +667,9 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                   decoration: BoxDecoration(
                     color: const Color(0xFF0D1220),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFD4AF37).withAlpha(40)),
+                    border: Border.all(
+                      color: const Color(0xFFD4AF37).withAlpha(40),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -593,7 +679,11 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                           color: const Color(0xFFD4AF37).withAlpha(20),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.verified_rounded, color: Color(0xFFFFDF79), size: 22),
+                        child: const Icon(
+                          Icons.verified_rounded,
+                          color: Color(0xFFFFDF79),
+                          size: 22,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -604,7 +694,11 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                               children: [
                                 const Text(
                                   'Təsdiqlənmiş Pedaqoq Kimliyi',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13.5,
+                                  ),
                                 ),
                                 const SizedBox(width: 6),
                                 Container(
@@ -620,7 +714,11 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                             const SizedBox(height: 3),
                             Text(
                               'Elektron jurnal, imtahan nəticələri və tədris sistemlərinə tam səlahiyyətli giriş.',
-                              style: TextStyle(color: Colors.white.withAlpha(160), fontSize: 11, height: 1.3),
+                              style: TextStyle(
+                                color: Colors.white.withAlpha(160),
+                                fontSize: 11,
+                                height: 1.3,
+                              ),
                             ),
                           ],
                         ),
@@ -652,14 +750,13 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF141724),
-            Color(0xFF1E1F30),
-            Color(0xFF10121D),
-          ],
+          colors: [Color(0xFF141724), Color(0xFF1E1F30), Color(0xFF10121D)],
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFD4AF37).withAlpha(180), width: 1.8),
+        border: Border.all(
+          color: const Color(0xFFD4AF37).withAlpha(180),
+          width: 1.8,
+        ),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFD4AF37).withAlpha(60),
@@ -707,7 +804,9 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                             decoration: BoxDecoration(
                               color: const Color(0xFFD4AF37).withAlpha(20),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFD4AF37).withAlpha(40)),
+                              border: Border.all(
+                                color: const Color(0xFFD4AF37).withAlpha(40),
+                              ),
                             ),
                             child: const IdrakLogo(size: 28),
                           ),
@@ -743,7 +842,11 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                           color: const Color(0xFFD4AF37).withAlpha(15),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.contactless_rounded, color: Color(0xFFFFDF79), size: 20),
+                        child: const Icon(
+                          Icons.contactless_rounded,
+                          color: Color(0xFFFFDF79),
+                          size: 20,
+                        ),
                       ),
                     ],
                   ),
@@ -756,7 +859,10 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                     children: [
                       _buildGoldEmvChip(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFFD4AF37), Color(0xFF8C6B1C)],
@@ -771,7 +877,11 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.workspace_premium_rounded, color: Colors.black87, size: 11),
+                            Icon(
+                              Icons.workspace_premium_rounded,
+                              color: Colors.black87,
+                              size: 11,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'FACULTY PASS',
@@ -800,7 +910,10 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                         height: 92,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFFFDF79), width: 1.8),
+                          border: Border.all(
+                            color: const Color(0xFFFFDF79),
+                            width: 1.8,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: const Color(0xFFD4AF37).withAlpha(50),
@@ -817,9 +930,13 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                               Image.network(
                                 user?.photoUrl ?? '',
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
+                                errorBuilder: (_, _, _) => Container(
                                   color: const Color(0xFF1E293B),
-                                  child: const Icon(Icons.person_outline_rounded, color: Color(0xFFFFDF79), size: 38),
+                                  child: const Icon(
+                                    Icons.person_outline_rounded,
+                                    color: Color(0xFFFFDF79),
+                                    size: 38,
+                                  ),
                                 ),
                               ),
                               Positioned(
@@ -827,7 +944,9 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                                 left: 0,
                                 right: 0,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 2,
+                                  ),
                                   color: Colors.black.withAlpha(180),
                                   child: const Text(
                                     'PEDAQOQ',
@@ -867,8 +986,12 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                             const SizedBox(height: 8),
                             _buildCardField('İDRAK KODU', teacherCode),
                             const SizedBox(height: 4),
-                            _buildCardField('VƏZİFƏ / KAFEDRA', teacherPosition),
-                            if (user?.finCode != null && user!.finCode!.isNotEmpty) ...[
+                            _buildCardField(
+                              'VƏZİFƏ / KAFEDRA',
+                              teacherPosition,
+                            ),
+                            if (user?.finCode != null &&
+                                user!.finCode!.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               _buildCardField('FIN KOD', user.finCode!),
                             ],
@@ -901,8 +1024,14 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            classes.isNotEmpty ? classes.join(' • ') : '9B • 10A • 11A',
-                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            classes.isNotEmpty
+                                ? classes.join(' • ')
+                                : '9B • 10A • 11A',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
@@ -958,14 +1087,13 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
         gradient: const LinearGradient(
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
-          colors: [
-            Color(0xFF141724),
-            Color(0xFF1E1F30),
-            Color(0xFF10121D),
-          ],
+          colors: [Color(0xFF141724), Color(0xFF1E1F30), Color(0xFF10121D)],
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFD4AF37).withAlpha(180), width: 1.8),
+        border: Border.all(
+          color: const Color(0xFFD4AF37).withAlpha(180),
+          width: 1.8,
+        ),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFD4AF37).withAlpha(60),
@@ -1032,7 +1160,11 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                         children: [
                           Row(
                             children: const [
-                              Icon(Icons.security_rounded, color: Color(0xFFFFDF79), size: 16),
+                              Icon(
+                                Icons.security_rounded,
+                                color: Color(0xFFFFDF79),
+                                size: 16,
+                              ),
                               SizedBox(width: 6),
                               Text(
                                 'SƏLAHİYYƏT VƏ İCAZƏ BAZASI',
@@ -1046,11 +1178,16 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                             ],
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.success.withAlpha(25),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: AppColors.success.withAlpha(50)),
+                              border: Border.all(
+                                color: AppColors.success.withAlpha(50),
+                              ),
                             ),
                             child: const Text(
                               'TAM İCAZƏLİ',
@@ -1076,15 +1213,38 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                         ),
                         child: Column(
                           children: [
-                            _buildBackRow('📚 Elektron Jurnal & Qiymətlər:', 'Aktiv (Tam İcazə)'),
+                            _buildBackRow(
+                              '📚 Elektron Jurnal & Qiymətlər:',
+                              'Aktiv (Tam İcazə)',
+                            ),
                             const SizedBox(height: 5),
-                            _buildBackRow('🏛️ Sinif İdarəsi:', classes.isNotEmpty ? classes.join(', ') : 'Təyin edilib'),
+                            _buildBackRow(
+                              '🏛️ Sinif İdarəsi:',
+                              classes.isNotEmpty
+                                  ? classes.join(', ')
+                                  : 'Təyin edilib',
+                            ),
                             const SizedBox(height: 5),
-                            _buildBackRow('🍽️ Yeməkxana Menyu Nəzarəti:', perms?.canManageCafeteria == true ? 'Aktiv' : 'Passiv'),
+                            _buildBackRow(
+                              '🍽️ Yeməkxana Menyu Nəzarəti:',
+                              perms?.canManageCafeteria == true
+                                  ? 'Aktiv'
+                                  : 'Passiv',
+                            ),
                             const SizedBox(height: 5),
-                            _buildBackRow('🏥 Tibbi Qeyd İcazəsi:', perms?.canManageMedical == true ? 'Aktiv' : 'Yalnız Baxış'),
+                            _buildBackRow(
+                              '🏥 Tibbi Qeyd İcazəsi:',
+                              perms?.canManageMedical == true
+                                  ? 'Aktiv'
+                                  : 'Yalnız Baxış',
+                            ),
                             const SizedBox(height: 5),
-                            _buildBackRow('📦 İnventar & Texniki Müraciət:', perms?.canManageInventory == true ? 'Aktiv' : 'Aktiv'),
+                            _buildBackRow(
+                              '📦 İnventar & Texniki Müraciət:',
+                              perms?.canManageInventory == true
+                                  ? 'Aktiv'
+                                  : 'Aktiv',
+                            ),
                           ],
                         ),
                       ),
@@ -1094,14 +1254,21 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                       // Disclaimer Text
                       Text(
                         'Bu rəqəmsal vəsiqə İdrak Liseyi pedaqoji heyətinə məxsusdur. İtirilmiş kart aşkar edildikdə lisey rəhbərliyinə təhvil verilməlidir.',
-                        style: TextStyle(color: Colors.white.withAlpha(130), fontSize: 8.5, height: 1.3),
+                        style: TextStyle(
+                          color: Colors.white.withAlpha(130),
+                          fontSize: 8.5,
+                          height: 1.3,
+                        ),
                       ),
 
                       const SizedBox(height: 10),
 
                       // Digital Stamp & Token
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withAlpha(8),
                           borderRadius: BorderRadius.circular(10),
@@ -1115,7 +1282,11 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                               children: [
                                 const Text(
                                   'PEDAQOJİ İMZA VƏ TOKEN',
-                                  style: TextStyle(color: Colors.white38, fontSize: 7.5, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 7.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
@@ -1131,7 +1302,11 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                             ),
                             Row(
                               children: const [
-                                Icon(Icons.verified_rounded, color: Color(0xFFFFDF79), size: 14),
+                                Icon(
+                                  Icons.verified_rounded,
+                                  color: Color(0xFFFFDF79),
+                                  size: 14,
+                                ),
                                 SizedBox(width: 4),
                                 Text(
                                   'FACULTY VERIFIED',
@@ -1192,7 +1367,11 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
       children: [
         Text(
           title,
-          style: const TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         Flexible(
           child: Text(
@@ -1218,11 +1397,7 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFFFEEA9),
-            Color(0xFFD4AF37),
-            Color(0xFF8C6B1C),
-          ],
+          colors: [Color(0xFFFFEEA9), Color(0xFFD4AF37), Color(0xFF8C6B1C)],
         ),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: const Color(0xFFFFEEA9), width: 0.8),

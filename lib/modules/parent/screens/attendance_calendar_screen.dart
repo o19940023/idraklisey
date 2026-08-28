@@ -11,7 +11,8 @@ class AttendanceCalendarScreen extends StatefulWidget {
   const AttendanceCalendarScreen({super.key});
 
   @override
-  State<AttendanceCalendarScreen> createState() => _AttendanceCalendarScreenState();
+  State<AttendanceCalendarScreen> createState() =>
+      _AttendanceCalendarScreenState();
 }
 
 class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
@@ -44,7 +45,8 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
 
       for (final p in att.periodDetails) {
         totalPeriods++;
-        if (p.status == AttendanceStatus.present || p.status == AttendanceStatus.late) {
+        if (p.status == AttendanceStatus.present ||
+            p.status == AttendanceStatus.late) {
           attendedPeriods++;
         }
       }
@@ -52,13 +54,22 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
 
     final int calculatedRate = totalPeriods > 0
         ? ((attendedPeriods / totalPeriods) * 100).round()
-        : (currentStudent.attendanceRate > 0 ? currentStudent.attendanceRate : 100);
+        : (currentStudent.attendanceRate > 0
+              ? currentStudent.attendanceRate
+              : 100);
 
     final selectedDayData = attendanceMap[_selectedDay];
     final monthName = DateFormat('MMMM yyyy').format(_currentDate);
 
-    final int daysInMonth = DateUtils.getDaysInMonth(_currentDate.year, _currentDate.month);
-    final firstDayWeekday = DateTime(_currentDate.year, _currentDate.month, 1).weekday;
+    final int daysInMonth = DateUtils.getDaysInMonth(
+      _currentDate.year,
+      _currentDate.month,
+    );
+    final firstDayWeekday = DateTime(
+      _currentDate.year,
+      _currentDate.month,
+      1,
+    ).weekday;
     final emptyLeadingSlots = firstDayWeekday - 1;
 
     return Scaffold(
@@ -89,7 +100,11 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.calendar_month_outlined, color: AppColors.primaryAccent, size: 20),
+                          const Icon(
+                            Icons.calendar_month_outlined,
+                            color: AppColors.primaryAccent,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             monthName,
@@ -102,15 +117,24 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.success.withAlpha(30),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.success.withAlpha(60)),
+                          border: Border.all(
+                            color: AppColors.success.withAlpha(60),
+                          ),
                         ),
                         child: Text(
                           'Davamiyyət: $calculatedRate%',
-                          style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -121,9 +145,24 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildSummaryStatItem('İştirak', '$presentCount Gün', AppColors.success, Icons.check_circle_outline_rounded),
-                      _buildSummaryStatItem('Gecikmə', '$lateCount Dəfə', AppColors.warning, Icons.schedule_outlined),
-                      _buildSummaryStatItem('Qayıb', '$absentCount Gün', AppColors.danger, Icons.cancel_outlined),
+                      _buildSummaryStatItem(
+                        'İştirak',
+                        '$presentCount Gün',
+                        AppColors.success,
+                        Icons.check_circle_outline_rounded,
+                      ),
+                      _buildSummaryStatItem(
+                        'Gecikmə',
+                        '$lateCount Dəfə',
+                        AppColors.warning,
+                        Icons.schedule_outlined,
+                      ),
+                      _buildSummaryStatItem(
+                        'Qayıb',
+                        '$absentCount Gün',
+                        AppColors.danger,
+                        Icons.cancel_outlined,
+                      ),
                     ],
                   ),
                 ],
@@ -136,10 +175,26 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildLegendItem('İştirak', AppColors.success, Icons.check_circle_outline_rounded),
-                  _buildLegendItem('Gecikmə', AppColors.warning, Icons.schedule_outlined),
-                  _buildLegendItem('Qayıb', AppColors.danger, Icons.cancel_outlined),
-                  _buildLegendItem('Tətil', AppColors.textMuted, Icons.beach_access_outlined),
+                  _buildLegendItem(
+                    'İştirak',
+                    AppColors.success,
+                    Icons.check_circle_outline_rounded,
+                  ),
+                  _buildLegendItem(
+                    'Gecikmə',
+                    AppColors.warning,
+                    Icons.schedule_outlined,
+                  ),
+                  _buildLegendItem(
+                    'Qayıb',
+                    AppColors.danger,
+                    Icons.cancel_outlined,
+                  ),
+                  _buildLegendItem(
+                    'Tətil',
+                    AppColors.textMuted,
+                    Icons.beach_access_outlined,
+                  ),
                 ],
               ),
             ),
@@ -179,12 +234,13 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 7,
-                      mainAxisSpacing: 6,
-                      crossAxisSpacing: 6,
-                      childAspectRatio: 0.95,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisSpacing: 6,
+                          crossAxisSpacing: 6,
+                          childAspectRatio: 0.95,
+                        ),
                     itemCount: emptyLeadingSlots + daysInMonth,
                     itemBuilder: (context, index) {
                       if (index < emptyLeadingSlots) {
@@ -206,12 +262,16 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? AppColors.primaryAccent.withAlpha(25)
-                                : (isToday ? AppColors.background : AppColors.surface),
+                                : (isToday
+                                      ? AppColors.background
+                                      : AppColors.surface),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: isSelected
                                   ? AppColors.primaryAccent
-                                  : (isToday ? AppColors.primaryAccent.withAlpha(60) : AppColors.cardBorder),
+                                  : (isToday
+                                        ? AppColors.primaryAccent.withAlpha(60)
+                                        : AppColors.cardBorder),
                               width: isSelected ? 1.8 : 1,
                             ),
                           ),
@@ -222,8 +282,12 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
                                 '$dayNum',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: isSelected || isToday ? FontWeight.w800 : FontWeight.w500,
-                                  color: isSelected ? AppColors.primaryAccent : AppColors.textPrimary,
+                                  fontWeight: isSelected || isToday
+                                      ? FontWeight.w800
+                                      : FontWeight.w500,
+                                  color: isSelected
+                                      ? AppColors.primaryAccent
+                                      : AppColors.textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -256,7 +320,8 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
               subtitle: 'Saatlar üzrə dərs davamiyyəti və qeydlər',
             ),
 
-            if (selectedDayData != null && selectedDayData.periodDetails.isNotEmpty) ...[
+            if (selectedDayData != null &&
+                selectedDayData.periodDetails.isNotEmpty) ...[
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 padding: const EdgeInsets.all(14),
@@ -284,7 +349,10 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
                           const SizedBox(height: 4),
                           Text(
                             'Qeyd: ${selectedDayData.note}',
-                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                            ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -299,7 +367,8 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: selectedDayData.periodDetails.length,
-                      separatorBuilder: (_, __) => Divider(color: AppColors.cardBorder, height: 1),
+                      separatorBuilder: (_, _) =>
+                          Divider(color: AppColors.cardBorder, height: 1),
                       itemBuilder: (context, idx) {
                         final period = selectedDayData.periodDetails[idx];
                         return Padding(
@@ -310,21 +379,34 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                      vertical: 3,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primaryAccent.withAlpha(15),
+                                      color: AppColors.primaryAccent.withAlpha(
+                                        15,
+                                      ),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
                                       '${idx + 1}-ci Dərs',
-                                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.primaryAccent),
+                                      style: const TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primaryAccent,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       period.subject,
-                                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary,
+                                      ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -352,18 +434,29 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(Icons.event_busy_outlined, size: 40, color: AppColors.textMuted),
+                      Icon(
+                        Icons.event_busy_outlined,
+                        size: 40,
+                        color: AppColors.textMuted,
+                      ),
                       const SizedBox(height: 10),
                       Text(
                         'Bu gün üçün heç bir dərs davamiyyət qeydi yoxdur.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Dərslər başladıqda status burada canlı görünəcək.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -376,14 +469,23 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
     );
   }
 
-  Widget _buildSummaryStatItem(String label, String value, Color color, IconData icon) {
+  Widget _buildSummaryStatItem(
+    String label,
+    String value,
+    Color color,
+    IconData icon,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color, size: 20),
         const SizedBox(height: 3),
         Text(
           value,
-          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         Text(
           label,
@@ -400,7 +502,11 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
         const SizedBox(width: 3),
         Text(
           title,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
         ),
       ],
     );
@@ -409,15 +515,31 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
   Widget _buildStatusIcon(AttendanceStatus? status, {double size = 16}) {
     switch (status) {
       case AttendanceStatus.present:
-        return Icon(Icons.check_circle_outline_rounded, color: AppColors.success, size: size);
+        return Icon(
+          Icons.check_circle_outline_rounded,
+          color: AppColors.success,
+          size: size,
+        );
       case AttendanceStatus.late:
-        return Icon(Icons.schedule_outlined, color: AppColors.warning, size: size);
+        return Icon(
+          Icons.schedule_outlined,
+          color: AppColors.warning,
+          size: size,
+        );
       case AttendanceStatus.absent:
         return Icon(Icons.cancel_outlined, color: AppColors.danger, size: size);
       case AttendanceStatus.holiday:
-        return Icon(Icons.beach_access_outlined, color: AppColors.textMuted, size: size);
+        return Icon(
+          Icons.beach_access_outlined,
+          color: AppColors.textMuted,
+          size: size,
+        );
       default:
-        return Icon(Icons.remove_circle_outline_rounded, color: AppColors.cardBorder, size: size);
+        return Icon(
+          Icons.remove_circle_outline_rounded,
+          color: AppColors.cardBorder,
+          size: size,
+        );
     }
   }
 
@@ -436,7 +558,14 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
             children: [
               Icon(Icons.check_rounded, color: AppColors.success, size: 12),
               SizedBox(width: 3),
-              Text('İştirak Edib', style: TextStyle(color: AppColors.success, fontSize: 10, fontWeight: FontWeight.bold)),
+              Text(
+                'İştirak Edib',
+                style: TextStyle(
+                  color: AppColors.success,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         );
@@ -453,7 +582,14 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
             children: [
               Icon(Icons.schedule_outlined, color: AppColors.warning, size: 12),
               SizedBox(width: 3),
-              Text('Gecikib', style: TextStyle(color: AppColors.warning, fontSize: 10, fontWeight: FontWeight.bold)),
+              Text(
+                'Gecikib',
+                style: TextStyle(
+                  color: AppColors.warning,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         );
@@ -470,7 +606,14 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
             children: [
               Icon(Icons.cancel_outlined, color: AppColors.danger, size: 12),
               SizedBox(width: 3),
-              Text('Qayıb', style: TextStyle(color: AppColors.danger, fontSize: 10, fontWeight: FontWeight.bold)),
+              Text(
+                'Qayıb',
+                style: TextStyle(
+                  color: AppColors.danger,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         );
@@ -481,7 +624,14 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
             color: AppColors.cardBorder,
             borderRadius: BorderRadius.circular(6),
           ),
-          child: Text('Tətil', style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.bold)),
+          child: Text(
+            'Tətil',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         );
     }
   }
