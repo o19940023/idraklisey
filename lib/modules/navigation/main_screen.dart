@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_shadows.dart';
 import '../../core/widgets/idrak_logo.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/widgets/animated_button.dart';
@@ -266,250 +265,256 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                     ),
 
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Alt Menyu və Sürətli Tablar',
-                              style: TextStyle(
-                                fontSize: 16.5,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Aşağıda görünəcək düymələri seçin və sıralayın',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        AnimatedButton(
-                          onTap: () async {
-                            await HapticHelper.medium();
-                            await appState.resetUserPreferences();
-                            setModalState(() {});
-                            if (mounted) setState(() {});
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            child: const Text(
-                              'Sıfırla',
-                              style: TextStyle(
-                                color: AppColors.primaryAccent,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const Divider(height: 1),
-
-                  // Content Tabs List
-                  Expanded(
-                    child: ListView(
+                    // Header
+                    Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+                        horizontal: 20,
+                        vertical: 10,
                       ),
-                      children: [
-                        // Currently pinned
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryAccent.withAlpha(12),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: AppColors.primaryAccent.withAlpha(40),
-                            ),
-                          ),
-                          child: Row(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(
-                                Icons.info_outline_rounded,
-                                size: 16,
-                                color: AppColors.primaryAccent,
+                              Text(
+                                'Alt Menyu və Sürətli Tablar',
+                                style: TextStyle(
+                                  fontSize: 16.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.textPrimary,
+                                ),
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Aktiv tablar: ${activeNav.length} / 5 (Dəyişmək üçün modulları seçin)',
-                                  style: const TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.primaryAccent,
-                                  ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Aşağıda görünəcək düymələri seçin və sıralayın',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: AppColors.textSecondary,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        Text(
-                          'Mövcud Bütün Modullar',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        for (final module in availableModules) ...[
-                          Builder(
-                            builder: (context) {
-                              final isPinned = activeNav.any(
-                                (n) => n.id == module.id,
-                              );
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                decoration: BoxDecoration(
-                                  color: isPinned
-                                      ? AppColors.surface
-                                      : AppColors.cardBorder.withAlpha(20),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: isPinned
-                                        ? AppColors.primaryAccent.withAlpha(60)
-                                        : AppColors.cardBorder,
-                                    width: isPinned ? 1.5 : 1,
-                                  ),
-                                ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 2,
-                                  ),
-                                  leading: Container(
-                                    width: 36,
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      color: isPinned
-                                          ? AppColors.primaryAccent.withAlpha(
-                                              20,
-                                            )
-                                          : Colors.grey.withAlpha(25),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                      _getIconFromString(module.icon),
-                                      color: isPinned
-                                          ? AppColors.primaryAccent
-                                          : AppColors.textSecondary,
-                                      size: 18,
-                                    ),
-                                  ),
-                                  title: Text(
-                                    module.title,
-                                    style: TextStyle(
-                                      fontSize: 13.5,
-                                      fontWeight: isPinned
-                                          ? FontWeight.w800
-                                          : FontWeight.w600,
-                                      color: isPinned
-                                          ? AppColors.textPrimary
-                                          : AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    module.subtitle,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textMuted,
-                                    ),
-                                  ),
-                                  trailing: IconButton(
-                                    icon: Icon(
-                                      isPinned
-                                          ? Icons.check_circle_rounded
-                                          : Icons.add_circle_outline_rounded,
-                                      color: isPinned
-                                          ? AppColors.primaryAccent
-                                          : AppColors.textMuted,
-                                      size: 22,
-                                    ),
-                                    onPressed: () async {
-                                      if (isPinned) {
-                                        await appState.removeNavigationItem(
-                                          module.id,
-                                        );
-                                      } else {
-                                        final success = await appState
-                                            .pinModuleToNavigation(module);
-                                        if (!success && context.mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'Maksimum 5 alt menyu tabı seçilə bilər.',
-                                              ),
-                                              backgroundColor:
-                                                  AppColors.warning,
-                                              duration: Duration(seconds: 2),
-                                            ),
-                                          );
-                                        }
-                                      }
-                                      setModalState(() {});
-                                      if (mounted) setState(() {});
-                                    },
-                                  ),
-                                ),
-                              );
+                          AnimatedButton(
+                            onTap: () async {
+                              await HapticHelper.medium();
+                              await appState.resetUserPreferences();
+                              setModalState(() {});
+                              if (mounted) setState(() {});
                             },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              child: const Text(
+                                'Sıfırla',
+                                style: TextStyle(
+                                  color: AppColors.primaryAccent,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
-                  ),
 
-                  // Bottom Button
-                  SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryAccent,
-                            shape: RoundedRectangleBorder(
+                    const Divider(height: 1),
+
+                    // Content Tabs List
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        children: [
+                          // Currently pinned
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryAccent.withAlpha(12),
                               borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: AppColors.primaryAccent.withAlpha(40),
+                              ),
                             ),
-                            elevation: 0,
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 16,
+                                  color: AppColors.primaryAccent,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Aktiv tablar: ${activeNav.length} / 5 (Dəyişmək üçün modulları seçin)',
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primaryAccent,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          child: const Text(
-                            'Tamamla',
+                          const SizedBox(height: 16),
+
+                          Text(
+                            'Mövcud Bütün Modullar',
                             style: TextStyle(
-                              color: Colors.white,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.w800,
-                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          for (final module in availableModules) ...[
+                            Builder(
+                              builder: (context) {
+                                final isPinned = activeNav.any(
+                                  (n) => n.id == module.id,
+                                );
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  decoration: BoxDecoration(
+                                    color: isPinned
+                                        ? AppColors.surface
+                                        : AppColors.cardBorder.withAlpha(20),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isPinned
+                                          ? AppColors.primaryAccent.withAlpha(
+                                              60,
+                                            )
+                                          : AppColors.cardBorder,
+                                      width: isPinned ? 1.5 : 1,
+                                    ),
+                                  ),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 2,
+                                    ),
+                                    leading: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: isPinned
+                                            ? AppColors.primaryAccent.withAlpha(
+                                                20,
+                                              )
+                                            : Colors.grey.withAlpha(25),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        _getIconFromString(module.icon),
+                                        color: isPinned
+                                            ? AppColors.primaryAccent
+                                            : AppColors.textSecondary,
+                                        size: 18,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      module.title,
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: isPinned
+                                            ? FontWeight.w800
+                                            : FontWeight.w600,
+                                        color: isPinned
+                                            ? AppColors.textPrimary
+                                            : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      module.subtitle,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                    trailing: IconButton(
+                                      icon: Icon(
+                                        isPinned
+                                            ? Icons.check_circle_rounded
+                                            : Icons.add_circle_outline_rounded,
+                                        color: isPinned
+                                            ? AppColors.primaryAccent
+                                            : AppColors.textMuted,
+                                        size: 22,
+                                      ),
+                                      onPressed: () async {
+                                        if (isPinned) {
+                                          await appState.removeNavigationItem(
+                                            module.id,
+                                          );
+                                        } else {
+                                          final success = await appState
+                                              .pinModuleToNavigation(module);
+                                          if (!success && context.mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Maksimum 5 alt menyu tabı seçilə bilər.',
+                                                ),
+                                                backgroundColor:
+                                                    AppColors.warning,
+                                                duration: Duration(seconds: 2),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                        setModalState(() {});
+                                        if (mounted) setState(() {});
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    // Bottom Button
+                    SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryAccent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'Tamamla',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },
@@ -573,32 +578,12 @@ class _MainScreenState extends State<MainScreen> {
     // İstifadəçi seçimlərindən sıralı navigation items
     final orderedNavItems = appState.getOrderedNavigation();
 
-    List<Widget> screens;
-    List<BottomNavigationBarItem> navItems;
-
-    if (orderedNavItems.isNotEmpty) {
-      screens = orderedNavItems.map((navItem) {
-        return _getScreenForNavItem(navItem.id, currentRole);
-      }).toList();
-
-      navItems = orderedNavItems.map((navItem) {
-        return BottomNavigationBarItem(
-          icon: Icon(_getIconFromString(navItem.icon)),
-          activeIcon: Icon(_getIconFromString(navItem.activeIcon)),
-          label: navItem.label,
-        );
-      }).toList();
-    } else {
-      // Fallback
-      screens = [_getScreenForNavItem('dashboard', currentRole)];
-      navItems = [
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard_outlined),
-          activeIcon: Icon(Icons.dashboard_rounded),
-          label: 'Əsas',
-        ),
-      ];
-    }
+    final screens = orderedNavItems.isNotEmpty
+        ? orderedNavItems
+              .map((navItem) => _getScreenForNavItem(navItem.id, currentRole))
+              .toList()
+        // Fallback
+        : <Widget>[_getScreenForNavItem('dashboard', currentRole)];
 
     final activeTabIndex = appState.currentTabIndex >= screens.length
         ? 0
@@ -825,10 +810,7 @@ class _MainScreenState extends State<MainScreen> {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -926,103 +908,104 @@ class _MainScreenState extends State<MainScreen> {
                         if (orderedNavItems.isNotEmpty)
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: List.generate(
-                              orderedNavItems.length,
-                              (index) {
-                                final item = orderedNavItems[index];
-                                final isSelected = activeTabIndex == index;
-                                final iconData = isSelected
-                                    ? _getIconFromString(item.activeIcon)
-                                    : _getIconFromString(item.icon);
+                            children: List.generate(orderedNavItems.length, (
+                              index,
+                            ) {
+                              final item = orderedNavItems[index];
+                              final isSelected = activeTabIndex == index;
+                              final iconData = isSelected
+                                  ? _getIconFromString(item.activeIcon)
+                                  : _getIconFromString(item.icon);
 
-                                return Expanded(
-                                  child: GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: () {
-                                      HapticHelper.light();
-                                      appState.setCurrentTabIndex(index);
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 2,
-                                        horizontal: 2,
+                              return Expanded(
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () {
+                                    HapticHelper.light();
+                                    appState.setCurrentTabIndex(index);
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 2,
+                                      horizontal: 2,
+                                    ),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 220,
                                       ),
-                                      child: AnimatedContainer(
-                                        duration: const Duration(
-                                          milliseconds: 220,
-                                        ),
-                                        curve: Curves.easeOutCubic,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: isSelected
-                                              ? AppColors.primaryAccent
-                                                  .withAlpha(isDark ? 35 : 22)
-                                              : Colors.transparent,
-                                          borderRadius:
-                                              BorderRadius.circular(18),
-                                          border: isSelected
-                                              ? Border.all(
-                                                  color: AppColors.primaryAccent
-                                                      .withAlpha(
-                                                          isDark ? 70 : 45),
-                                                  width: 1.0,
-                                                )
-                                              : null,
-                                        ),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            AnimatedScale(
-                                              scale: isSelected ? 1.15 : 1.0,
-                                              duration: const Duration(
-                                                milliseconds: 200,
-                                              ),
-                                              child: Icon(
-                                                iconData,
-                                                size: 20,
-                                                color: isSelected
-                                                    ? AppColors.primaryAccent
-                                                    : Colors.white.withValues(
-                                                        alpha: 0.85,
-                                                      ),
-                                              ),
+                                      curve: Curves.easeOutCubic,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? AppColors.primaryAccent.withAlpha(
+                                                isDark ? 35 : 22,
+                                              )
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: isSelected
+                                            ? Border.all(
+                                                color: AppColors.primaryAccent
+                                                    .withAlpha(
+                                                      isDark ? 70 : 45,
+                                                    ),
+                                                width: 1.0,
+                                              )
+                                            : null,
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          AnimatedScale(
+                                            scale: isSelected ? 1.15 : 1.0,
+                                            duration: const Duration(
+                                              milliseconds: 200,
                                             ),
-                                            const SizedBox(height: 3),
-                                            AnimatedDefaultTextStyle(
-                                              duration: const Duration(
-                                                milliseconds: 200,
-                                              ),
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: isSelected
-                                                    ? FontWeight.w900
-                                                    : FontWeight.w500,
-                                                color: isSelected
-                                                    ? AppColors.primaryAccent
-                                                    : Colors.white.withValues(
-                                                        alpha: 0.85,
-                                                      ),
-                                                letterSpacing:
-                                                    isSelected ? -0.2 : 0,
-                                              ),
-                                              child: Text(
-                                                item.label,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
+                                            child: Icon(
+                                              iconData,
+                                              size: 20,
+                                              color: isSelected
+                                                  ? AppColors.primaryAccent
+                                                  : Colors.white.withValues(
+                                                      alpha: 0.85,
+                                                    ),
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          AnimatedDefaultTextStyle(
+                                            duration: const Duration(
+                                              milliseconds: 200,
+                                            ),
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.w900
+                                                  : FontWeight.w500,
+                                              color: isSelected
+                                                  ? AppColors.primaryAccent
+                                                  : Colors.white.withValues(
+                                                      alpha: 0.85,
+                                                    ),
+                                              letterSpacing: isSelected
+                                                  ? -0.2
+                                                  : 0,
+                                            ),
+                                            child: Text(
+                                              item.label,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                              );
+                            }),
                           ),
                       ],
                     ),

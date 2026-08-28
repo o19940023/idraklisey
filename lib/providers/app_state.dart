@@ -161,9 +161,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await _firestoreService.fetchUserPreferences(
-        user.id,
-      );
+      final prefs = await _firestoreService.fetchUserPreferences(user.id);
       if (prefs != null && prefs.userRole == user.role.name) {
         _userPreferences = prefs;
       } else {
@@ -200,13 +198,13 @@ class AppState extends ChangeNotifier {
       newOrder[i] = newOrder[i].copyWith(orderIndex: i);
     }
 
-    _userPreferences = (_userPreferences ?? UserPreferences.createDefault(
-      userId: _currentUser!.id,
-      userRole: _currentUser!.role.name,
-    )).copyWith(
-      dashboardModules: newOrder,
-      lastModified: DateTime.now(),
-    );
+    _userPreferences =
+        (_userPreferences ??
+                UserPreferences.createDefault(
+                  userId: _currentUser!.id,
+                  userRole: _currentUser!.role.name,
+                ))
+            .copyWith(dashboardModules: newOrder, lastModified: DateTime.now());
 
     await _firestoreService.saveUserPreferences(_userPreferences!);
     notifyListeners();
@@ -220,13 +218,13 @@ class AppState extends ChangeNotifier {
       newOrder[i] = newOrder[i].copyWith(orderIndex: i);
     }
 
-    _userPreferences = (_userPreferences ?? UserPreferences.createDefault(
-      userId: _currentUser!.id,
-      userRole: _currentUser!.role.name,
-    )).copyWith(
-      navigationItems: newOrder,
-      lastModified: DateTime.now(),
-    );
+    _userPreferences =
+        (_userPreferences ??
+                UserPreferences.createDefault(
+                  userId: _currentUser!.id,
+                  userRole: _currentUser!.role.name,
+                ))
+            .copyWith(navigationItems: newOrder, lastModified: DateTime.now());
 
     await _firestoreService.saveUserPreferences(_userPreferences!);
     notifyListeners();
@@ -258,13 +256,18 @@ class AppState extends ChangeNotifier {
       );
     }
 
-    final currentNav = List<NavigationItem>.from(_userPreferences!.navigationItems);
-    
+    final currentNav = List<NavigationItem>.from(
+      _userPreferences!.navigationItems,
+    );
+
     // Check if already in navigation
     final existingIndex = currentNav.indexWhere((n) => n.id == module.id);
     if (existingIndex != -1) {
       if (!currentNav[existingIndex].isVisible) {
-        currentNav[existingIndex] = currentNav[existingIndex].copyWith(isVisible: true, isPinned: true);
+        currentNav[existingIndex] = currentNav[existingIndex].copyWith(
+          isVisible: true,
+          isPinned: true,
+        );
         await updateNavigationOrder(currentNav);
         return true;
       }
@@ -299,7 +302,9 @@ class AppState extends ChangeNotifier {
       );
     }
 
-    final currentNav = List<NavigationItem>.from(_userPreferences!.navigationItems);
+    final currentNav = List<NavigationItem>.from(
+      _userPreferences!.navigationItems,
+    );
     final index = currentNav.indexWhere((n) => n.id == navId);
     if (index == -1) return false;
 
@@ -362,7 +367,9 @@ class AppState extends ChangeNotifier {
       userRole: roleName,
     ).dashboardModules;
 
-    final currentMods = List<ModuleItem>.from(_userPreferences!.dashboardModules);
+    final currentMods = List<ModuleItem>.from(
+      _userPreferences!.dashboardModules,
+    );
     bool updated = false;
     for (final defMod in defaultMods) {
       if (!currentMods.any((m) => m.id == defMod.id)) {
@@ -371,7 +378,9 @@ class AppState extends ChangeNotifier {
       }
     }
     if (updated) {
-      _userPreferences = _userPreferences!.copyWith(dashboardModules: currentMods);
+      _userPreferences = _userPreferences!.copyWith(
+        dashboardModules: currentMods,
+      );
     }
 
     // Səlahiyyətlərə görə filtrlə
@@ -404,6 +413,10 @@ class AppState extends ChangeNotifier {
     visible.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
     return visible;
   }
+
+  /// getOrderedNavigation() üçün getter qısa yolu
+  /// (main_screen alt menyusu bu adla istifadə edir)
+  List<NavigationItem> get orderedNavigationItems => getOrderedNavigation();
 
   /// Rol üçün mövcud bütün modulları qaytarır
   List<ModuleItem> getAvailableModulesForRole() {
@@ -452,14 +465,22 @@ class AppState extends ChangeNotifier {
 
     // Teacher navigation ID mapping to Permission IDs
     if (user.role == UserRole.teacher) {
-      if (permissionId == 'teacher_students') return role.permissionIds.contains('view_students');
-      if (permissionId == 'teacher_timetable') return role.permissionIds.contains('view_timetable');
-      if (permissionId == 'teacher_grading') return role.permissionIds.contains('view_grades');
-      if (permissionId == 'teacher_inventory') return role.permissionIds.contains('view_inventory');
-      if (permissionId == 'teacher_medical') return role.permissionIds.contains('view_medical');
-      if (permissionId == 'teacher_library') return role.permissionIds.contains('view_library');
-      if (permissionId == 'teacher_notifications') return role.permissionIds.contains('view_settings');
-      if (permissionId == 'teacher_meet') return role.permissionIds.contains('view_meet');
+      if (permissionId == 'teacher_students')
+        return role.permissionIds.contains('view_students');
+      if (permissionId == 'teacher_timetable')
+        return role.permissionIds.contains('view_timetable');
+      if (permissionId == 'teacher_grading')
+        return role.permissionIds.contains('view_grades');
+      if (permissionId == 'teacher_inventory')
+        return role.permissionIds.contains('view_inventory');
+      if (permissionId == 'teacher_medical')
+        return role.permissionIds.contains('view_medical');
+      if (permissionId == 'teacher_library')
+        return role.permissionIds.contains('view_library');
+      if (permissionId == 'teacher_notifications')
+        return role.permissionIds.contains('view_settings');
+      if (permissionId == 'teacher_meet')
+        return role.permissionIds.contains('view_meet');
     }
 
     return role.permissionIds.contains(permissionId);
@@ -1091,10 +1112,14 @@ class AppState extends ChangeNotifier {
 
         for (final lesson in day.lessons) {
           // Müəllim ya əsas müəllimdir, ya da co-teacher
-          if (lesson.teacherId == teacherId || lesson.coTeacherId == teacherId) {
+          if (lesson.teacherId == teacherId ||
+              lesson.coTeacherId == teacherId) {
             // Əgər birləşdirilmiş dərsdirsə, eyni saatda təkrar əlavə etməyək
             final alreadyAdded = dayMap[day.dayName]!.any(
-              (existing) => existing.time == lesson.time && (existing.id == lesson.id || existing.subject == lesson.subject),
+              (existing) =>
+                  existing.time == lesson.time &&
+                  (existing.id == lesson.id ||
+                      existing.subject == lesson.subject),
             );
             if (!alreadyAdded) {
               dayMap[day.dayName]!.add(lesson);
@@ -1105,18 +1130,20 @@ class AppState extends ChangeNotifier {
     }
 
     final allDays = <DayTimetable>[];
-    const defaultDayNames = ['Bazar ertəsi', 'Çərşənbə axşamı', 'Çərşənbə', 'Cümə axşamı', 'Cümə'];
+    const defaultDayNames = [
+      'Bazar ertəsi',
+      'Çərşənbə axşamı',
+      'Çərşənbə',
+      'Cümə axşamı',
+      'Cümə',
+    ];
     const shortNames = ['B.E', 'Ç.A', 'Ç.', 'C.A', 'C.'];
 
     for (int i = 0; i < defaultDayNames.length; i++) {
       final dName = defaultDayNames[i];
       final lessons = dayMap[dName] ?? [];
       allDays.add(
-        DayTimetable(
-          dayName: dName,
-          shortDay: shortNames[i],
-          lessons: lessons,
-        ),
+        DayTimetable(dayName: dName, shortDay: shortNames[i], lessons: lessons),
       );
     }
 
@@ -1287,7 +1314,8 @@ class AppState extends ChangeNotifier {
     if (isEdit) {
       sendTimetableChangeNotification(
         title: '✏️ Dərs Cədvəli Yeniləndi',
-        message: '$day günü ${lesson.period} dərsi (${lesson.subject}) üçün cədvəldə dəyişiklik edildi.',
+        message:
+            '$day günü ${lesson.period} dərsi (${lesson.subject}) üçün cədvəldə dəyişiklik edildi.',
         targetClasses: cleanClasses,
       );
     }
@@ -1364,8 +1392,11 @@ class AppState extends ChangeNotifier {
         if (recurringSlotIdx != -1) {
           final old = days[dayIndex].lessons[recurringSlotIdx];
           if (!old.excludedDates.contains(dateStr)) {
-            final updatedExclusions = List<String>.from(old.excludedDates)..add(dateStr);
-            days[dayIndex].lessons[recurringSlotIdx] = old.copyWith(excludedDates: updatedExclusions);
+            final updatedExclusions = List<String>.from(old.excludedDates)
+              ..add(dateStr);
+            days[dayIndex].lessons[recurringSlotIdx] = old.copyWith(
+              excludedDates: updatedExclusions,
+            );
           }
         }
 
@@ -1390,7 +1421,10 @@ class AppState extends ChangeNotifier {
 
         // Əvvəlki tək-tarixli slot varsa əvəzlə, yoxdursa əlavə et
         final existingSingleIdx = days[dayIndex].lessons.indexWhere(
-          (l) => (l.period == period || l.time == time) && !l.isRecurring && l.dateStr == dateStr,
+          (l) =>
+              (l.period == period || l.time == time) &&
+              !l.isRecurring &&
+              l.dateStr == dateStr,
         );
         if (existingSingleIdx != -1) {
           days[dayIndex].lessons[existingSingleIdx] = singleDateMergedSlot;
@@ -1404,7 +1438,8 @@ class AppState extends ChangeNotifier {
 
       sendTimetableChangeNotification(
         title: '🔗 Birgə Dərs Təyin Edildi ($dateStr)',
-        message: '$dateStr tarixində ($period) $primarySubject dərsi ${cleanClasses.join(" və ")} sinifləri üçün birgə keçiriləcək.',
+        message:
+            '$dateStr tarixində ($period) $primarySubject dərsi ${cleanClasses.join(" və ")} sinifləri üçün birgə keçiriləcək.',
         targetClasses: cleanClasses,
       );
     } else {
@@ -1455,7 +1490,8 @@ class AppState extends ChangeNotifier {
 
       sendTimetableChangeNotification(
         title: '🔗 Birgə Dərs Təyin Edildi',
-        message: '$day günü $time ($period) $primarySubject dərsi ${cleanClasses.join(" və ")} sinifləri üçün otaq $primaryRoom-də birgə keçiriləcək.',
+        message:
+            '$day günü $time ($period) $primarySubject dərsi ${cleanClasses.join(" və ")} sinifləri üçün otaq $primaryRoom-də birgə keçiriləcək.',
         targetClasses: cleanClasses,
       );
     }
@@ -1478,18 +1514,26 @@ class AppState extends ChangeNotifier {
           // Əgər konkret tarixli birləşmədirsə:
           // 1. Həmin tarixdəki single-date slotu sil
           days[dayIndex].lessons.removeWhere(
-            (l) => (l.period == period) && !l.isRecurring && l.dateStr == dateStr,
+            (l) =>
+                (l.period == period) && !l.isRecurring && l.dateStr == dateStr,
           );
           // 2. Əgər recurring slotda excludedDates-də bu tarix varsa, bərpa et
-          final recIdx = days[dayIndex].lessons.indexWhere((l) => l.period == period && l.isRecurring);
+          final recIdx = days[dayIndex].lessons.indexWhere(
+            (l) => l.period == period && l.isRecurring,
+          );
           if (recIdx != -1) {
             final old = days[dayIndex].lessons[recIdx];
-            final updatedEx = List<String>.from(old.excludedDates)..remove(dateStr);
-            days[dayIndex].lessons[recIdx] = old.copyWith(excludedDates: updatedEx);
+            final updatedEx = List<String>.from(old.excludedDates)
+              ..remove(dateStr);
+            days[dayIndex].lessons[recIdx] = old.copyWith(
+              excludedDates: updatedEx,
+            );
           }
         } else {
           // Daimi birləşmədirsə:
-          final lIdx = days[dayIndex].lessons.indexWhere((l) => l.period == period);
+          final lIdx = days[dayIndex].lessons.indexWhere(
+            (l) => l.period == period,
+          );
           if (lIdx != -1) {
             final old = days[dayIndex].lessons[lIdx];
             days[dayIndex].lessons[lIdx] = old.copyWith(
@@ -1524,12 +1568,17 @@ class AppState extends ChangeNotifier {
     final days = getClassTimetable(className);
     final dayIndex = days.indexWhere((d) => d.dayName == day);
     if (dayIndex != -1) {
-      final targetLesson = days[dayIndex].lessons.where((l) => l.period == period).firstOrNull;
-      final affectedClasses = targetLesson?.isMerged == true && targetLesson!.mergedClassNames.isNotEmpty
+      final targetLesson = days[dayIndex].lessons
+          .where((l) => l.period == period)
+          .firstOrNull;
+      final affectedClasses =
+          targetLesson?.isMerged == true &&
+              targetLesson!.mergedClassNames.isNotEmpty
           ? targetLesson.mergedClassNames
           : [className];
 
-      if (targetLesson?.isMerged == true && targetLesson!.mergedClassNames.isNotEmpty) {
+      if (targetLesson?.isMerged == true &&
+          targetLesson!.mergedClassNames.isNotEmpty) {
         for (final mCls in targetLesson.mergedClassNames) {
           final mDays = getClassTimetable(mCls);
           final mDayIdx = mDays.indexWhere((d) => d.dayName == day);
@@ -1547,7 +1596,8 @@ class AppState extends ChangeNotifier {
 
       sendTimetableChangeNotification(
         title: '🗓️ Dərs Cədvəldən Silindi',
-        message: '$day günü $period ${targetLesson?.subject ?? "Dərs"} cədvəldən silindi.',
+        message:
+            '$day günü $period ${targetLesson?.subject ?? "Dərs"} cədvəldən silindi.',
         targetClasses: affectedClasses,
       );
 
@@ -1565,10 +1615,13 @@ class AppState extends ChangeNotifier {
     final days = getClassTimetable(className);
     final dayIndex = days.indexWhere((d) => d.dayName == day);
     if (dayIndex != -1) {
-      final targetLesson = days[dayIndex].lessons.where((l) => l.period == period).firstOrNull;
+      final targetLesson = days[dayIndex].lessons
+          .where((l) => l.period == period)
+          .firstOrNull;
       if (targetLesson == null) return;
 
-      final targetClasses = targetLesson.isMerged && targetLesson.mergedClassNames.isNotEmpty
+      final targetClasses =
+          targetLesson.isMerged && targetLesson.mergedClassNames.isNotEmpty
           ? targetLesson.mergedClassNames
           : [className];
 
@@ -1576,11 +1629,16 @@ class AppState extends ChangeNotifier {
         final cDays = getClassTimetable(cls);
         final cDayIdx = cDays.indexWhere((d) => d.dayName == day);
         if (cDayIdx != -1) {
-          final lIdx = cDays[cDayIdx].lessons.indexWhere((l) => l.period == period);
+          final lIdx = cDays[cDayIdx].lessons.indexWhere(
+            (l) => l.period == period,
+          );
           if (lIdx != -1) {
             final old = cDays[cDayIdx].lessons[lIdx];
-            final updatedExclusions = List<String>.from(old.excludedDates)..add(dateFormatted);
-            cDays[cDayIdx].lessons[lIdx] = old.copyWith(excludedDates: updatedExclusions);
+            final updatedExclusions = List<String>.from(old.excludedDates)
+              ..add(dateFormatted);
+            cDays[cDayIdx].lessons[lIdx] = old.copyWith(
+              excludedDates: updatedExclusions,
+            );
             _classTimetablesMap[cls] = cDays;
             _firestoreService.saveClassTimetable(cls, cDays);
           }
@@ -1589,7 +1647,8 @@ class AppState extends ChangeNotifier {
 
       sendTimetableChangeNotification(
         title: '⚠️ Dərs Təxirə Salındı ($dateFormatted)',
-        message: '$dateFormatted tarixindəki $period ${targetLesson.subject} dərsi təxirə salındı.',
+        message:
+            '$dateFormatted tarixindəki $period ${targetLesson.subject} dərsi təxirə salındı.',
         targetClasses: targetClasses,
       );
 
@@ -2778,9 +2837,12 @@ class AppState extends ChangeNotifier {
     required String subject,
     required String time,
   }) {
-    final targets = classNames ?? (className != null ? [className] : <String>[]);
+    final targets =
+        classNames ?? (className != null ? [className] : <String>[]);
     _currentSessionClasses = List.from(targets);
-    _currentSessionClass = targets.isNotEmpty ? targets.join(' & ') : (className ?? '');
+    _currentSessionClass = targets.isNotEmpty
+        ? targets.join(' & ')
+        : (className ?? '');
     _currentSessionSubject = subject;
 
     final allStudents = <StudentProfile>[];

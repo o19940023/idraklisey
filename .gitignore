@@ -48,3 +48,4 @@ workers/agora-token/.worker-min/
 
 # INCLUDED: All source code, configs, and signing files
 # These are essential and relatively small
+.gradle/
