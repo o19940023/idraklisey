@@ -57,7 +57,6 @@ dependencies:
   shimmer: ^3.0.0
   lottie: ^3.1.0
   flutter_slidable: ^3.0.1
-  adaptive_platform_ui: ^0.1.111
 
 dev_dependencies:
   flutter_test:

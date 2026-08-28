@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:adaptive_platform_ui/adaptive_platform_ui.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/widgets/idrak_logo.dart';
@@ -818,105 +817,222 @@ class _MainScreenState extends State<MainScreen> {
           }
         },
         builder: (context, candidateData, rejectedData) {
-          // Use AdaptiveBottomNavigationBar for TRUE iPhone liquid glass effect
+          // Custom iPhone-style liquid glass bottom navigation
           return ClipRRect(
             borderRadius: BorderRadius.circular(28),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-              child: Stack(
-                children: [
-                  // Native iOS liquid glass bottom navigation
-                  AdaptiveBottomNavigationBar(
-                    selectedIndex: activeTabIndex,
-                    onTap: (index) {
-                      HapticHelper.light();
-                      appState.setCurrentTabIndex(index);
-                    },
-                    items: orderedNavItems.map((item) {
-                      final iconName = item.icon;
-                      final activeIconName = item.activeIcon;
-                      return AdaptiveNavigationDestination(
-                        icon: _getSFSymbolFromIconName(iconName),
-                        selectedIcon: _getSFSymbolFromIconName(activeIconName, filled: true),
-                        label: item.label,
-                      );
-                    }).toList(),
-                    useNativeBottomBar: true, // Enable native iOS 26 liquid glass
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      isDark
+                          ? const Color(0xFF10172A).withValues(alpha: 0.75)
+                          : Colors.black.withValues(alpha: 0.65),
+                      isDark
+                          ? const Color(0xFF0F172A).withValues(alpha: 0.70)
+                          : Colors.black.withValues(alpha: 0.60),
+                    ],
                   ),
-                  // Drag-drop hover effect overlay
-                  if (_isDragHoveredOnDock)
-                    Positioned.fill(
-                      child: Container(
-                        margin: const EdgeInsets.all(8),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          gradient: AppColors.accentGradient,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.primaryAccent,
-                            width: 2.2,
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.push_pin_rounded,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              '📌 Alt menyuya bərkitmək üçün buraxın',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: _isDragHoveredOnDock
+                        ? AppColors.primaryAccent
+                        : Colors.white.withValues(alpha: 0.5),
+                    width: _isDragHoveredOnDock ? 2.2 : 1.0,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                    if (_isDragHoveredOnDock)
+                      BoxShadow(
+                        color: AppColors.primaryAccent.withAlpha(120),
+                        blurRadius: 20,
+                        spreadRadius: 2,
+                      ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    // iOS Liquid Glass top highlight line
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: FractionallySizedBox(
+                          widthFactor: 0.55,
+                          child: Container(
+                            height: 1,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.white.withValues(alpha: 0.85),
+                                  Colors.transparent,
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                ],
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Drag hover indicator
+                        if (_isDragHoveredOnDock)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 4),
+                            padding: const EdgeInsets.symmetric(vertical: 5),
+                            decoration: BoxDecoration(
+                              gradient: AppColors.accentGradient,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.push_pin_rounded,
+                                  color: Colors.white,
+                                  size: 13,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  '📌 Alt menyuya bərkitmək üçün buraxın',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        // Navigation items
+                        if (orderedNavItems.isNotEmpty)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: List.generate(
+                              orderedNavItems.length,
+                              (index) {
+                                final item = orderedNavItems[index];
+                                final isSelected = activeTabIndex == index;
+                                final iconData = isSelected
+                                    ? _getIconFromString(item.activeIcon)
+                                    : _getIconFromString(item.icon);
+
+                                return Expanded(
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () {
+                                      HapticHelper.light();
+                                      appState.setCurrentTabIndex(index);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 2,
+                                        horizontal: 2,
+                                      ),
+                                      child: AnimatedContainer(
+                                        duration: const Duration(
+                                          milliseconds: 220,
+                                        ),
+                                        curve: Curves.easeOutCubic,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? AppColors.primaryAccent
+                                                  .withAlpha(isDark ? 35 : 22)
+                                              : Colors.transparent,
+                                          borderRadius:
+                                              BorderRadius.circular(18),
+                                          border: isSelected
+                                              ? Border.all(
+                                                  color: AppColors.primaryAccent
+                                                      .withAlpha(
+                                                          isDark ? 70 : 45),
+                                                  width: 1.0,
+                                                )
+                                              : null,
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            AnimatedScale(
+                                              scale: isSelected ? 1.15 : 1.0,
+                                              duration: const Duration(
+                                                milliseconds: 200,
+                                              ),
+                                              child: Icon(
+                                                iconData,
+                                                size: 20,
+                                                color: isSelected
+                                                    ? AppColors.primaryAccent
+                                                    : Colors.white.withValues(
+                                                        alpha: 0.85,
+                                                      ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 3),
+                                            AnimatedDefaultTextStyle(
+                                              duration: const Duration(
+                                                milliseconds: 200,
+                                              ),
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.w900
+                                                    : FontWeight.w500,
+                                                color: isSelected
+                                                    ? AppColors.primaryAccent
+                                                    : Colors.white.withValues(
+                                                        alpha: 0.85,
+                                                      ),
+                                                letterSpacing:
+                                                    isSelected ? -0.2 : 0,
+                                              ),
+                                              child: Text(
+                                                item.label,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           );
         },
       ),
     );
-  }
-
-  /// SF Symbol mapping for iOS native navigation
-  String _getSFSymbolFromIconName(String iconName, {bool filled = false}) {
-    final iconMap = {
-      'Icons.dashboard': filled ? 'square.grid.2x2.fill' : 'square.grid.2x2',
-      'Icons.dashboard_rounded': filled ? 'square.grid.2x2.fill' : 'square.grid.2x2',
-      'Icons.home': filled ? 'house.fill' : 'house',
-      'Icons.home_rounded': filled ? 'house.fill' : 'house',
-      'Icons.people': filled ? 'person.2.fill' : 'person.2',
-      'Icons.people_rounded': filled ? 'person.2.fill' : 'person.2',
-      'Icons.person': filled ? 'person.fill' : 'person',
-      'Icons.person_rounded': filled ? 'person.fill' : 'person',
-      'Icons.school': filled ? 'graduationcap.fill' : 'graduationcap',
-      'Icons.school_rounded': filled ? 'graduationcap.fill' : 'graduationcap',
-      'Icons.menu_book': filled ? 'book.fill' : 'book',
-      'Icons.menu_book_rounded': filled ? 'book.fill' : 'book',
-      'Icons.calendar_today': filled ? 'calendar.fill' : 'calendar',
-      'Icons.calendar_month': filled ? 'calendar.fill' : 'calendar',
-      'Icons.bar_chart': filled ? 'chart.bar.fill' : 'chart.bar',
-      'Icons.assessment': filled ? 'chart.bar.fill' : 'chart.bar',
-      'Icons.assignment': filled ? 'doc.text.fill' : 'doc.text',
-      'Icons.description': filled ? 'doc.text.fill' : 'doc.text',
-      'Icons.settings': filled ? 'gearshape.fill' : 'gearshape',
-      'Icons.settings_rounded': filled ? 'gearshape.fill' : 'gearshape',
-      'Icons.badge': filled ? 'person.crop.rectangle.fill' : 'person.crop.rectangle',
-      'Icons.badge_rounded': filled ? 'person.crop.rectangle.fill' : 'person.crop.rectangle',
-      'Icons.menu': filled ? 'line.3.horizontal.fill' : 'line.3.horizontal',
-      'Icons.more_horiz': filled ? 'ellipsis.circle.fill' : 'ellipsis.circle',
-      'Icons.explore': filled ? 'safari.fill' : 'safari',
-    };
-    
-    return iconMap[iconName] ?? (filled ? 'app.fill' : 'app');
   }
 }
