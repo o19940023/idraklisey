@@ -1,0 +1,13 @@
+name = "idrak-push-relay"
+main = "src/worker.js"
+compatibility_date = "2024-09-23"
+
+[vars]
+# Firebase projekti ID-si (android/app/google-services.json -> project_id)
+FIREBASE_PROJECT_ID = "idraklisey-aafd7"
+
+# Aşağıdakılar secret kimi əlavə olunur (repo-ya YAZILMIR):
+#   npx wrangler secret put FIREBASE_CLIENT_EMAIL
+#   npx wrangler secret put FIREBASE_PRIVATE_KEY
+#   npx wrangler secret put PUSH_KEY
+# Ətraflı: PUSH_SETUP.md

@@ -1,0 +1,484 @@
+{
+  "menu_items": [
+    {
+      "dayName": "Çərşənbə axşamı - Səhər",
+      "date": "2026-09-02T08:00:00",
+      "mealTime": "Səhər (08:00 - 08:30)",
+      "totalCalories": 900,
+      "items": [
+        {
+          "name": "Xama",
+          "category": "Əsas Yemək",
+          "calories": 250,
+          "weightGram": "150g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400"
+        },
+        {
+          "name": "Əncir Cemi",
+          "category": "Şirniyyat / İçki",
+          "calories": 120,
+          "weightGram": "50g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400"
+        },
+        {
+          "name": "Kərə Yağı",
+          "category": "Qarnir",
+          "calories": 100,
+          "weightGram": "20g",
+          "allergens": ["Süd"],
+          "imageUrl": "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=400"
+        },
+        {
+          "name": "Buğda Çörəyi",
+          "category": "Əsas Yemək",
+          "calories": 180,
+          "weightGram": "80g",
+          "allergens": ["Qlüten"],
+          "imageUrl": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400"
+        },
+        {
+          "name": "Şirin Çay",
+          "category": "Şirniyyat / İçki",
+          "calories": 50,
+          "weightGram": "200ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1564890369478-c89ca6d9cde9?w=400"
+        },
+        {
+          "name": "Omlet",
+          "category": "Əsas Yemək",
+          "calories": 200,
+          "weightGram": "120g",
+          "allergens": ["Yumurta"],
+          "imageUrl": "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400"
+        }
+      ]
+    },
+    {
+      "dayName": "Çərşənbə axşamı - Günorta",
+      "date": "2026-09-02T12:30:00",
+      "mealTime": "Günorta (12:30 - 13:30)",
+      "totalCalories": 1230,
+      "items": [
+        {
+          "name": "Plov",
+          "category": "Əsas Yemək",
+          "calories": 450,
+          "weightGram": "250g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400"
+        },
+        {
+          "name": "Toyuq Kababı",
+          "category": "Əsas Yemək",
+          "calories": 280,
+          "weightGram": "150g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=400"
+        },
+        {
+          "name": "Çoban Salatı",
+          "category": "Salat",
+          "calories": 80,
+          "weightGram": "120g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400"
+        },
+        {
+          "name": "Zoğal Xoşabı",
+          "category": "Şirniyyat / İçki",
+          "calories": 90,
+          "weightGram": "200ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1577805947697-89e18249d767?w=400"
+        },
+        {
+          "name": "Buğda Çörəyi",
+          "category": "Əsas Yemək",
+          "calories": 180,
+          "weightGram": "80g",
+          "allergens": ["Qlüten"],
+          "imageUrl": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400"
+        },
+        {
+          "name": "Süfrə Suyu",
+          "category": "Şirniyyat / İçki",
+          "calories": 0,
+          "weightGram": "200ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1560493676-04071c5f467b?w=400"
+        },
+        {
+          "name": "Dovğa",
+          "category": "Şorba",
+          "calories": 150,
+          "weightGram": "250ml",
+          "allergens": ["Süd"],
+          "imageUrl": "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400"
+        }
+      ]
+    },
+    {
+      "dayName": "Çərşənbə - Səhər",
+      "date": "2026-09-03T08:00:00",
+      "mealTime": "Səhər (08:00 - 08:30)",
+      "totalCalories": 890,
+      "items": [
+        {
+          "name": "Şor",
+          "category": "Əsas Yemək",
+          "calories": 230,
+          "weightGram": "150g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1619754647425-e4f2b2c3a6dd?w=400"
+        },
+        {
+          "name": "Alma Cemi",
+          "category": "Şirniyyat / İçki",
+          "calories": 110,
+          "weightGram": "50g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400"
+        },
+        {
+          "name": "Kərə Yağı",
+          "category": "Qarnir",
+          "calories": 100,
+          "weightGram": "20g",
+          "allergens": ["Süd"],
+          "imageUrl": "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=400"
+        },
+        {
+          "name": "Buğda Çörəyi",
+          "category": "Əsas Yemək",
+          "calories": 180,
+          "weightGram": "80g",
+          "allergens": ["Qlüten"],
+          "imageUrl": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400"
+        },
+        {
+          "name": "Şirin Çay",
+          "category": "Şirniyyat / İçki",
+          "calories": 50,
+          "weightGram": "200ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1564890369478-c89ca6d9cde9?w=400"
+        },
+        {
+          "name": "Düyü Sıyığı",
+          "category": "Əsas Yemək",
+          "calories": 220,
+          "weightGram": "200g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400"
+        }
+      ]
+    },
+    {
+      "dayName": "Çərşənbə - Günorta",
+      "date": "2026-09-03T12:30:00",
+      "mealTime": "Günorta (12:30 - 13:30)",
+      "totalCalories": 1220,
+      "items": [
+        {
+          "name": "Qarabaşaq",
+          "category": "Əsas Yemək",
+          "calories": 380,
+          "weightGram": "250g",
+          "allergens": ["Qlüten"],
+          "imageUrl": "https://images.unsplash.com/photo-1556269923-e4ef51d69638?w=400"
+        },
+        {
+          "name": "Qulyaj",
+          "category": "Əsas Yemək",
+          "calories": 320,
+          "weightGram": "180g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=400"
+        },
+        {
+          "name": "Xiyar",
+          "category": "Salat",
+          "calories": 30,
+          "weightGram": "100g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1604977042946-1eecc30f269e?w=400"
+        },
+        {
+          "name": "Reyhan Şərbəti",
+          "category": "Şirniyyat / İçki",
+          "calories": 70,
+          "weightGram": "200ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1577805947697-89e18249d767?w=400"
+        },
+        {
+          "name": "Buğda Çörəyi",
+          "category": "Əsas Yemək",
+          "calories": 180,
+          "weightGram": "80g",
+          "allergens": ["Qlüten"],
+          "imageUrl": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400"
+        },
+        {
+          "name": "Süfrə Suyu",
+          "category": "Şirniyyat / İçki",
+          "calories": 0,
+          "weightGram": "200ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1560493676-04071c5f467b?w=400"
+        },
+        {
+          "name": "Qırmızı Mərci Şorbası",
+          "category": "Şorba",
+          "calories": 160,
+          "weightGram": "250ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400"
+        }
+      ]
+    },
+    {
+      "dayName": "Cümə axşamı - Səhər",
+      "date": "2026-09-04T08:00:00",
+      "mealTime": "Səhər (08:00 - 08:30)",
+      "totalCalories": 900,
+      "items": [
+        {
+          "name": "Brınza Pendiri",
+          "category": "Əsas Yemək",
+          "calories": 200,
+          "weightGram": "100g",
+          "allergens": ["Süd"],
+          "imageUrl": "https://images.unsplash.com/photo-1452195100486-9cc805987862?w=400"
+        },
+        {
+          "name": "Ərik Cemi",
+          "category": "Şirniyyat / İçki",
+          "calories": 130,
+          "weightGram": "50g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400"
+        },
+        {
+          "name": "Kərə Yağı",
+          "category": "Qarnir",
+          "calories": 100,
+          "weightGram": "20g",
+          "allergens": ["Süd"],
+          "imageUrl": "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=400"
+        },
+        {
+          "name": "Buğda Çörəyi",
+          "category": "Əsas Yemək",
+          "calories": 180,
+          "weightGram": "80g",
+          "allergens": ["Qlüten"],
+          "imageUrl": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400"
+        },
+        {
+          "name": "Şirin Çay",
+          "category": "Şirniyyat / İçki",
+          "calories": 50,
+          "weightGram": "200ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1564890369478-c89ca6d9cde9?w=400"
+        },
+        {
+          "name": "Vafli",
+          "category": "Şirniyyat / İçki",
+          "calories": 240,
+          "weightGram": "80g",
+          "allergens": ["Qlüten", "Yumurta"],
+          "imageUrl": "https://images.unsplash.com/photo-1562376552-0d160a2f238d?w=400"
+        }
+      ]
+    },
+    {
+      "dayName": "Cümə axşamı - Günorta",
+      "date": "2026-09-04T12:30:00",
+      "mealTime": "Günorta (12:30 - 13:30)",
+      "totalCalories": 1295,
+      "items": [
+        {
+          "name": "Dana Ətindən Kotlet",
+          "category": "Əsas Yemək",
+          "calories": 350,
+          "weightGram": "150g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=400"
+        },
+        {
+          "name": "Kartof",
+          "category": "Qarnir",
+          "calories": 200,
+          "weightGram": "180g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400"
+        },
+        {
+          "name": "Pomidor Qızartması",
+          "category": "Salat",
+          "calories": 90,
+          "weightGram": "100g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1592417817038-d13fd7ab53d3?w=400"
+        },
+        {
+          "name": "Manqal Salatı",
+          "category": "Salat",
+          "calories": 110,
+          "weightGram": "120g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400"
+        },
+        {
+          "name": "Alça Xoşabı",
+          "category": "Şirniyyat / İçki",
+          "calories": 85,
+          "weightGram": "200ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1577805947697-89e18249d767?w=400"
+        },
+        {
+          "name": "Buğda Çörəyi",
+          "category": "Əsas Yemək",
+          "calories": 180,
+          "weightGram": "80g",
+          "allergens": ["Qlüten"],
+          "imageUrl": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400"
+        },
+        {
+          "name": "Süfrə Suyu",
+          "category": "Şirniyyat / İçki",
+          "calories": 0,
+          "weightGram": "200ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1560493676-04071c5f467b?w=400"
+        },
+        {
+          "name": "Doğramac",
+          "category": "Şorba",
+          "calories": 140,
+          "weightGram": "250ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400"
+        }
+      ]
+    },
+    {
+      "dayName": "Cümə - Səhər",
+      "date": "2026-09-05T08:00:00",
+      "mealTime": "Səhər (08:00 - 08:30)",
+      "totalCalories": 910,
+      "items": [
+        {
+          "name": "Şor",
+          "category": "Əsas Yemək",
+          "calories": 230,
+          "weightGram": "150g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1619754647425-e4f2b2c3a6dd?w=400"
+        },
+        {
+          "name": "Çiyələk Cemi",
+          "category": "Şirniyyat / İçki",
+          "calories": 140,
+          "weightGram": "50g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400"
+        },
+        {
+          "name": "Kərə Yağı",
+          "category": "Qarnir",
+          "calories": 100,
+          "weightGram": "20g",
+          "allergens": ["Süd"],
+          "imageUrl": "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=400"
+        },
+        {
+          "name": "Buğda Çörəyi",
+          "category": "Əsas Yemək",
+          "calories": 180,
+          "weightGram": "80g",
+          "allergens": ["Qlüten"],
+          "imageUrl": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400"
+        },
+        {
+          "name": "Şirin Çay",
+          "category": "Şirniyyat / İçki",
+          "calories": 50,
+          "weightGram": "200ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1564890369478-c89ca6d9cde9?w=400"
+        },
+        {
+          "name": "Yulaf Sıyığı",
+          "category": "Əsas Yemək",
+          "calories": 210,
+          "weightGram": "200g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400"
+        }
+      ]
+    },
+    {
+      "dayName": "Cümə - Günorta",
+      "date": "2026-09-05T12:30:00",
+      "mealTime": "Günorta (12:30 - 13:30)",
+      "totalCalories": 1200,
+      "items": [
+        {
+          "name": "İtalyan Sayağı Spagetti",
+          "category": "Əsas Yemək",
+          "calories": 420,
+          "weightGram": "250g",
+          "allergens": ["Qlüten"],
+          "imageUrl": "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400"
+        },
+        {
+          "name": "Toyuq Salatı",
+          "category": "Salat",
+          "calories": 190,
+          "weightGram": "150g",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1546793665-c74683f339c1?w=400"
+        },
+        {
+          "name": "Göyəm Xoşabı",
+          "category": "Şirniyyat / İçki",
+          "calories": 80,
+          "weightGram": "200ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1577805947697-89e18249d767?w=400"
+        },
+        {
+          "name": "Buğda Çörəyi",
+          "category": "Əsas Yemək",
+          "calories": 180,
+          "weightGram": "80g",
+          "allergens": ["Qlüten"],
+          "imageUrl": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400"
+        },
+        {
+          "name": "Süfrə Suyu",
+          "category": "Şirniyyat / İçki",
+          "calories": 0,
+          "weightGram": "200ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1560493676-04071c5f467b?w=400"
+        },
+        {
+          "name": "Düyü Şorbası",
+          "category": "Şorba",
+          "calories": 150,
+          "weightGram": "250ml",
+          "allergens": [],
+          "imageUrl": "https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400"
+        }
+      ]
+    }
+  ]
+}

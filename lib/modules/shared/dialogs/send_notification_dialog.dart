@@ -54,7 +54,7 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
       if (user?.assignedClasses.isNotEmpty == true) {
         _selectedClassForTeacher = widget.initialClass ?? user!.assignedClasses.first;
       } else {
-        _selectedClassForTeacher = '9B';
+        _selectedClassForTeacher = '';
       }
     } else {
       _titleController.text = 'İdrak Liseyi Rəsmi Elanı';
@@ -97,6 +97,17 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
         );
       } else if (user?.role == UserRole.teacher) {
         // Teacher class broadcast
+        if (_selectedClassForTeacher.isEmpty) {
+          setState(() => _isSending = false);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sizin heç bir sinif təyin edilməyib. Adminə müraciət edin.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
         List<String> targetRoles = [];
         if (_teacherRecipientType == 'parent') targetRoles = ['parent'];
         if (_teacherRecipientType == 'student') targetRoles = ['student'];

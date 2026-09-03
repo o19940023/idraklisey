@@ -662,14 +662,14 @@ class DefaultRoles {
       Role(
         id: 'role-psikolog',
         name: 'Psixoloq',
-        description: 'Rəhbər müəllim - Şagird izləməsi',
+        description: 'Rəhbər müəllim - Şagird izləməsi və psixoloji/tibbi qeydlər',
         permissionIds: [
           'view_students',
           'view_grades',
           'view_attendance',
           'view_classes',
           'view_reports',
-          'view_medical',
+          'view_medical', 'manage_medical',
         ],
         isDefault: true,
         isDeletable: false,

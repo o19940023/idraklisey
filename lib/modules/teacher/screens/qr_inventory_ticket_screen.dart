@@ -101,19 +101,6 @@ class _QrInventoryTicketScreenState extends State<QrInventoryTicketScreen> {
 
     appState.addTicket(newTicket);
 
-    final deviceLabel = item != null
-        ? '${item.name} (${item.room})'
-        : 'Qeydiyyatsız avadanlıq [QR: $_scannedQrCode]';
-    appState.sendNotification(
-      title: '📡 Texniki Müraciət: ${item?.name ?? "Qeydiyyatsız QR"}',
-      message:
-          '$deviceLabel — ${newTicket.title}. Göndərən: ${currentUser?.fullName ?? "Müəllim"}. İzah: ${_problemDescCtrl.text.trim()}',
-      category: _priority == TicketPriority.urgent
-          ? NotificationCategory.emergency
-          : NotificationCategory.general,
-      priority: _priority == TicketPriority.urgent ? 'high' : 'normal',
-    );
-
     _problemTitleCtrl.clear();
     _problemDescCtrl.clear();
     setState(() {
@@ -123,7 +110,7 @@ class _QrInventoryTicketScreenState extends State<QrInventoryTicketScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('İnventar nasazlıq müraciəti rəhbərliyə və IT şöbəsinə çatdırıldı!'),
+        content: Text('Müraciət helpdesk/IT şöbəsinə göndərildi! Cavabı bildirimlər bölməsində alacaqsınız.'),
         backgroundColor: AppColors.success,
       ),
     );
@@ -132,7 +119,12 @@ class _QrInventoryTicketScreenState extends State<QrInventoryTicketScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
-    final inventoryTickets = appState.tickets.where((t) => t.category == TicketCategory.inventory).toList();
+    final myId = appState.currentUser?.id;
+    final canSeeAll = appState.hasPermission('view_all_tickets');
+    final inventoryTickets = appState.tickets
+        .where((t) => t.category == TicketCategory.inventory)
+        .where((t) => canSeeAll || (t.senderId != null && t.senderId == myId))
+        .toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,

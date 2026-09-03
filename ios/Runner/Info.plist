@@ -31,6 +31,10 @@
 		<string>itms-apps</string>
 		<string>itms-services</string>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -41,6 +45,8 @@
 	<string>Şagird vəsiqəsi və QR kodların oxunması, profil şəkli və ev tapşırıqlarının təhvili üçün kamera icazəsi lazımdır.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Canlı dərslər və səsli pedaqoji rəy daxil etmək üçün mikrofon icazəsi lazımdır.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Səsli rəyləri avtomatik mətnə çevirmək üçün nitqin tanınması icazəsi tələb olunur.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Ev tapşırıqları və profil şəkli yükləmək üçün foto qalereya icazəsi lazımdır.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

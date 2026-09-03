@@ -47,35 +47,37 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
     super.dispose();
   }
 
-  void _simulateVoiceToText() {
-    setState(() {
-      _isVoiceRecording = !_isVoiceRecording;
-    });
-
-    if (_isVoiceRecording) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Səs yazılır... Danışın...'),
-          backgroundColor: AppColors.primaryAccent,
-          duration: Duration(seconds: 2),
-        ),
-      );
-
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted && _isVoiceRecording) {
-          setState(() {
-            _isVoiceRecording = false;
-            _feedbackController.text = 'Şagird bugünkü dərsdə və qiymətləndirmə tapşırıqlarında çox fəal iştirak etdi, analitik yanaşması əladır.';
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Səsli rəy mətnə çevrildi (Voice-to-Text)!'),
-              backgroundColor: AppColors.success,
+  Future<void> _toggleVoiceToText() async {
+    // Voice-to-text is currently unavailable (speech_to_text package 
+    // is incompatible with AGP 9+). Show informational dialog.
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.mic_off_rounded, color: AppColors.warning, size: 28),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text('Səslə yazma', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             ),
-          );
-        }
-      });
-    }
+          ],
+        ),
+        content: const Text(
+          'Azərbaycan dilində səslə yazma funksiyası hazırda inkişaf mərhələsindədir. '
+          'Bu xüsusiyyət tezliklə aktiv olacaq.\n\n'
+          'Hələlik rəyinizi klaviatura ilə yaza bilərsiniz.',
+          style: TextStyle(fontSize: 13, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Anladım', style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -316,7 +318,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                                   child: CircleAvatar(
                                     radius: 18,
                                     backgroundImage: NetworkImage(student.photoUrl),
-                                    onBackgroundImageError: (_, __) {},
+                                    onBackgroundImageError: (_, _) {},
                                     child: null,
                                   ),
                                 ),
@@ -362,7 +364,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                     child: CircleAvatar(
                       radius: 22,
                       backgroundImage: NetworkImage(activeStudent.photoUrl),
-                      onBackgroundImageError: (_, __) {},
+                      onBackgroundImageError: (_, _) {},
                       child: null,
                     ),
                   ),
@@ -487,14 +489,14 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                       ),
                       GestureDetector(
-                        onTap: _simulateVoiceToText,
+                        onTap: _toggleVoiceToText,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: _isVoiceRecording ? AppColors.danger.withAlpha(12) : AppColors.primaryAccent.withAlpha(10),
+                            color: _isVoiceRecording ? AppColors.danger.withAlpha(15) : AppColors.primaryAccent.withAlpha(10),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: _isVoiceRecording ? AppColors.danger.withAlpha(50) : AppColors.primaryAccent.withAlpha(30),
+                              color: _isVoiceRecording ? AppColors.danger : AppColors.primaryAccent.withAlpha(30),
                             ),
                           ),
                           child: Row(
@@ -507,7 +509,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                               ),
                               const SizedBox(width: 5),
                               Text(
-                                _isVoiceRecording ? 'Yazılır...' : 'Səslə Rəy',
+                                _isVoiceRecording ? 'Dinlənilir (Dayandır)' : 'Səslə Rəy (AZ)',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,

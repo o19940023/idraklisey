@@ -6,6 +6,7 @@ import '../../../core/theme/app_shadows.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../providers/app_state.dart';
 import '../../../data/models/library_model.dart';
+import '../../../admin/import_books_helper.dart';
 
 class LibraryScreen extends StatefulWidget {
   final bool isTeacherView;
@@ -20,7 +21,25 @@ class _LibraryScreenState extends State<LibraryScreen> {
   String _selectedCategory = 'Hamısı';
   final TextEditingController _searchCtrl = TextEditingController();
 
-  final List<String> _categories = ['Hamısı', 'Dərslik', 'IB Resurs', 'Bədii', 'Elmi', 'Xarici Dil'];
+  static const List<String> _defaultCategories = [
+    'Dərslik',
+    'IB Resurs',
+    'Bədii',
+    'Elmi',
+    'Xarici Dil',
+  ];
+
+  /// Kitablarda mövcud kateqoriyalar — siyahı boşdursa standartlar göstərilir
+  List<String> _categoriesFor(List<BookItem> allBooks) {
+    final cats = <String>[];
+    for (final b in allBooks) {
+      if (b.category.isNotEmpty && !cats.contains(b.category)) {
+        cats.add(b.category);
+      }
+    }
+    if (cats.isEmpty) cats.addAll(_defaultCategories);
+    return ['Hamısı', ...cats];
+  }
 
   @override
   void dispose() {
@@ -32,24 +51,41 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final allBooks = appState.books;
+    final categories = _categoriesFor(allBooks);
 
+    final query = _searchCtrl.text.toLowerCase();
     final filtered = allBooks.where((book) {
-      final matchesCategory = _selectedCategory == 'Hamısı' || book.category == _selectedCategory;
-      final matchesSearch = book.title.toLowerCase().contains(_searchCtrl.text.toLowerCase()) ||
-          book.author.toLowerCase().contains(_searchCtrl.text.toLowerCase());
+      final matchesCategory =
+          _selectedCategory == 'Hamısı' || book.category == _selectedCategory;
+      final matchesSearch = book.title.toLowerCase().contains(query) ||
+          book.author.toLowerCase().contains(query) ||
+          book.isbn.toLowerCase().contains(query);
       return matchesCategory && matchesSearch;
     }).toList();
 
     final currentUser = appState.currentUser;
-    final canAddBook = currentUser?.role == UserRole.teacher || currentUser?.role == UserRole.admin;
+    final canAddBook =
+        currentUser?.role == UserRole.teacher ||
+        currentUser?.role == UserRole.admin;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(widget.isTeacherView ? 'Müəllim Resurs & E-Kitabxana' : 'İdrak E-Kitabxana'),
+        title: Text(
+          widget.isTeacherView
+              ? 'Müəllim Resurs & E-Kitabxana'
+              : 'İdrak E-Kitabxana',
+        ),
         elevation: 0,
         actions: canAddBook
             ? [
+                // ⚠️ TEK DƏFƏ İSTİFADƏ - Toplu Kitab Yükləmə
+                if (currentUser?.role == UserRole.admin)
+                  IconButton(
+                    icon: const Icon(Icons.upload_file),
+                    tooltip: 'Lisey Kitablarını Yüklə (TEK DƏFƏ)',
+                    onPressed: () => _importLiseyBooks(context, appState),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline_rounded),
                   tooltip: 'Yeni Kitab Əlavə Et',
@@ -62,8 +98,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ? FloatingActionButton.extended(
               onPressed: () => _showAddBookDialog(context, appState),
               backgroundColor: AppColors.primaryAccent,
-              icon: const Icon(Icons.bookmark_add_outlined, color: Colors.white),
-              label: const Text('Yeni Kitab Əlavə Et', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              icon: const Icon(
+                Icons.bookmark_add_outlined,
+                color: Colors.white,
+              ),
+              label: const Text(
+                'Yeni Kitab Əlavə Et',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             )
           : null,
       body: Column(
@@ -82,10 +127,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     hintText: 'Kitab adı, müəllif və ya ISBN axtar...',
-                    hintStyle: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                    hintStyle: TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textMuted,
+                    ),
                     filled: true,
                     fillColor: AppColors.background,
-                    prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primaryAccent, size: 20),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.primaryAccent,
+                      size: 20,
+                    ),
                     suffixIcon: _searchCtrl.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear_rounded, size: 18),
@@ -95,7 +147,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             },
                           )
                         : null,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 14,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(color: AppColors.cardBorder),
@@ -106,7 +161,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: AppColors.primaryAccent, width: 1.5),
+                      borderSide: const BorderSide(
+                        color: AppColors.primaryAccent,
+                        width: 1.5,
+                      ),
                     ),
                   ),
                 ),
@@ -114,7 +172,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: _categories.map((cat) {
+                    children: categories.map((cat) {
                       final isSelected = _selectedCategory == cat;
                       return Padding(
                         padding: const EdgeInsets.only(right: 6),
@@ -122,17 +180,30 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           onTap: () => setState(() => _selectedCategory = cat),
                           borderRadius: BorderRadius.circular(20),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
-                              color: isSelected ? AppColors.primaryAccent : AppColors.surface,
+                              color: isSelected
+                                  ? AppColors.primaryAccent
+                                  : AppColors.surface,
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: isSelected ? AppColors.primaryAccent : AppColors.cardBorder),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.primaryAccent
+                                    : AppColors.cardBorder,
+                              ),
                             ),
                             child: Text(
                               cat,
                               style: TextStyle(
-                                color: isSelected ? Colors.white : AppColors.textPrimary,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                color: isSelected
+                                    ? Colors.white
+                                    : AppColors.textPrimary,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
                                 fontSize: 11.5,
                               ),
                             ),
@@ -153,14 +224,27 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.menu_book_outlined, size: 56, color: AppColors.textMuted),
+                        Icon(
+                          Icons.menu_book_outlined,
+                          size: 56,
+                          color: AppColors.textMuted,
+                        ),
                         const SizedBox(height: 12),
-                        Text('Bu kateqoriyada kitab tapılmadı.', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                        Text(
+                          'Bu kateqoriyada kitab tapılmadı.',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
                       ],
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     physics: const BouncingScrollPhysics(),
                     itemCount: filtered.length,
                     itemBuilder: (context, index) {
@@ -174,7 +258,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  Widget _buildBookCard(BuildContext context, AppState appState, BookItem book) {
+  Widget _buildBookCard(
+    BuildContext context,
+    AppState appState,
+    BookItem book,
+  ) {
     final dateFormat = DateFormat('dd.MM.yyyy');
 
     return Container(
@@ -209,9 +297,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.menu_book_outlined, color: AppColors.primaryAccent, size: 24),
+                        Icon(
+                          Icons.menu_book_outlined,
+                          color: AppColors.primaryAccent,
+                          size: 24,
+                        ),
                         SizedBox(height: 4),
-                        Text('İDRAK', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.primaryAccent)),
+                        Text(
+                          'İDRAK',
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryAccent,
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -234,11 +333,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     ),
                     Row(
                       children: [
-                        const Icon(Icons.star_rounded, color: AppColors.goldDark, size: 16),
+                        const Icon(
+                          Icons.star_rounded,
+                          color: AppColors.goldDark,
+                          size: 16,
+                        ),
                         const SizedBox(width: 2),
                         Text(
                           '${book.rating}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11.5,
+                          ),
                         ),
                       ],
                     ),
@@ -257,11 +363,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 const SizedBox(height: 2),
                 Text(
                   book.author,
-                  style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${book.pageCount} səhifə • Dil: ${book.language}',
+                  book.pageCount > 0
+                      ? '${book.pageCount} səhifə • Dil: ${book.language} • ${book.availableCopies} nüsxə'
+                      : '${book.language} • ${book.availableCopies} nüsxə',
                   style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
                 ),
                 const SizedBox(height: 10),
@@ -269,27 +380,43 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 // Borrow / Read Actions
                 Row(
                   children: [
-                    if (book.type == BookType.ebook || book.type == BookType.both)
+                    if (book.type == BookType.ebook ||
+                        book.type == BookType.both)
                       Expanded(
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 6,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           onPressed: () {
                             _showEBookReader(context, book);
                           },
                           icon: const Icon(Icons.menu_book_outlined, size: 14),
-                          label: const Text('E-Oxu', style: TextStyle(fontSize: 11)),
+                          label: const Text(
+                            'E-Oxu',
+                            style: TextStyle(fontSize: 11),
+                          ),
                         ),
                       ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: book.isBorrowedByMe ? AppColors.success : AppColors.primaryAccent,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          backgroundColor: book.isBorrowedByMe
+                              ? AppColors.success
+                              : AppColors.primaryAccent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
                         ),
                         onPressed: () {
                           appState.toggleBorrowBook(book.id);
@@ -304,10 +431,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             ),
                           );
                         },
-                        icon: Icon(book.isBorrowedByMe ? Icons.check_circle_outline : Icons.bookmark_add_outlined, size: 14, color: Colors.white),
+                        icon: Icon(
+                          book.isBorrowedByMe
+                              ? Icons.check_circle_outline
+                              : Icons.bookmark_add_outlined,
+                          size: 14,
+                          color: Colors.white,
+                        ),
                         label: Text(
                           book.isBorrowedByMe ? 'İcarədədir' : 'İcarəyə Götür',
-                          style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -318,7 +455,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   const SizedBox(height: 6),
                   Text(
                     'Qaytarma tarixi: ${dateFormat.format(book.returnDeadline!)}',
-                    style: const TextStyle(fontSize: 10.5, color: AppColors.warning, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      color: AppColors.warning,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ],
@@ -334,7 +475,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final authorCtrl = TextEditingController();
     final pageCtrl = TextEditingController(text: '200');
     final descCtrl = TextEditingController();
-    String category = 'Dərslik';
+    final dialogCategories = _categoriesFor(appState.books).skip(1).toList();
+    String category = dialogCategories.first;
     String language = 'Azərbaycan';
     BookType bookType = BookType.both;
 
@@ -344,22 +486,35 @@ class _LibraryScreenState extends State<LibraryScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               title: const Text('Kitabxanaya Yeni Kitab Əlavə Et'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Kitabın Adı *')),
+                    TextField(
+                      controller: titleCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Kitabın Adı *',
+                      ),
+                    ),
                     const SizedBox(height: 10),
-                    TextField(controller: authorCtrl, decoration: const InputDecoration(labelText: 'Müəllif *')),
+                    TextField(
+                      controller: authorCtrl,
+                      decoration: const InputDecoration(labelText: 'Müəllif *'),
+                    ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       initialValue: category,
-                      decoration: const InputDecoration(labelText: 'Kateqoriya'),
-                      items: _categories
-                          .where((c) => c != 'Hamısı')
-                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      decoration: const InputDecoration(
+                        labelText: 'Kateqoriya',
+                      ),
+                      items: dialogCategories
+                          .map(
+                            (c) => DropdownMenuItem(value: c, child: Text(c)),
+                          )
                           .toList(),
                       onChanged: (val) {
                         if (val != null) setDialogState(() => category = val);
@@ -369,13 +524,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     TextField(
                       controller: pageCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Səhifə Sayı'),
+                      decoration: const InputDecoration(
+                        labelText: 'Səhifə Sayı',
+                      ),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: descCtrl,
                       maxLines: 2,
-                      decoration: const InputDecoration(labelText: 'Qısa Təsvir / Xülasə'),
+                      decoration: const InputDecoration(
+                        labelText: 'Qısa Təsvir / Xülasə',
+                      ),
                     ),
                   ],
                 ),
@@ -388,12 +547,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryAccent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: () {
-                    if (titleCtrl.text.trim().isEmpty || authorCtrl.text.trim().isEmpty) {
+                    if (titleCtrl.text.trim().isEmpty ||
+                        authorCtrl.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Zəhmət olmasa kitab adı və müəllifi daxil edin!')),
+                        const SnackBar(
+                          content: Text(
+                            'Zəhmət olmasa kitab adı və müəllifi daxil edin!',
+                          ),
+                        ),
                       );
                       return;
                     }
@@ -405,7 +571,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       description: descCtrl.text.trim().isNotEmpty
                           ? descCtrl.text.trim()
                           : 'İdrak Liseyi rəsmi tədris vəsaiti.',
-                      coverUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400',
+                      coverUrl:
+                          'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400',
                       type: bookType,
                       pageCount: int.tryParse(pageCtrl.text.trim()) ?? 150,
                       rating: 4.8,
@@ -416,12 +583,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('"${newBook.title}" kitabxanaya əlavə edildi!'),
+                        content: Text(
+                          '"${newBook.title}" kitabxanaya əlavə edildi!',
+                        ),
                         backgroundColor: AppColors.success,
                       ),
                     );
                   },
-                  child: const Text('Əlavə Et', style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    'Əlavə Et',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ],
             );
@@ -455,7 +627,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -465,11 +640,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         children: [
                           Text(
                             book.title,
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          Text(book.author, style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+                          Text(
+                            book.author,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -487,36 +671,61 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.picture_as_pdf_outlined, size: 56, color: Colors.red.shade400),
+                      Icon(
+                        Icons.picture_as_pdf_outlined,
+                        size: 56,
+                        color: Colors.red.shade400,
+                      ),
                       const SizedBox(height: 14),
                       Text(
                         'Rəqəmsal Dərslik / PDF Önizləmə',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         '${book.pageCount} səhifəlik rəsmi PDF nüsxəsi daxili oxucuya yüklənir...',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryAccent,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: () {
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('E-Kitab offline oxumaq üçün keşləndi.'),
+                              content: Text(
+                                'E-Kitab offline oxumaq üçün keşləndi.',
+                              ),
                               backgroundColor: AppColors.success,
                             ),
                           );
                         },
-                        icon: const Icon(Icons.download_outlined, color: Colors.white, size: 16),
-                        label: const Text('Offline Saxla və Oxu', style: TextStyle(color: Colors.white, fontSize: 12)),
+                        icon: const Icon(
+                          Icons.download_outlined,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        label: const Text(
+                          'Offline Saxla və Oxu',
+                          style: TextStyle(color: Colors.white, fontSize: 12),
+                        ),
                       ),
                     ],
                   ),
@@ -526,6 +735,102 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ),
         );
       },
+    );
+  }
+
+  // Lisey kitablarını toplu şəkildə yükləyir
+  void _importLiseyBooks(BuildContext context, AppState appState) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Row(
+          children: [
+            Icon(Icons.upload_file, color: AppColors.primaryAccent),
+            SizedBox(width: 8),
+            Text('Lisey Kitablarını Yüklə'),
+          ],
+        ),
+        content: Text(
+          'Lisey siyahısından ${BooksImportHelper.count} kitab Firebase-ə yükləniləcək. Mövcud kitablar silinib yeniləri ilə əvəz olunacaq.\n\nDavam etmək istəyirsiniz?',
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Ləğv et'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              
+              // Loading göstər
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (ctx) => const Center(
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(color: AppColors.primaryAccent),
+                          SizedBox(height: 16),
+                          Text('Kitablar yüklənir...', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+
+              try {
+                // Kitabları Firebase'e yüklə
+                await BooksImportHelper.importLiseyBooks();
+                
+                // Kitabları yenidən yüklə
+                final cloudBooks = await appState.firestoreService.fetchBooks();
+                appState.updateBooks(cloudBooks);
+                
+                if (context.mounted) {
+                  Navigator.pop(context); // Loading dialog'u bağla
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✅ Lisey kitabları uğurla yükləndi!'),
+                      backgroundColor: AppColors.success,
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context); // Loading dialog'u bağla
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('❌ Xəta: $e'),
+                      backgroundColor: AppColors.danger,
+                      duration: const Duration(seconds: 5),
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text(
+              'Yüklə',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

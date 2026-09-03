@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_state.dart';
 import 'services/app_update_service.dart';
+import 'services/push_notification_service.dart';
 import 'modules/auth/screens/video_splash_screen.dart';
 
 void main() async {
@@ -30,6 +31,9 @@ void main() async {
   final appState = AppState();
   await appState.loadThemeMode();
   appState.initFirebaseData();
+
+  // Push bildirişləri (tətbiq bağlı ikən də gəlməsi üçün) — arxa planda
+  unawaited(PushNotificationService.instance.initialize());
 
   // Yeni versiya yoxlaması (banner üçün) — arxa planda, gecikmə yaratmır
   final appUpdateService = AppUpdateService();

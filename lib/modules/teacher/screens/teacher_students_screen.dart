@@ -856,15 +856,16 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
                                   const Text('Sağlamlıq & Allergiya', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.danger)),
                                 ],
                               ),
-                              TextButton.icon(
-                                onPressed: () {
-                                  _showAddAllergyQuickDialog(context, appState, student.id, () {
-                                    setSheetState(() {});
-                                  });
-                                },
-                                icon: const Icon(Icons.add_circle_outline_rounded, size: 14, color: AppColors.danger),
-                                label: const Text('Əlavə Et', style: TextStyle(fontSize: 11, color: AppColors.danger, fontWeight: FontWeight.w700)),
-                              ),
+                              if (canEditMedical)
+                                TextButton.icon(
+                                  onPressed: () {
+                                    _showAddAllergyQuickDialog(context, appState, student.id, () {
+                                      setSheetState(() {});
+                                    });
+                                  },
+                                  icon: const Icon(Icons.add_circle_outline_rounded, size: 14, color: AppColors.danger),
+                                  label: const Text('Əlavə Et', style: TextStyle(fontSize: 11, color: AppColors.danger, fontWeight: FontWeight.w700)),
+                                ),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -1140,6 +1141,12 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
   }
 
   void _showEditPhysicalStatsDialog(BuildContext context, AppState appState, String studentId, StudentMedicalCard card, VoidCallback onUpdated) {
+    if (!appState.hasPermission('manage_medical')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bu məlumatı yalnız Tibbi Heyət və Psixoloq redaktə edə bilər.'), backgroundColor: AppColors.warning),
+      );
+      return;
+    }
     final heightCtrl = TextEditingController(text: card.heightCm > 0 ? '${card.heightCm.toInt()}' : '');
     final weightCtrl = TextEditingController(text: card.weightKg > 0 ? '${card.weightKg.toInt()}' : '');
     String selectedBlood = card.bloodGroup.isNotEmpty && card.bloodGroup != 'Məlumat yoxdur' ? card.bloodGroup : 'A(II) Rh+';
@@ -1219,6 +1226,12 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
   }
 
   void _showAddAllergyQuickDialog(BuildContext context, AppState appState, String studentId, VoidCallback onAdded) {
+    if (!appState.hasPermission('manage_medical')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Allergiya qeydini yalnız Tibbi Heyət və Psixoloq əlavə edə bilər.'), backgroundColor: AppColors.warning),
+      );
+      return;
+    }
     final nameCtrl = TextEditingController();
     final reactionCtrl = TextEditingController();
     String severity = 'Yüksək dərəcə';
@@ -1282,6 +1295,12 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
   }
 
   void _showAddVaccineQuickDialog(BuildContext context, AppState appState, String studentId, VoidCallback onAdded) {
+    if (!appState.hasPermission('manage_medical')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Peyvənd qeydini yalnız Tibbi Heyət və Psixoloq əlavə edə bilər.'), backgroundColor: AppColors.warning),
+      );
+      return;
+    }
     final nameCtrl = TextEditingController(text: 'QPM (Qızılca, Parotit, Məxmərək)');
     final doctorCtrl = TextEditingController(text: 'Dr. Əliyeva N. (Məktəb Tibb Otağı)');
     String status = 'Tamamlandı';

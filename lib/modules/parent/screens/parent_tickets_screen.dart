@@ -430,13 +430,16 @@ class _ParentTicketsScreenState extends State<ParentTicketsScreen> {
                         IconButton.filled(
                           onPressed: () {
                             if (messageController.text.trim().isNotEmpty) {
+                              final me = appState.currentUser;
+                              final isStaff = appState.currentRole != UserRole.parent &&
+                                  appState.currentRole != UserRole.student;
                               appState.addTicketMessage(
                                 currentTicket.id,
                                 TicketMessage(
-                                  sender: 'Rəşad Qasımov (Valideyn)',
+                                  sender: me?.fullName ?? 'İstifadəçi',
                                   message: messageController.text.trim(),
                                   timestamp: DateTime.now(),
-                                  isFromStaff: false,
+                                  isFromStaff: isStaff,
                                 ),
                               );
                               messageController.clear();
@@ -494,7 +497,11 @@ class _ParentTicketsScreenState extends State<ParentTicketsScreen> {
                   DropdownButtonFormField<TicketCategory>(
                     initialValue: selectedCat,
                     decoration: const InputDecoration(labelText: 'Müraciət Şöbəsi / Kateqoriya'),
-                    items: TicketCategory.values.map((cat) {
+                    // İnventar (QR cihaz) müraciətləri yalnız işçilərin göndərə biləcəyi
+                    // texniki kateqoriyadır — valideyn/şagird dialoqunda gizlədilir.
+                    items: TicketCategory.values
+                        .where((cat) => cat != TicketCategory.inventory)
+                        .map((cat) {
                       return DropdownMenuItem(
                         value: cat,
                         child: Text(_getCategoryName(cat)),

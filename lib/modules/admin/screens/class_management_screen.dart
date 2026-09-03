@@ -220,38 +220,50 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                           children: [
                             // Header Row: Class name & Promote Button
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primaryAccent.withAlpha(15),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: AppColors.primaryAccent.withAlpha(35)),
-                                      ),
-                                      child: Text(
-                                        cls,
-                                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.primaryAccent),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          '$cls Sinfi',
-                                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Flexible(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primaryAccent.withAlpha(15),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: AppColors.primaryAccent.withAlpha(35)),
+                                          ),
+                                          child: Text(
+                                            cls,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.primaryAccent),
+                                          ),
                                         ),
-                                        Text(
-                                          '${classStudents.length} Şagird Qeydiyyatda',
-                                          style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '$cls Sinfi',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                                            ),
+                                            Text(
+                                              '${classStudents.length} Şagird Qeydiyyatda',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
-                                  ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                                const SizedBox(width: 8),
 
                                 // Promote Class Button
                                 ElevatedButton.icon(
@@ -263,7 +275,7 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
                                   ),
                                   onPressed: () => _showPromoteClassDialog(context, appState, cls),
                                   icon: const Icon(Icons.upgrade_rounded, size: 16, color: Colors.white),
-                                  label: const Text('Sinifi Yüksəlt', style: TextStyle(fontSize: 11.5, color: Colors.white, fontWeight: FontWeight.w700)),
+                                  label: const Text('Yüksəlt', style: TextStyle(fontSize: 11.5, color: Colors.white, fontWeight: FontWeight.w700)),
                                 ),
                               ],
                             ),

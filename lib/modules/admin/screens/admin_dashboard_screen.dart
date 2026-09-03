@@ -14,6 +14,7 @@ import 'student_management_screen.dart';
 import '../../parent/screens/parent_tickets_screen.dart';
 import '../../parent/screens/grades_analytics_screen.dart';
 import '../../student/screens/cafeteria_menu_screen.dart';
+import '../../student/screens/library_screen.dart';
 import '../../shared/screens/notifications_screen.dart';
 import '../widgets/reorderable_module_grid.dart';
 
@@ -547,6 +548,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       'view_cafeteria': 'Menyu təyini',
                       'view_settings': 'Rəsmi bildirişlər',
                       'view_inventory': 'Texniki xidmət',
+                      'view_library': 'Kitab kolleksiyası',
                     },
                     onReorder: (newOrder) {
                       appState.updateModuleOrder(newOrder);
@@ -632,6 +634,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             MaterialPageRoute(
                               builder: (_) =>
                                   const QrInventoryManagementScreen(),
+                            ),
+                          );
+                          break;
+                        case 'view_library':
+                          Navigator.push(
+                            ctx,
+                            MaterialPageRoute(
+                              builder: (_) => const LibraryScreen(),
                             ),
                           );
                           break;

@@ -13,6 +13,7 @@ class SmartAttendanceScreen extends StatefulWidget {
   final String? targetTime;
   final bool isMerged;
   final String? coTeacherName;
+  final DateTime? targetDate;
 
   const SmartAttendanceScreen({
     super.key,
@@ -22,6 +23,7 @@ class SmartAttendanceScreen extends StatefulWidget {
     this.targetTime,
     this.isMerged = false,
     this.coTeacherName,
+    this.targetDate,
   });
 
   @override
@@ -31,24 +33,6 @@ class SmartAttendanceScreen extends StatefulWidget {
 class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with SingleTickerProviderStateMixin {
   Offset _dragOffset = Offset.zero;
   double _dragRotation = 0.0;
-
-  // Helper: Gün adından weekday tap
-  int? _getDayOfWeekFromName(String dayName) {
-    switch (dayName) {
-      case 'Bazar ertəsi':
-        return 1; // Monday
-      case 'Çərşənbə axşamı':
-        return 2; // Tuesday
-      case 'Çərşənbə':
-        return 3; // Wednesday
-      case 'Cümə axşamı':
-        return 4; // Thursday
-      case 'Cümə':
-        return 5; // Friday
-      default:
-        return null;
-    }
-  }
 
   @override
   void initState() {
@@ -76,93 +60,61 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
     final subject = appState.currentSessionSubject.isNotEmpty ? appState.currentSessionSubject : (widget.targetSubject ?? 'Dərs');
     final timeStr = widget.targetTime ?? 'Dərs Saatı';
 
-    // ✅ YENİ: 10 Dəqiqə Əvvəl Yoxlaması (GÜN DƏSTƏYİ)
+    // ✅ DƏQİQ TARİX VƏ VAXT YOXLAMASI
     bool canAccessAttendance = true;
     String? blockMessage;
-    
-    // Dərsin hansı gündə olduğunu tap (cədvəldən)
-    int? lessonDayOfWeek;
-    
-    // Cədvəldən dərsin hansı gündə olduğunu tapırıq
-    final allClasses = appState.allDistinctClasses;
-    for (final cls in allClasses) {
-      final timetable = appState.getClassTimetable(cls);
-      for (final day in timetable) {
-        for (final lesson in day.lessons) {
-          if (lesson.time == widget.targetTime && lesson.subject == subject) {
-            // Günü tap
-            lessonDayOfWeek = _getDayOfWeekFromName(day.dayName);
-            break;
-          }
-        }
-        if (lessonDayOfWeek != null) break;
-      }
-      if (lessonDayOfWeek != null) break;
-    }
-    
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final DateTime targetLessonDate = widget.targetDate != null
+        ? DateTime(widget.targetDate!.year, widget.targetDate!.month, widget.targetDate!.day)
+        : today;
+
+    final bool isToday = targetLessonDate.isAtSameMomentAs(today);
+    final bool isFuture = targetLessonDate.isAfter(today);
+
     if (widget.targetTime != null && widget.targetTime!.contains(' - ')) {
       final timeParts = widget.targetTime!.split(' - ');
       final startTimeParts = timeParts[0].trim().split(':');
-      
+
       if (startTimeParts.length == 2) {
-        final now = DateTime.now();
         final startHour = int.tryParse(startTimeParts[0]);
         final startMin = int.tryParse(startTimeParts[1]);
-        
+
         if (startHour != null && startMin != null) {
-          // Dərsin tam tarixini hesabla
-          DateTime lessonStartTime;
-          
-          if (lessonDayOfWeek != null) {
-            // Bu həftə və ya növbəti həftə
-            final currentDayOfWeek = now.weekday; // 1=Bazar ertəsi, 7=Bazar
-            int daysUntilLesson = lessonDayOfWeek - currentDayOfWeek;
-            
-            if (daysUntilLesson < 0) {
-              daysUntilLesson += 7; // Növbəti həftə
-            } else if (daysUntilLesson == 0) {
-              // Bu gün - saata bax
-              lessonStartTime = DateTime(now.year, now.month, now.day, startHour, startMin);
-              if (now.isAfter(lessonStartTime)) {
-                daysUntilLesson = 7; // Növbəti həftə eyni gün
-              }
-            }
-            
-            lessonStartTime = DateTime(
-              now.year,
-              now.month,
-              now.day + daysUntilLesson,
-              startHour,
-              startMin,
-            );
-          } else {
-            // Gün məlumatı yoxdursa, bu günə görə hesabla (köhnə metod)
-            lessonStartTime = DateTime(now.year, now.month, now.day, startHour, startMin);
-          }
-          
+          final lessonStartTime = DateTime(
+            targetLessonDate.year,
+            targetLessonDate.month,
+            targetLessonDate.day,
+            startHour,
+            startMin,
+          );
           final tenMinBefore = lessonStartTime.subtract(const Duration(minutes: 10));
-          
-          if (now.isBefore(tenMinBefore)) {
-            canAccessAttendance = false;
-            final diffMinutes = tenMinBefore.difference(now).inMinutes;
-            final diffHours = diffMinutes ~/ 60;
-            final diffDays = diffHours ~/ 24;
-            final remainingHours = diffHours % 24;
-            final remainingMinutes = diffMinutes % 60;
-            
-            if (diffDays > 0) {
-              blockMessage = 'Davamiyyət qeydiyyatına daha $diffDays gün $remainingHours saat var.\n\n'
-                  'Dərs ${lessonStartTime.day}.${lessonStartTime.month} - ${lessonStartTime.hour.toString().padLeft(2, '0')}:${lessonStartTime.minute.toString().padLeft(2, '0')}-da başlayacaq.\n\n'
-                  '10 dəqiqə əvvəl (${tenMinBefore.hour.toString().padLeft(2, '0')}:${tenMinBefore.minute.toString().padLeft(2, '0')}) giriş açılacaq.';
-            } else if (remainingHours > 0) {
-              blockMessage = 'Davamiyyət qeydiyyatına daha $remainingHours saat $remainingMinutes dəqiqə var.\n\n'
-                  'Dərs saatından 10 dəqiqə əvvəl (${tenMinBefore.hour.toString().padLeft(2, '0')}:${tenMinBefore.minute.toString().padLeft(2, '0')}) '
-                  'giriş açılacaq.';
+
+          if (isToday) {
+            if (now.isBefore(tenMinBefore)) {
+              canAccessAttendance = false;
+              final diffMinutes = tenMinBefore.difference(now).inMinutes;
+              final remainingHours = diffMinutes ~/ 60;
+              final remainingMinutes = diffMinutes % 60;
+
+              if (remainingHours > 0) {
+                blockMessage = 'Davamiyyət qeydiyyatına daha $remainingHours saat $remainingMinutes dəqiqə var.\n\n'
+                    'Dərs saatından 10 dəqiqə əvvəl (${tenMinBefore.hour.toString().padLeft(2, '0')}:${tenMinBefore.minute.toString().padLeft(2, '0')}) giriş açılacaq.';
+              } else {
+                blockMessage = 'Davamiyyət qeydiyyatına daha $diffMinutes dəqiqə var.\n\n'
+                    'Dərs saatından 10 dəqiqə əvvəl (${tenMinBefore.hour.toString().padLeft(2, '0')}:${tenMinBefore.minute.toString().padLeft(2, '0')}) giriş açılacaq.';
+              }
             } else {
-              blockMessage = 'Davamiyyət qeydiyyatına daha $diffMinutes dəqiqə var.\n\n'
-                  'Dərs saatından 10 dəqiqə əvvəl (${tenMinBefore.hour.toString().padLeft(2, '0')}:${tenMinBefore.minute.toString().padLeft(2, '0')}) '
-                  'giriş açılacaq.';
+              canAccessAttendance = true;
             }
+          } else if (isFuture) {
+            canAccessAttendance = false;
+            final monthStr = '${targetLessonDate.day}.${targetLessonDate.month.toString().padLeft(2, '0')}.${targetLessonDate.year}';
+            blockMessage = 'Bu dərs gələcək tarix üçün ($monthStr, saat ${widget.targetTime}) planlaşdırılıb.\n\n'
+                'Davamiyyət qeydiyyatı dərs günü dərsin başlamasına 10 dəqiqə qalmış aktivləşəcək.';
+          } else {
+            canAccessAttendance = true;
           }
         }
       }

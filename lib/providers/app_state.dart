@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../core/theme/app_colors.dart';
 import '../data/models/timetable_model.dart';
 import '../data/models/grade_model.dart';
@@ -22,6 +23,8 @@ import '../data/mock_data.dart';
 import '../core/utils/email_generator.dart';
 import '../services/firestore_service.dart';
 import '../services/auth_storage_service.dart';
+import '../services/push_notification_service.dart';
+import '../services/push_relay_service.dart';
 
 enum UserRole {
   admin, // Məktəb İdarəetməsi (Admin)
@@ -62,6 +65,7 @@ class AppState extends ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
   final AuthStorageService _authStorage = AuthStorageService();
   StreamSubscription<List<MeetRoom>>? _meetRoomsSubscription;
+  StreamSubscription<List<AppNotification>>? _notificationsSubscription;
 
   // Public getter for FirestoreService
   FirestoreService get firestoreService => _firestoreService;
@@ -163,7 +167,7 @@ class AppState extends ChangeNotifier {
     try {
       final prefs = await _firestoreService.fetchUserPreferences(user.id);
       if (prefs != null && prefs.userRole == user.role.name) {
-        _userPreferences = prefs;
+        _userPreferences = prefs.withMergedDefaultModules();
       } else {
         // Varsayılan tercihleri oluştur
         _userPreferences = UserPreferences.createDefault(
@@ -452,12 +456,60 @@ class AppState extends ChangeNotifier {
   /// Səlahiyyət yoxlaması.
   /// assignedRoleId olan istifadəçi YALNIZ rolunun icazə verdiyi
   /// səlahiyyətlərə çatır. Rol təyin olunmayan istifadəçilər
-  /// öz rollarının standart modullarına tam giriş əldə edirlər.
+  /// öz rollarının standart modullarına giriş əldə edirlər.
   bool hasPermission(String permissionId) {
     final user = _currentUser;
     if (user == null) return false;
+
+    // Admin hər zaman tam səlahiyyətə malikdir
+    if (user.role == UserRole.admin) return true;
+
+    // Şagird/Valideyn paneli yalnız öz modullarını istifadə edir —
+    // işçi alətlərinə (helpdesk, inventar, istifadəçi idarəetməsi) heç vaxt giriş yoxdur.
+    if (user.role == UserRole.parent || user.role == UserRole.student) {
+      const staffOnlyPermissions = {
+        'view_all_tickets',
+        'manage_tickets',
+        'view_tickets',
+        'view_inventory',
+        'manage_inventory',
+        'view_users',
+        'add_users',
+        'edit_users',
+        'view_roles',
+        'manage_roles',
+        'view_settings',
+        'manage_settings',
+        'manage_medical',
+      };
+      if (staffOnlyPermissions.contains(permissionId)) return false;
+    }
+
+    // manage_medical xüsusi icazəsi: Yalnız Tibbi işçi, Psixoloq və ya xüsusi icazəli şəxslər
+    if (permissionId == 'manage_medical') {
+      if (user.teacherPermissions?.canManageMedical == true) return true;
+      final roleId = user.assignedRoleId;
+      if (roleId != null && roleId.isNotEmpty) {
+        final role = getRoleById(roleId);
+        if (role != null) {
+          if (role.permissionIds.contains('manage_medical')) return true;
+          final nameLower = role.name.toLowerCase();
+          if (nameLower.contains('tibb') ||
+              nameLower.contains('psix') ||
+              nameLower.contains('psik') ||
+              nameLower.contains('həkim')) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
     final roleId = user.assignedRoleId;
     if (roleId == null || roleId.isEmpty) {
+      if (user.role == UserRole.teacher) {
+        if (permissionId == 'teacher_medical') return false;
+      }
       return true;
     }
     final role = getRoleById(roleId);
@@ -465,22 +517,30 @@ class AppState extends ChangeNotifier {
 
     // Teacher navigation ID mapping to Permission IDs
     if (user.role == UserRole.teacher) {
-      if (permissionId == 'teacher_students')
+      if (permissionId == 'teacher_students') {
         return role.permissionIds.contains('view_students');
-      if (permissionId == 'teacher_timetable')
+      }
+      if (permissionId == 'teacher_timetable') {
         return role.permissionIds.contains('view_timetable');
-      if (permissionId == 'teacher_grading')
+      }
+      if (permissionId == 'teacher_grading') {
         return role.permissionIds.contains('view_grades');
-      if (permissionId == 'teacher_inventory')
+      }
+      if (permissionId == 'teacher_inventory') {
         return role.permissionIds.contains('view_inventory');
-      if (permissionId == 'teacher_medical')
-        return role.permissionIds.contains('view_medical');
-      if (permissionId == 'teacher_library')
+      }
+      if (permissionId == 'teacher_medical') {
+        return false;
+      }
+      if (permissionId == 'teacher_library') {
         return role.permissionIds.contains('view_library');
-      if (permissionId == 'teacher_notifications')
+      }
+      if (permissionId == 'teacher_notifications') {
         return role.permissionIds.contains('view_settings');
-      if (permissionId == 'teacher_meet')
+      }
+      if (permissionId == 'teacher_meet') {
         return role.permissionIds.contains('view_meet');
+      }
     }
 
     return role.permissionIds.contains(permissionId);
@@ -615,6 +675,18 @@ class AppState extends ChangeNotifier {
         _students.clear();
         _students.addAll(cloudStudents);
         _pendingAttendanceStudents = List.from(_students);
+
+        // Studentlər gecikə bilər — valideyn girişi olanda uşaq sinifləri
+        // hazır deyilsə, yüklənən kimi class topic-lərini yenilə.
+        final current = _currentUser;
+        if (current != null && current.role == UserRole.parent) {
+          final classes = _childClassesFor(current);
+          if (classes.isNotEmpty) {
+            unawaited(
+              PushNotificationService.instance.updateClassTopics(classes),
+            );
+          }
+        }
       }
 
       // 3. Fetch Timetables
@@ -685,6 +757,9 @@ class AppState extends ChangeNotifier {
         _notifications.clear();
         _notifications.addAll(cloudNotifs);
       }
+      // Bundan sonra canlı dinlə — tətbiq açıq ikən gələn bildirişlər
+      // dərhal görünsün (çıx-gir etməyə ehtiyac yoxdur).
+      _startNotificationsListener();
 
       // 13. Fetch QR Inventory Items
       final cloudInventory = await _firestoreService.fetchInventoryItems();
@@ -723,6 +798,24 @@ class AppState extends ChangeNotifier {
         // Keep existing rooms on error instead of clearing
       },
       cancelOnError: false, // Keep stream alive on Firestore reconnects
+    );
+  }
+
+  /// Bildirişlərin canlı sinkronizasiyası (meet rooms listener-i ilə eyni pattern).
+  void _startNotificationsListener() {
+    _notificationsSubscription?.cancel();
+    _notificationsSubscription = _firestoreService.watchNotifications().listen(
+      (notifs) {
+        _notifications
+          ..clear()
+          ..addAll(notifs);
+        notifyListeners();
+      },
+      onError: (Object error) {
+        debugPrint('Notifications live sync error: $error');
+        // Xətada mövcud siyahını saxla, boşaltma
+      },
+      cancelOnError: false, // Firestore yenidən qoşulanda axın davam etsin
     );
   }
 
@@ -778,6 +871,15 @@ class AppState extends ChangeNotifier {
 
     // 🆕 İstifadəçi seçimlərini yüklə (modul sıralaması üçün)
     loadUserPreferences();
+
+    // Push bildirişləri: icazə + token + topic abunəlikləri
+    // (valideyn uşaqlarının siniflərinə də abunə olur)
+    unawaited(
+      PushNotificationService.instance.onUserLoggedIn(
+        user,
+        childClasses: _childClassesFor(user),
+      ),
+    );
 
     // Save credentials for auto-login if requested
     if (saveCredentials) {
@@ -852,6 +954,9 @@ class AppState extends ChangeNotifier {
   }
 
   void logout() async {
+    // Şəxsi push topic-lərinə abunəliyi ləğv et (başqa hesabın
+    // bildirişləri bu cihaza gəlməsin)
+    unawaited(PushNotificationService.instance.onUserLoggedOut());
     _currentUser = null;
     _currentTabIndex = 0;
     await _authStorage.clearAll();
@@ -1099,6 +1204,90 @@ class AppState extends ChangeNotifier {
       _firestoreService.saveClassTimetable(className, days);
       notifyListeners();
     }
+  }
+
+  // Helper: DateTime -> Gün adı
+  String getDayNameFromDateTime(DateTime date) {
+    switch (date.weekday) {
+      case DateTime.monday:
+        return 'Bazar ertəsi';
+      case DateTime.tuesday:
+        return 'Çərşənbə axşamı';
+      case DateTime.wednesday:
+        return 'Çərşənbə';
+      case DateTime.thursday:
+        return 'Cümə axşamı';
+      case DateTime.friday:
+        return 'Cümə';
+      case DateTime.saturday:
+        return 'Şənbə';
+      case DateTime.sunday:
+        return 'Bazar';
+      default:
+        return 'Bazar ertəsi';
+    }
+  }
+
+  // ✅ YENİ: Müəllimə və Konkret Tarixə görə dərslər (İstisnalar, birgə tədris və xüsusi dərslər nəzərə alınır)
+  List<LessonSlot> getTeacherLessonsForDate(String teacherId, DateTime date) {
+    final dayName = getDayNameFromDateTime(date);
+    final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    final List<LessonSlot> result = [];
+
+    for (final className in _classTimetablesMap.keys) {
+      final classDays = _classTimetablesMap[className]!;
+      final matchDay = classDays.where((d) => d.dayName == dayName).firstOrNull;
+      if (matchDay != null) {
+        for (final lesson in matchDay.lessons) {
+          if (lesson.teacherId == teacherId ||
+              lesson.coTeacherId == teacherId) {
+            // Əgər bu tarix üçün ləğv edilibsə (istisna), göstərmə
+            if (lesson.excludedDates.contains(dateStr)) continue;
+
+            // Əgər təkrarlanmayan xüsusi tarixli dərsdirsə, yalnız həmin tarixdə göstər
+            if (!lesson.isRecurring && lesson.dateStr != null) {
+              if (lesson.dateStr != dateStr) continue;
+            }
+
+            // Eyni saatdakı birləşdirilmiş dərsləri təkrar əlavə etmə
+            final alreadyAdded = result.any(
+              (existing) =>
+                  existing.time == lesson.time &&
+                  (existing.id == lesson.id ||
+                      existing.subject == lesson.subject),
+            );
+            if (!alreadyAdded) {
+              result.add(lesson);
+            }
+          }
+        }
+      }
+    }
+
+    result.sort((a, b) => a.time.compareTo(b.time));
+    return result;
+  }
+
+  // ✅ YENİ: Sinifə və Konkret Tarixə görə dərslər
+  List<LessonSlot> getClassLessonsForDate(String className, DateTime date) {
+    final dayName = getDayNameFromDateTime(date);
+    final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    final List<LessonSlot> result = [];
+
+    final classDays = getClassTimetable(className);
+    final matchDay = classDays.where((d) => d.dayName == dayName).firstOrNull;
+    if (matchDay != null) {
+      for (final lesson in matchDay.lessons) {
+        if (lesson.excludedDates.contains(dateStr)) continue;
+        if (!lesson.isRecurring && lesson.dateStr != null) {
+          if (lesson.dateStr != dateStr) continue;
+        }
+        result.add(lesson);
+      }
+    }
+
+    result.sort((a, b) => a.time.compareTo(b.time));
+    return result;
   }
 
   // ✅ YENİ: Müəllimə görə cədvəl (Birgə tədris & Birləşdirilmiş dərslər dəstəyi ilə)
@@ -2260,9 +2449,106 @@ class AppState extends ChangeNotifier {
   final List<HelpdeskTicket> _tickets = [];
   List<HelpdeskTicket> get tickets => _tickets;
 
+  /// Verilən icazəyə sahib aktiv işçi istifadəçilərin ID-ləri
+  List<String> _staffIdsWithPermission(String permissionId) {
+    return _users
+        .where((u) {
+          if (!u.isActive) return false;
+          if (u.role == UserRole.admin) return true;
+          final roleId = u.assignedRoleId;
+          if (roleId == null || roleId.isEmpty) return false;
+          final role = getRoleById(roleId);
+          return role?.permissionIds.contains(permissionId) ?? false;
+        })
+        .map((u) => u.id)
+        .toList();
+  }
+
+  /// Psixoloq / rəhbər müəllim rolundakı işçilərin ID-ləri
+  List<String> _psychologistIds() {
+    return _users
+        .where((u) {
+          if (!u.isActive) return false;
+          final roleId = u.assignedRoleId;
+          if (roleId == null || roleId.isEmpty) return false;
+          final role = getRoleById(roleId);
+          if (role == null) return false;
+          final name = role.name.toLowerCase();
+          return role.id == 'role-psikolog' ||
+              name.contains('psix') ||
+              name.contains('psik') ||
+              name.contains('rehberlik') ||
+              name.contains('rəhbər müəllim');
+        })
+        .map((u) => u.id)
+        .toList();
+  }
+
+  /// Ticketın hansı işçilərə yönləndiriləcəyini müəyyən edir:
+  /// inventar → helpdesk/IT; psixoloji → yalnız psixoloq;
+  /// qalanları → idarəetmə (manage_tickets icazəliləri).
+  Set<String> _ticketRecipients(HelpdeskTicket ticket) {
+    switch (ticket.category) {
+      case TicketCategory.psychological:
+        return _psychologistIds().toSet();
+      case TicketCategory.inventory:
+      case TicketCategory.general:
+      case TicketCategory.academic:
+      case TicketCategory.finance:
+      case TicketCategory.cafeteria:
+        return _staffIdsWithPermission('manage_tickets').toSet();
+    }
+  }
+
+  String _ticketNotificationTitle(HelpdeskTicket ticket) {
+    switch (ticket.category) {
+      case TicketCategory.inventory:
+        return '🔧 Yeni inventar müraciəti';
+      case TicketCategory.psychological:
+        return '🧠 Yeni psixoloji müraciət';
+      case TicketCategory.finance:
+        return '💰 Yeni maliyyə müraciəti';
+      case TicketCategory.cafeteria:
+        return '🍽 Yeni yeməkxana müraciəti';
+      case TicketCategory.academic:
+        return '📚 Yeni tədris müraciəti';
+      case TicketCategory.general:
+        return '📨 Yeni müraciət';
+    }
+  }
+
+  String _ticketStatusLabel(TicketStatus status) {
+    switch (status) {
+      case TicketStatus.open:
+        return 'Gözləmədə';
+      case TicketStatus.inProgress:
+        return 'Baxılır / İcrada';
+      case TicketStatus.resolved:
+        return 'Həll olundu';
+      case TicketStatus.closed:
+        return 'Bağlandı';
+    }
+  }
+
   void addTicket(HelpdeskTicket ticket) {
     _tickets.insert(0, ticket);
     _firestoreService.saveTicket(ticket);
+    // Yalnız məsul şöbəyə bildiriş (valideyn/şagirdlərə YOX)
+    final recipients = _ticketRecipients(
+      ticket,
+    ).where((id) => id != ticket.senderId).toList();
+    if (recipients.isNotEmpty) {
+      sendNotification(
+        title: _ticketNotificationTitle(ticket),
+        message:
+            '${ticket.senderName}: ${ticket.title}${ticket.roomNumber != null ? ' (${ticket.roomNumber})' : ''}',
+        category: ticket.priority == TicketPriority.urgent
+            ? NotificationCategory.emergency
+            : NotificationCategory.general,
+        priority: ticket.priority == TicketPriority.urgent ? 'high' : 'normal',
+        targetUserIds: recipients,
+      );
+    }
     notifyListeners();
   }
 
@@ -2290,6 +2576,30 @@ class AppState extends ChangeNotifier {
       );
       _tickets[index] = updatedTicket;
       _firestoreService.saveTicket(updatedTicket);
+      // Əks tərəfə bildiriş: işçi cavabı → göndərənə; göndərən → məsul şöbəyə
+      final myId = _currentUser?.id;
+      if (message.isFromStaff) {
+        if (ticket.senderId != null && ticket.senderId != myId) {
+          sendNotification(
+            title: '💬 Müraciətinizə cavab verildi',
+            message: '${ticket.title} — ${message.message}',
+            category: NotificationCategory.general,
+            targetUserIds: [ticket.senderId!],
+          );
+        }
+      } else {
+        final recipients = _ticketRecipients(
+          ticket,
+        ).where((id) => id != myId).toList();
+        if (recipients.isNotEmpty) {
+          sendNotification(
+            title: '💬 Yeni cavab: ${ticket.title}',
+            message: '${message.sender}: ${message.message}',
+            category: NotificationCategory.general,
+            targetUserIds: recipients,
+          );
+        }
+      }
       notifyListeners();
     }
   }
@@ -2298,8 +2608,18 @@ class AppState extends ChangeNotifier {
   void updateTicketStatus(String ticketId, TicketStatus status) {
     final index = _tickets.indexWhere((t) => t.id == ticketId);
     if (index != -1) {
-      _tickets[index] = _tickets[index].copyWith(status: status);
+      final ticket = _tickets[index];
+      _tickets[index] = ticket.copyWith(status: status);
       _firestoreService.updateTicketStatus(ticketId, status);
+      // Statusu yalnız göndərən şəxs görür (başqalarına bildiriş YOX)
+      if (ticket.senderId != null && ticket.senderId != _currentUser?.id) {
+        sendNotification(
+          title: '📋 Müraciət statusu yeniləndi',
+          message: '"${ticket.title}" — ${_ticketStatusLabel(status)}',
+          category: NotificationCategory.general,
+          targetUserIds: [ticket.senderId!],
+        );
+      }
       notifyListeners();
     }
   }
@@ -2743,6 +3063,14 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Kitab siyahısını birdən dəyişir (məs. toplu yükləmədən sonra)
+  void updateBooks(List<BookItem> books) {
+    _books
+      ..clear()
+      ..addAll(books);
+    notifyListeners();
+  }
+
   void toggleBorrowBook(String bookId) {
     final index = _books.indexWhere((b) => b.id == bookId);
     if (index != -1) {
@@ -2766,6 +3094,9 @@ class AppState extends ChangeNotifier {
             : null,
         description: old.description,
         rating: old.rating,
+        isbn: old.isbn,
+        pdfUrl: old.pdfUrl,
+        totalCopies: old.totalCopies,
       );
       _books[index] = updated;
       _firestoreService.saveBook(updated);
@@ -2777,40 +3108,78 @@ class AppState extends ChangeNotifier {
   final List<DailyMenu> _weeklyMenu = List.from(MockData.weeklyMenu);
   List<DailyMenu> get weeklyMenu => _weeklyMenu;
 
-  void addMenuItemToDay(int dayIndex, MenuItem item) {
-    if (dayIndex >= 0 && dayIndex < _weeklyMenu.length) {
-      _weeklyMenu[dayIndex].items.add(item);
-      _weeklyMenu[dayIndex] = DailyMenu(
-        dayName: _weeklyMenu[dayIndex].dayName,
-        date: _weeklyMenu[dayIndex].date,
-        mealTime: _weeklyMenu[dayIndex].mealTime,
-        totalCalories: _weeklyMenu[dayIndex].totalCalories + item.calories,
-        items: _weeklyMenu[dayIndex].items,
-      );
-      _firestoreService.saveWeeklyMenu(_weeklyMenu);
-      notifyListeners();
-    }
+  static const List<String> _weekdayNames = [
+    'Bazar ertəsi',
+    'Çərşənbə axşamı',
+    'Çərşənbə',
+    'Cümə axşamı',
+    'Cümə',
+    'Şənbə',
+    'Bazar',
+  ];
+
+  int _menuIndexForDate(DateTime date) {
+    return _weeklyMenu.indexWhere(
+      (m) =>
+          m.date.year == date.year &&
+          m.date.month == date.month &&
+          m.date.day == date.day,
+    );
   }
 
-  void removeMenuItemFromDay(int dayIndex, int itemIndex) {
-    if (dayIndex >= 0 && dayIndex < _weeklyMenu.length) {
-      if (itemIndex >= 0 && itemIndex < _weeklyMenu[dayIndex].items.length) {
-        final removed = _weeklyMenu[dayIndex].items.removeAt(itemIndex);
-        _weeklyMenu[dayIndex] = DailyMenu(
-          dayName: _weeklyMenu[dayIndex].dayName,
-          date: _weeklyMenu[dayIndex].date,
-          mealTime: _weeklyMenu[dayIndex].mealTime,
+  /// Seçilmiş tarixli günün menyusuna yemək əlavə edir.
+  /// Gün menyuda yoxdursa (məs. növbəti həftə boş gündür) yeni gün yaradılır.
+  void addMenuItemToDay(DateTime date, MenuItem item) {
+    final index = _menuIndexForDate(date);
+    if (index != -1) {
+      final day = _weeklyMenu[index];
+      _weeklyMenu[index] = DailyMenu(
+        dayName: day.dayName,
+        date: day.date,
+        mealTime: day.mealTime,
+        totalCalories: day.totalCalories + item.calories,
+        items: [...day.items, item],
+      );
+    } else {
+      final newDay = DailyMenu(
+        dayName: _weekdayNames[date.weekday - 1],
+        date: DateTime(date.year, date.month, date.day),
+        mealTime: 'Səhər və Günorta',
+        totalCalories: item.calories,
+        items: [item],
+      );
+      _weeklyMenu.add(newDay);
+      _weeklyMenu.sort((a, b) => a.date.compareTo(b.date));
+    }
+    _firestoreService.saveWeeklyMenu(_weeklyMenu);
+    notifyListeners();
+  }
+
+  void removeMenuItemFromDay(DateTime date, int itemIndex) {
+    final index = _menuIndexForDate(date);
+    if (index != -1) {
+      final day = _weeklyMenu[index];
+      if (itemIndex >= 0 && itemIndex < day.items.length) {
+        final removed = day.items[itemIndex];
+        _weeklyMenu[index] = DailyMenu(
+          dayName: day.dayName,
+          date: day.date,
+          mealTime: day.mealTime,
           totalCalories:
-              (_weeklyMenu[dayIndex].totalCalories - removed.calories).clamp(
-                0,
-                99999,
-              ),
-          items: _weeklyMenu[dayIndex].items,
+              (day.totalCalories - removed.calories).clamp(0, 99999),
+          items: List<MenuItem>.from(day.items)..removeAt(itemIndex),
         );
         _firestoreService.saveWeeklyMenu(_weeklyMenu);
         notifyListeners();
       }
     }
+  }
+
+  // Menyunu yenilə (Firebase-dən gələn yeni menyunu set et)
+  void updateWeeklyMenu(List<DailyMenu> newMenu) {
+    _weeklyMenu.clear();
+    _weeklyMenu.addAll(newMenu);
+    notifyListeners();
   }
 
   // --- TEACHER HUB: SMART ATTENDANCE TINDER-STYLE STATE ---
@@ -3065,7 +3434,20 @@ class AppState extends ChangeNotifier {
       return _notifications;
     }
 
+    // İşçi rolü kimlikləri (assignedRole id + adı) — helpdesk/IT/psixoloq
+    // kimi rolların bildirişlərə hədəflənməsi üçün.
+    String? assignedRoleId;
+    String assignedRoleName = '';
+    if (user.assignedRoleId != null && user.assignedRoleId!.isNotEmpty) {
+      assignedRoleId = user.assignedRoleId;
+      assignedRoleName = getRoleById(assignedRoleId)?.name.toLowerCase() ?? '';
+    }
+
     return _notifications.where((n) {
+      // 0. Doğrudan istifadəçiyə hədəflənmiş bildirişlər
+      //    (ticket cavabı, status dəyişikliyi, helpdesk yönləndirməsi)
+      if (n.targetUserIds.contains(userId)) return true;
+
       // 1. Direct message targeted to this user or sent by this user
       if (n.targetParentId == userId ||
           n.targetStudentId == userId ||
@@ -3073,24 +3455,33 @@ class AppState extends ChangeNotifier {
         return true;
       }
 
-      // 2. Teacher filtering
+      // 2. Teacher / işçi rollar (müəllim, helpdesk, IT, psixoloq...)
       if (userRole == UserRole.teacher) {
-        if (n.targetRoles.isNotEmpty && !n.targetRoles.contains('teacher')) {
-          return false;
+        // Adminin ümumi elanları hamıya çatır
+        if (n.targetRoles.isEmpty && n.senderRole == 'admin') return true;
+        if (n.targetRoles.contains('teacher')) return true;
+        // Rol bazlı hədəfləmə: 'role-helpdesk' və ya rol adı ilə
+        if (assignedRoleId != null &&
+            (n.targetRoles.contains(assignedRoleId) ||
+                (assignedRoleName.isNotEmpty &&
+                    n.targetRoles.any(
+                      (r) => r.toLowerCase() == assignedRoleName,
+                    )))) {
+          return true;
         }
-        return true;
+        return false;
       }
 
-      // 3. Student filtering
+      // 3. Student filtering — yalnız: adminin göndərdikləri,
+      //    birbaşa özünə hədəflənənlər, yaxud sinif elanları
       if (userRole == UserRole.student) {
         if (n.targetStudentId != null &&
             n.targetStudentId != userId &&
             n.targetStudentId != student.id) {
           return false;
         }
-        if (n.targetRoles.isNotEmpty && !n.targetRoles.contains('student')) {
-          return false;
-        }
+        if (n.targetRoles.isEmpty) return n.senderRole == 'admin';
+        if (!n.targetRoles.contains('student')) return false;
         final sClass = user.className ?? student.className;
         if (n.targetClasses.isNotEmpty && !n.targetClasses.contains(sClass)) {
           return false;
@@ -3098,7 +3489,8 @@ class AppState extends ChangeNotifier {
         return true;
       }
 
-      // 4. Parent filtering — Övladlar modelinə görə bütün uşaqlar
+      // 4. Parent filtering — yalnız: adminin göndərdikləri,
+      //    öz uşağına hədəflənənlər, yaxud sinif elanları
       if (userRole == UserRole.parent) {
         final kids = children;
         final childIds = kids.map((c) => c.id).toSet();
@@ -3111,9 +3503,8 @@ class AppState extends ChangeNotifier {
         if (n.targetParentId != null && n.targetParentId != userId) {
           return false;
         }
-        if (n.targetRoles.isNotEmpty && !n.targetRoles.contains('parent')) {
-          return false;
-        }
+        if (n.targetRoles.isEmpty) return n.senderRole == 'admin';
+        if (!n.targetRoles.contains('parent')) return false;
         if (n.targetClasses.isNotEmpty &&
             !n.targetClasses.any((c) => childClasses.contains(c))) {
           return false;
@@ -3132,6 +3523,19 @@ class AppState extends ChangeNotifier {
     return notificationsForCurrentUser.where((n) => !n.isReadBy(userId)).length;
   }
 
+  /// Valideynin uşaqlarının sinif adları — class_<sinif> push topic-ləri üçün.
+  Set<String> _childClassesFor(AppUser user) {
+    if (user.role != UserRole.parent) return {};
+    final ids = <String>{
+      if (user.linkedStudentId != null) user.linkedStudentId!,
+      ...user.linkedStudentIds,
+    };
+    return _students
+        .where((s) => ids.contains(s.id) && s.className.trim().isNotEmpty)
+        .map((s) => s.className.trim())
+        .toSet();
+  }
+
   Future<AppNotification> sendNotification({
     required String title,
     required String message,
@@ -3139,6 +3543,7 @@ class AppState extends ChangeNotifier {
     String? targetStudentId,
     String? targetStudentName,
     String? targetParentId,
+    List<String> targetUserIds = const [],
     List<String> targetClasses = const [],
     List<String> targetRoles = const [],
     String priority = 'normal',
@@ -3166,6 +3571,7 @@ class AppState extends ChangeNotifier {
       targetStudentId: targetStudentId,
       targetStudentName: targetStudentName,
       targetParentId: targetParentId,
+      targetUserIds: targetUserIds,
       targetClasses: targetClasses,
       targetRoles: targetRoles,
       priority: priority,
@@ -3173,6 +3579,35 @@ class AppState extends ChangeNotifier {
 
     _notifications.insert(0, notif);
     await _firestoreService.saveNotification(notif);
+
+    // Push (tətbiq bağlı ikən də): hədəfləri relay-ə ötür. Best-effort —
+    // relay xətası bildirişin Firestore-dakı saxlanmasına təsir etmir.
+    // Şagirdə göndərilən qeydlərdə həmin şagirdin valideynləri də əlavə olunur.
+    final parentIds = targetStudentId == null
+        ? const <String>[]
+        : _users
+              .where(
+                (u) =>
+                    u.role == UserRole.parent &&
+                    (u.linkedStudentIds.contains(targetStudentId) ||
+                        u.linkedStudentId == targetStudentId),
+              )
+              .map((u) => u.id)
+              .toList();
+    unawaited(
+      PushRelayService.instance.sendPush(
+        title: title,
+        body: message,
+        targetUserIds: [...targetUserIds, ...parentIds],
+        targetRoles: targetRoles,
+        targetClasses: targetClasses,
+        targetStudentId: targetStudentId,
+        targetParentId: targetParentId,
+        priority: priority,
+        excludeUserId: senderId,
+      ),
+    );
+
     notifyListeners();
     return notif;
   }

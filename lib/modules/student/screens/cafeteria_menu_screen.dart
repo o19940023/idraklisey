@@ -5,6 +5,7 @@ import '../../../core/theme/app_shadows.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../providers/app_state.dart';
 import '../../../data/models/menu_model.dart';
+import '../../../admin/import_menu_helper.dart';
 
 class CafeteriaMenuScreen extends StatefulWidget {
   const CafeteriaMenuScreen({super.key});
@@ -15,15 +16,58 @@ class CafeteriaMenuScreen extends StatefulWidget {
 
 class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
   int _selectedDayIndex = 0;
+  DateTime? _selectedWeekStart; // null = cari həftə
+
+  static const List<String> _weekdayNames = [
+    'Bazar ertəsi',
+    'Çərşənbə axşamı',
+    'Çərşənbə',
+    'Cümə axşamı',
+    'Cümə',
+    'Şənbə',
+    'Bazar',
+  ];
+
+  /// Həftənin başlanğıcı (Bazar ertəsi, saat 00:00)
+  DateTime _weekStart(DateTime date) {
+    final d = DateTime(date.year, date.month, date.day);
+    return d.subtract(Duration(days: d.weekday - 1));
+  }
+
+  String _fmtDate(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}';
+
+  String _weekdayName(int weekday) => _weekdayNames[weekday - 1];
 
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
-    final weeklyMenus = appState.weeklyMenu;
-    final currentMenu = _selectedDayIndex < weeklyMenus.length ? weeklyMenus[_selectedDayIndex] : null;
+    final allMenus = appState.weeklyMenu;
+
+    // Seçilmiş həftənin günləri (Bazar ertəsi — Bazar)
+    final thisWeekStart = _weekStart(DateTime.now());
+    final weekStart = _selectedWeekStart ?? thisWeekStart;
+    final weekEnd = weekStart.add(const Duration(days: 7));
+    final weekMenus = allMenus
+        .where((m) => !m.date.isBefore(weekStart) && m.date.isBefore(weekEnd))
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+    final dayIndex = _selectedDayIndex < weekMenus.length
+        ? _selectedDayIndex
+        : 0;
+    final currentMenu = weekMenus.isNotEmpty ? weekMenus[dayIndex] : null;
+
+    // Həftə nişanları: bu həftə + növbəti həftə + menyusu olan bütün gələcək həftələr
+    final weekChipStarts = <DateTime>{thisWeekStart, thisWeekStart.add(const Duration(days: 7))};
+    for (final m in allMenus) {
+      final ws = _weekStart(m.date);
+      if (!ws.isBefore(thisWeekStart)) weekChipStarts.add(ws);
+    }
+    final weekChips = weekChipStarts.toList()..sort();
 
     final currentUser = appState.currentUser;
-    final canManageMenu = currentUser?.role == UserRole.admin ||
+    final canManageMenu =
+        currentUser?.role == UserRole.admin ||
         (currentUser?.role == UserRole.teacher &&
             (currentUser?.teacherPermissions?.canManageCafeteria ?? false));
 
@@ -35,10 +79,20 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
       ),
       floatingActionButton: canManageMenu
           ? FloatingActionButton.extended(
-              onPressed: () => _showAddMenuItemDialog(context, appState),
+              onPressed: () => _showAddMenuItemDialog(
+                context,
+                appState,
+                currentMenu?.date ?? weekStart,
+              ),
               backgroundColor: AppColors.goldDark,
               icon: const Icon(Icons.add_rounded, color: Colors.white),
-              label: const Text('Menyuya Əlavə Et', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              label: const Text(
+                'Menyuya Əlavə Et',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             )
           : null,
       body: SingleChildScrollView(
@@ -51,26 +105,77 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
             if (canManageMenu)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 color: AppColors.goldDark.withAlpha(18),
                 child: Row(
                   children: [
-                    const Icon(Icons.admin_panel_settings_outlined, size: 16, color: AppColors.goldDark),
+                    const Icon(
+                      Icons.admin_panel_settings_outlined,
+                      size: 16,
+                      color: AppColors.goldDark,
+                    ),
                     const SizedBox(width: 8),
                     const Expanded(
                       child: Text(
                         'İdarəetmə aktivdir: Menyunu dəyişə, yeni yemək əlavə edə və silə bilərsiniz.',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.goldDark),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.goldDark,
+                        ),
                       ),
                     ),
+                    // ⚠️ BU DÜYMƏ BİR DƏFƏ İŞLƏDİLDİKDƏN SONRA SİLİNƏCƏK
+                    if (currentUser?.role == UserRole.admin)
+                      IconButton(
+                        icon: const Icon(
+                          Icons.upload_file,
+                          color: AppColors.goldDark,
+                          size: 18,
+                        ),
+                        tooltip: 'Lisey Menyusunu Yüklə (TEK DƏFƏ)',
+                        onPressed: () => _importLiseyMenu(context, appState),
+                      ),
                     IconButton(
-                      icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.goldDark, size: 18),
+                      icon: const Icon(
+                        Icons.add_circle_outline_rounded,
+                        color: AppColors.goldDark,
+                        size: 18,
+                      ),
                       tooltip: 'Yemək Əlavə Et',
-                      onPressed: () => _showAddMenuItemDialog(context, appState),
+                      onPressed: () => _showAddMenuItemDialog(
+                        context,
+                        appState,
+                        currentMenu?.date ?? weekStart,
+                      ),
                     ),
                   ],
                 ),
               ),
+
+            // Week Switcher — Bu həftə / Növbəti həftə / menyusu olan həftələr
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                border: Border(bottom: BorderSide(color: AppColors.cardBorder)),
+              ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: weekChips
+                      .map((ws) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: _buildWeekChip(ws, thisWeekStart),
+                          ))
+                      .toList(),
+                ),
+              ),
+            ),
 
             // Days Switcher
             Container(
@@ -82,25 +187,38 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: List.generate(weeklyMenus.length, (index) {
-                    final isSelected = index == _selectedDayIndex;
+                  children: List.generate(weekMenus.length, (index) {
+                    final isSelected = index == dayIndex;
                     return Padding(
                       padding: const EdgeInsets.only(right: 6),
                       child: InkWell(
                         onTap: () => setState(() => _selectedDayIndex = index),
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 13,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primaryAccent : AppColors.surface,
+                            color: isSelected
+                                ? AppColors.primaryAccent
+                                : AppColors.surface,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: isSelected ? AppColors.primaryAccent : AppColors.cardBorder),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.primaryAccent
+                                  : AppColors.cardBorder,
+                            ),
                           ),
                           child: Text(
-                            weeklyMenus[index].dayName,
+                            '${weekMenus[index].dayName} ${_fmtDate(weekMenus[index].date)}',
                             style: TextStyle(
-                              color: isSelected ? Colors.white : AppColors.textPrimary,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppColors.textPrimary,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
                               fontSize: 11.5,
                             ),
                           ),
@@ -134,17 +252,29 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                       children: [
                         Text(
                           currentMenu.dayName,
-                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: -0.2),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.2,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           '${currentMenu.mealTime} • ${currentMenu.items.length} Çeşid',
-                          style: const TextStyle(color: Colors.white70, fontSize: 11.5, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
@@ -153,7 +283,11 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                         children: [
                           Text(
                             'Cəmi Kalori',
-                            style: TextStyle(color: AppColors.textSecondary, fontSize: 9, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           Text(
                             '${currentMenu.totalCalories} kkal',
@@ -183,22 +317,47 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                   child: Center(
                     child: Column(
                       children: [
-                        Icon(Icons.restaurant_menu_outlined, size: 44, color: AppColors.textMuted),
+                        Icon(
+                          Icons.restaurant_menu_outlined,
+                          size: 44,
+                          color: AppColors.textMuted,
+                        ),
                         const SizedBox(height: 10),
                         Text(
                           'Bu gün üçün menyu daxil edilməyib.',
-                          style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold, fontSize: 13),
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
                         ),
                         if (canManageMenu) ...[
                           const SizedBox(height: 12),
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.goldDark,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                            onPressed: () => _showAddMenuItemDialog(context, appState),
-                            icon: const Icon(Icons.add, color: Colors.white, size: 16),
-                            label: const Text('İlk Yeməyi Əlavə Et', style: TextStyle(color: Colors.white, fontSize: 12)),
+                            onPressed: () =>
+                                _showAddMenuItemDialog(
+                                  context,
+                                  appState,
+                                  currentMenu.date,
+                                ),
+                            icon: const Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            label: const Text(
+                              'İlk Yeməyi Əlavə Et',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
                         ],
                       ],
@@ -209,9 +368,20 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
-                    children: currentMenu.items.asMap().entries.map(
-                      (entry) => _buildMenuItemCard(context, appState, entry.value, entry.key, canManageMenu),
-                    ).toList(),
+                    children: currentMenu.items
+                        .asMap()
+                        .entries
+                        .map(
+                          (entry) => _buildMenuItemCard(
+                            context,
+                            appState,
+                            entry.value,
+                            entry.key,
+                            canManageMenu,
+                            currentMenu.date,
+                          ),
+                        )
+                        .toList(),
                   ),
                 ),
             ],
@@ -227,7 +397,53 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
     MenuItem item,
     int itemIndex,
     bool canManage,
+    DateTime menuDate,
   ) {
+    // Başlıq item-i üçün fərqli dizayn
+    if (item.category == 'Başlıq') {
+      return Container(
+        margin: const EdgeInsets.only(top: 16, bottom: 8),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primaryAccent.withAlpha(30),
+              AppColors.primaryAccent.withAlpha(10),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primaryAccent.withAlpha(60)),
+        ),
+        child: Row(
+          children: [
+            Text(
+              item.name,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                color: AppColors.primaryAccent,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              height: 2,
+              width: 40,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primaryAccent,
+                    AppColors.primaryAccent.withAlpha(0),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Normal yemək item-i
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
@@ -251,7 +467,10 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                 width: 70,
                 height: 70,
                 color: const Color(0xFFF1F5F9),
-                child: Icon(Icons.restaurant_outlined, color: AppColors.textMuted),
+                child: Icon(
+                  Icons.restaurant_outlined,
+                  color: AppColors.textMuted,
+                ),
               ),
             ),
           ),
@@ -272,7 +491,11 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                       children: [
                         Text(
                           '${item.calories} kkal • ${item.weightGram}',
-                          style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                         if (canManage) ...[
                           const SizedBox(width: 4),
@@ -281,21 +504,43 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                               showDialog(
                                 context: context,
                                 builder: (dCtx) => AlertDialog(
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
                                   title: const Text('Yeməyi Sil'),
-                                  content: Text('"${item.name}" menyudan silinsin?'),
+                                  content: Text(
+                                    '"${item.name}" menyudan silinsin?',
+                                  ),
                                   actions: [
-                                    TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('Ləğv et')),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(dCtx),
+                                      child: const Text('Ləğv et'),
+                                    ),
                                     ElevatedButton(
-                                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.danger,
+                                      ),
                                       onPressed: () {
-                                        appState.removeMenuItemFromDay(_selectedDayIndex, itemIndex);
+                                        appState.removeMenuItemFromDay(
+                                          menuDate,
+                                          itemIndex,
+                                        );
                                         Navigator.pop(dCtx);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Yemək menyudan silindi.'), backgroundColor: AppColors.danger),
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Yemək menyudan silindi.',
+                                            ),
+                                            backgroundColor: AppColors.danger,
+                                          ),
                                         );
                                       },
-                                      child: const Text('Sil', style: TextStyle(color: Colors.white)),
+                                      child: const Text(
+                                        'Sil',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -303,7 +548,11 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                             },
                             child: const Padding(
                               padding: EdgeInsets.all(2),
-                              child: Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.danger),
+                              child: Icon(
+                                Icons.delete_outline_rounded,
+                                size: 16,
+                                color: AppColors.danger,
+                              ),
                             ),
                           ),
                         ],
@@ -327,20 +576,33 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                     runSpacing: 3,
                     children: item.allergens.map((allergen) {
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.danger.withAlpha(12),
                           borderRadius: BorderRadius.circular(5),
-                          border: Border.all(color: AppColors.danger.withAlpha(40)),
+                          border: Border.all(
+                            color: AppColors.danger.withAlpha(40),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.warning_amber_rounded, size: 10, color: AppColors.danger),
+                            const Icon(
+                              Icons.warning_amber_rounded,
+                              size: 10,
+                              color: AppColors.danger,
+                            ),
                             const SizedBox(width: 2),
                             Text(
                               allergen,
-                              style: const TextStyle(fontSize: 9, color: AppColors.danger, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),
@@ -356,13 +618,79 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
     );
   }
 
-  void _showAddMenuItemDialog(BuildContext context, AppState appState) {
+  Widget _buildWeekChip(DateTime start, DateTime thisWeekStart) {
+    final end = start.add(const Duration(days: 6));
+    final isSelected = (_selectedWeekStart ?? thisWeekStart) == start;
+    final offsetDays = start.difference(thisWeekStart).inDays;
+    final title = offsetDays == 0
+        ? 'Bu həftə'
+        : offsetDays == 7
+            ? 'Növbəti həftə'
+            : '${_fmtDate(start)} – ${_fmtDate(end)}';
+    return InkWell(
+      onTap: () => setState(() {
+        _selectedWeekStart = start;
+        _selectedDayIndex = 0;
+      }),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.goldDark : AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? AppColors.goldDark : AppColors.cardBorder,
+          ),
+        ),
+        child: Column(
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? Colors.white : AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 12.5,
+              ),
+            ),
+            const SizedBox(height: 2),
+            if (offsetDays <= 7)
+              Text(
+                '${_fmtDate(start)} – ${_fmtDate(end)}',
+                style: TextStyle(
+                  color: isSelected ? Colors.white70 : AppColors.textMuted,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddMenuItemDialog(
+    BuildContext context,
+    AppState appState,
+    DateTime menuDate,
+  ) {
     final nameCtrl = TextEditingController();
     final calCtrl = TextEditingController(text: '300');
     final weightCtrl = TextEditingController(text: '200g');
     final allergenCtrl = TextEditingController();
+    // Hansı həftənin gününə əlavə olunur — admin bunu dəyişə bilər
+    DateTime selectedDate = DateTime(
+      menuDate.year,
+      menuDate.month,
+      menuDate.day,
+    );
     String category = 'Əsas Yemək';
-    final categories = ['Şorba', 'Əsas Yemək', 'Qarnir', 'Salat', 'Şirniyyat / İçki'];
+    final categories = [
+      'Şorba',
+      'Əsas Yemək',
+      'Qarnir',
+      'Salat',
+      'Şirniyyat / İçki',
+    ];
 
     showDialog(
       context: context,
@@ -370,18 +698,92 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
               title: const Text('Menyuya Yeni Yemək Əlavə Et'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Yeməyin Adı *')),
+                    // Tarix seçici — hansı həftə/gün üçün daxil edirik
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime.now()
+                              .subtract(const Duration(days: 365)),
+                          lastDate: DateTime.now()
+                              .add(const Duration(days: 365)),
+                          helpText: 'Yeməyin tarixini seçin',
+                        );
+                        if (picked != null) {
+                          setDialogState(
+                            () => selectedDate = DateTime(
+                              picked.year,
+                              picked.month,
+                              picked.day,
+                            ),
+                          );
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.cardBorder),
+                          borderRadius: BorderRadius.circular(12),
+                          color: AppColors.goldDark.withAlpha(10),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_month_rounded,
+                              color: AppColors.goldDark,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '${_weekdayName(selectedDate.weekday)}, ${_fmtDate(selectedDate)} — bu günə əlavə olunacaq',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.goldDark,
+                                ),
+                              ),
+                            ),
+                            const Icon(
+                              Icons.edit_calendar_outlined,
+                              size: 16,
+                              color: AppColors.goldDark,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Yeməyin Adı *',
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       initialValue: category,
-                      decoration: const InputDecoration(labelText: 'Kateqoriya'),
-                      items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                      decoration: const InputDecoration(
+                        labelText: 'Kateqoriya',
+                      ),
+                      items: categories
+                          .map(
+                            (c) => DropdownMenuItem(value: c, child: Text(c)),
+                          )
+                          .toList(),
                       onChanged: (val) {
                         if (val != null) setDialogState(() => category = val);
                       },
@@ -393,14 +795,18 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                           child: TextField(
                             controller: calCtrl,
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Kalori (kkal) *'),
+                            decoration: const InputDecoration(
+                              labelText: 'Kalori (kkal) *',
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: TextField(
                             controller: weightCtrl,
-                            decoration: const InputDecoration(labelText: 'Porsiya (qram) *'),
+                            decoration: const InputDecoration(
+                              labelText: 'Porsiya (qram) *',
+                            ),
                           ),
                         ),
                       ],
@@ -417,16 +823,23 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Ləğv et')),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Ləğv et'),
+                ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.goldDark,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: () {
                     if (nameCtrl.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Yeməyin adını qeyd edin!')),
+                        const SnackBar(
+                          content: Text('Yeməyin adını qeyd edin!'),
+                        ),
                       );
                       return;
                     }
@@ -440,24 +853,135 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                       name: nameCtrl.text.trim(),
                       category: category,
                       calories: int.tryParse(calCtrl.text.trim()) ?? 250,
-                      weightGram: weightCtrl.text.trim().isNotEmpty ? weightCtrl.text.trim() : '200g',
+                      weightGram: weightCtrl.text.trim().isNotEmpty
+                          ? weightCtrl.text.trim()
+                          : '200g',
                       allergens: allergens,
-                      imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400',
+                      imageUrl:
+                          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400',
                     );
 
-                    appState.addMenuItemToDay(_selectedDayIndex, newItem);
+                    appState.addMenuItemToDay(selectedDate, newItem);
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('"${newItem.name}" menyuya əlavə edildi!'), backgroundColor: AppColors.success),
+                      SnackBar(
+                        content: Text(
+                          '"${newItem.name}" menyuya əlavə edildi!',
+                        ),
+                        backgroundColor: AppColors.success,
+                      ),
                     );
                   },
-                  child: const Text('Əlavə Et', style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    'Əlavə Et',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ],
             );
           },
         );
       },
+    );
+  }
+
+  // Lisey menyusunu Firebase'e yüklə
+  void _importLiseyMenu(BuildContext context, AppState appState) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Row(
+          children: [
+            Icon(Icons.upload_file, color: AppColors.goldDark),
+            SizedBox(width: 8),
+            Text('Lisey Menyusunu Yüklə'),
+          ],
+        ),
+        content: const Text(
+          'Bu həftə və növbəti həftənin menyuları Firebase-ə yükləniləcək. Eyni tarixli günlər yenilənir, digər həftələrin menyusuna toxunulmur.\n\nDavam etmək istəyirsiniz?',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Ləğv et'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.goldDark,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+
+              // Loading göstər
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (ctx) => const Center(
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(color: AppColors.goldDark),
+                          SizedBox(height: 16),
+                          Text(
+                            'Menyu yüklənir...',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+
+              try {
+                // Menyunu Firebase'e yüklə
+                await MenuImportHelper.importLiseyMenu();
+
+                // Menyunu yenidən yüklə
+                final cloudMenu = await appState.firestoreService
+                    .fetchWeeklyMenu();
+                appState.updateWeeklyMenu(cloudMenu);
+
+                if (context.mounted) {
+                  Navigator.pop(context); // Loading dialog'u bağla
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✅ Lisey menyusu uğurla yükləndi!'),
+                      backgroundColor: AppColors.success,
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context); // Loading dialog'u bağla
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('❌ Xəta: $e'),
+                      backgroundColor: AppColors.danger,
+                      duration: const Duration(seconds: 5),
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Yüklə', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 }

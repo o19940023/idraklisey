@@ -50,8 +50,8 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyA_placeholder_android_key_idrak',
-    appId: '1:948909504681:android:e938bf8329b3112c',
+    apiKey: 'AIzaSyD5TOY9Z9RcdZvf-Wx_CeUlazTu0009v7E',
+    appId: '1:948909504681:android:339c7becedfb54cdc2d1b8',
     messagingSenderId: '948909504681',
     projectId: 'idraklisey-aafd7',
     storageBucket: 'idraklisey-aafd7.firebasestorage.app',

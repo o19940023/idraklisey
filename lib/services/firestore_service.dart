@@ -661,21 +661,7 @@ class FirestoreService {
   // --- LIBRARY BOOKS ---
   Future<void> saveBook(BookItem book) async {
     try {
-      await db.collection('books').doc(book.id).set({
-        'id': book.id,
-        'title': book.title,
-        'author': book.author,
-        'category': book.category,
-        'coverUrl': book.coverUrl,
-        'type': book.type.name,
-        'pageCount': book.pageCount,
-        'language': book.language,
-        'availableCopies': book.availableCopies,
-        'isBorrowedByMe': book.isBorrowedByMe,
-        'returnDeadline': book.returnDeadline?.toIso8601String(),
-        'description': book.description,
-        'rating': book.rating,
-      });
+      await db.collection('books').doc(book.id).set(bookToMap(book));
     } catch (e) {
       debugPrint('Firestore saveBook error: $e');
     }
@@ -705,6 +691,9 @@ class FirestoreService {
               : null,
           description: data['description'] ?? '',
           rating: (data['rating'] as num?)?.toDouble() ?? 5.0,
+          isbn: data['isbn'] ?? '',
+          pdfUrl: data['pdfUrl'] ?? '',
+          totalCopies: data['totalCopies'] ?? data['availableCopies'] ?? 0,
         );
       }).toList();
     } catch (e) {
@@ -713,30 +702,87 @@ class FirestoreService {
     }
   }
 
+  /// BookItem-i Firestore sənədinə çevirir (saveBook və importBooks birlikdə istifadə edir)
+  Map<String, dynamic> bookToMap(BookItem book) {
+    return {
+      'id': book.id,
+      'title': book.title,
+      'author': book.author,
+      'category': book.category,
+      'coverUrl': book.coverUrl,
+      'type': book.type.name,
+      'pageCount': book.pageCount,
+      'language': book.language,
+      'availableCopies': book.availableCopies,
+      'totalCopies': book.totalCopies,
+      'isbn': book.isbn,
+      'pdfUrl': book.pdfUrl,
+      'isBorrowedByMe': book.isBorrowedByMe,
+      'returnDeadline': book.returnDeadline?.toIso8601String(),
+      'description': book.description,
+      'rating': book.rating,
+    };
+  }
+
+  /// Toplu kitab yükləmə. replaceAll=true olsa, mövcud bütün kitablar əvvəlcə silinir.
+  Future<void> importBooks(List<BookItem> books, {bool replaceAll = true}) async {
+    const chunkSize = 400; // Firestore batch limiti 500 əməliyyatdır
+    try {
+      if (replaceAll) {
+        final oldBooks = await db.collection('books').get();
+        for (var i = 0; i < oldBooks.docs.length; i += chunkSize) {
+          final batch = db.batch();
+          for (final doc in oldBooks.docs.skip(i).take(chunkSize)) {
+            batch.delete(doc.reference);
+          }
+          await batch.commit();
+        }
+      }
+      for (var i = 0; i < books.length; i += chunkSize) {
+        final batch = db.batch();
+        for (final book in books.skip(i).take(chunkSize)) {
+          batch.set(db.collection('books').doc(book.id), bookToMap(book));
+        }
+        await batch.commit();
+      }
+    } catch (e) {
+      debugPrint('Firestore importBooks error: $e');
+      rethrow;
+    }
+  }
+
   // --- CAFETERIA MENU ---
+  /// Menyu sənədinin ID-si — gün adı yox, tarix əsasdır ki
+  /// müxtəlif həftələrin menyuları bir-birini əvəz etməsin
+  String _menuDocId(DateTime date) => 'menu_${date.toIso8601String().substring(0, 10)}';
+
+  Map<String, dynamic> menuToMap(DailyMenu day) {
+    return {
+      'dayName': day.dayName,
+      'date': day.date.toIso8601String(),
+      'mealTime': day.mealTime,
+      'totalCalories': day.totalCalories,
+      'items': day.items
+          .map(
+            (i) => {
+              'name': i.name,
+              'category': i.category,
+              'calories': i.calories,
+              'weightGram': i.weightGram,
+              'allergens': i.allergens,
+              'imageUrl': i.imageUrl,
+            },
+          )
+          .toList(),
+    };
+  }
+
   Future<void> saveWeeklyMenu(List<DailyMenu> menu) async {
     try {
       final batch = db.batch();
       for (final day in menu) {
-        final docRef = db.collection('cafeteria_menu').doc(day.dayName);
-        batch.set(docRef, {
-          'dayName': day.dayName,
-          'date': day.date.toIso8601String(),
-          'mealTime': day.mealTime,
-          'totalCalories': day.totalCalories,
-          'items': day.items
-              .map(
-                (i) => {
-                  'name': i.name,
-                  'category': i.category,
-                  'calories': i.calories,
-                  'weightGram': i.weightGram,
-                  'allergens': i.allergens,
-                  'imageUrl': i.imageUrl,
-                },
-              )
-              .toList(),
-        });
+        final docRef = db.collection('cafeteria_menu').doc(_menuDocId(day.date));
+        batch.set(docRef, menuToMap(day));
       }
       await batch.commit();
     } catch (e) {
@@ -744,11 +790,43 @@ class FirestoreService {
     }
   }
 
+  /// Toplu menyu yükləmə. Köhnə formatlı (gün adı ID-li) sənədləri təmizləyir,
+  /// yeni sənədlər tarix ID-si ilə yazılır — mövcud həftələr pozulmur.
+  Future<void> importMenus(List<DailyMenu> menus) async {
+    const chunkSize = 400;
+    try {
+      final existing = await db.collection('cafeteria_menu').get();
+      final legacyDocs = existing.docs
+          .where((doc) => !doc.id.startsWith('menu_'))
+          .toList();
+      for (var i = 0; i < legacyDocs.length; i += chunkSize) {
+        final batch = db.batch();
+        for (final doc in legacyDocs.skip(i).take(chunkSize)) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      }
+      for (var i = 0; i < menus.length; i += chunkSize) {
+        final batch = db.batch();
+        for (final day in menus.skip(i).take(chunkSize)) {
+          batch.set(
+            db.collection('cafeteria_menu').doc(_menuDocId(day.date)),
+            menuToMap(day),
+          );
+        }
+        await batch.commit();
+      }
+    } catch (e) {
+      debugPrint('Firestore importMenus error: $e');
+      rethrow;
+    }
+  }
+
   Future<List<DailyMenu>> fetchWeeklyMenu() async {
     try {
       final snapshot = await db.collection('cafeteria_menu').get();
       if (snapshot.docs.isEmpty) return [];
-      return snapshot.docs.map((doc) {
+      final menus = snapshot.docs.map((doc) {
         final data = doc.data();
         final items =
             (data['items'] as List<dynamic>?)?.map((it) {
@@ -772,6 +850,8 @@ class FirestoreService {
           items: items,
         );
       }).toList();
+      menus.sort((a, b) => a.date.compareTo(b.date));
+      return menus;
     } catch (e) {
       debugPrint('Firestore fetchWeeklyMenu error: $e');
       return [];
@@ -1285,6 +1365,19 @@ class FirestoreService {
       debugPrint('Firestore fetchNotifications error: $e');
       return [];
     }
+  }
+
+  /// Bildirişlərin canlı axını — tətbiq açıq ikən başqasının göndərdiyi
+  /// bildiriş dərhal gəmiriciyə düşsün (çıx-gir lazım deyil).
+  Stream<List<AppNotification>> watchNotifications() {
+    return db
+        .collection('notifications')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snap) =>
+              snap.docs.map((d) => AppNotification.fromJson(d.data())).toList(),
+        );
   }
 
   Future<void> markNotificationRead(

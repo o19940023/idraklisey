@@ -140,6 +140,9 @@ class _MainScreenState extends State<MainScreen> {
             return const NotificationsScreen();
           case 'view_inventory':
             return const QrInventoryManagementScreen();
+          case 'view_library':
+          case 'library':
+            return const LibraryScreen();
           default:
             return const AdminDashboardScreen();
         }
