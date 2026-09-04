@@ -303,7 +303,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Divider(color: AppColors.cardBorder, height: 1),
                   const SizedBox(height: 16),
                   _buildInfoRow(loc.version, _packageInfo?.version ?? '1.4.8'),
-                  _buildInfoRow(loc.build, _packageInfo?.buildNumber ?? '38'),
+                  _buildInfoRow(loc.build, _packageInfo?.buildNumber ?? '40'),
                   _buildInfoRow(
                     loc.packageName,
                     _packageInfo?.packageName ?? 'az.idrak.liseyi',
