@@ -21,6 +21,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
+    <!-- Agora-nın avtomatik əlavə etdiyi lazımsız ekran paylaşımı icazəsini və servisini tam silirik -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" tools:node="remove" />
+
     <!-- Google Play Store donanım filtresini devre dışı bırakmak için (Emülatörler ve donanımsız cihazlar için) -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
@@ -79,6 +82,11 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@android:color/white" />
+
+        <!-- Agora Ekran Paylaşımı servisini ləğv edirik -->
+        <service
+            android:name="io.agora.rtc2.extensions.MediaProjectionMgr$LocalScreenSharingService"
+            tools:node="remove" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
