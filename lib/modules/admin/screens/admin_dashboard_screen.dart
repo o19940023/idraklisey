@@ -16,6 +16,8 @@ import '../../parent/screens/grades_analytics_screen.dart';
 import '../../student/screens/cafeteria_menu_screen.dart';
 import '../../student/screens/library_screen.dart';
 import '../../shared/screens/notifications_screen.dart';
+import '../../shared/screens/settings_screen.dart';
+import '../../../l10n/app_localizations.dart';
 import '../widgets/reorderable_module_grid.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -30,6 +32,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final appState = Provider.of<AppState>(context);
     final users = appState.users;
     final studentCount = users.where((u) => u.role == UserRole.student).length;
@@ -48,8 +51,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         headerTitle = assignedRole.name;
         headerBadge = assignedRole.name.toUpperCase();
       } else {
-        headerTitle = currentUser?.position ?? 'Baş İnzibatçı Paneli';
-        headerBadge = 'MƏKTƏB İDARƏETMƏSİ';
+        headerTitle = currentUser?.position ?? (loc?.adminDashboard ?? 'Baş İnzibatçı Paneli');
+        headerBadge = (loc?.admin ?? 'İnzibatçı').toUpperCase();
       }
     } else {
       final assignedRole = appState.getRoleById(currentUser?.assignedRoleId);
@@ -58,11 +61,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         headerBadge = assignedRole.name.toUpperCase();
       } else {
         headerTitle =
-            currentUser?.position ?? currentUser?.role.displayName ?? 'Panel';
+            currentUser?.position ?? currentUser?.role.displayName ?? (loc?.dashboard ?? 'Panel');
         headerBadge =
             currentUser?.position?.toUpperCase() ??
             currentUser?.role.displayName.toUpperCase() ??
-            'PANEL';
+            (loc?.dashboard.toUpperCase() ?? 'PANEL');
       }
     }
 
@@ -84,7 +87,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             actions: [
               // 🆕 Modül Sıralama Modu Toggle
               Padding(
-                padding: const EdgeInsets.only(right: 4),
+                padding: const EdgeInsets.only(right: 2),
                 child: IconButton(
                   icon: Container(
                     padding: const EdgeInsets.all(6),
@@ -127,7 +130,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.only(right: 2),
                 child: IconButton(
                   icon: Container(
                     padding: const EdgeInsets.all(6),
@@ -157,6 +160,59 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   },
                 ),
               ),
+              // Notifications
+              IconButton(
+                icon: Stack(
+                  children: [
+                    const Icon(
+                      Icons.notifications_outlined,
+                      color: Colors.white,
+                    ),
+                    if (appState.unreadNotificationCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: AppColors.danger,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            '${appState.unreadNotificationCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/notifications');
+                },
+              ),
+              // Settings Button
+              IconButton(
+                icon: const Icon(
+                  Icons.settings_outlined,
+                  color: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
@@ -327,9 +383,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
-                                        'Yeni İşçi Hesabı Yarat',
-                                        style: TextStyle(
+                                      Text(
+                                        loc?.createEmployee ?? 'Yeni İşçi Hesabı Yarat',
+                                        style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 15,
                                           fontWeight: FontWeight.w800,
@@ -338,7 +394,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        'Bütün HR məlumatları, rol və avtomatik @idrak.edu.az mail ilə',
+                                        '${loc?.details ?? "HR"} • ${loc?.role ?? "Rol"} • @idrak.edu.az',
                                         style: TextStyle(
                                           color: Colors.white.withAlpha(200),
                                           fontSize: 11,
@@ -378,26 +434,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
                       _buildAdminStatTile(
-                        'Müəllimlər',
-                        '$teacherCount Nəfər',
+                        loc?.teachers ?? 'Müəllimlər',
+                        '$teacherCount',
                         Icons.psychology_rounded,
                         const Color(0xFF0D9488),
                       ),
                       _buildAdminStatTile(
-                        'Şagirdlər',
-                        '$studentCount Nəfər',
+                        loc?.students ?? 'Şagirdlər',
+                        '$studentCount',
                         Icons.school_rounded,
                         AppColors.primaryAccent,
                       ),
                       _buildAdminStatTile(
-                        'Valideynlər',
-                        '$parentCount Nəfər',
+                        loc?.parents ?? 'Valideynlər',
+                        '$parentCount',
                         Icons.family_restroom_rounded,
                         AppColors.goldDark,
                       ),
                       _buildAdminStatTile(
-                        'Helpdesk',
-                        '$activeTickets Ticket',
+                        loc?.helpdesk ?? 'Helpdesk',
+                        '$activeTickets',
                         Icons.support_agent_rounded,
                         Colors.purple,
                       ),
@@ -418,7 +474,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'İnzibati Modullar',
+                              loc?.roleManagement ?? 'İnzibati Modullar',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w900,
@@ -428,7 +484,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'İcazələr, cədvəl və məktəb idarəetməsi',
+                              loc?.details ?? 'İcazələr, cədvəl və məktəb idarəetməsi',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,
@@ -466,8 +522,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Tam Səlahiyyət',
-                                    style: TextStyle(
+                                    loc?.role ?? 'Tam Səlahiyyət',
+                                    style: const TextStyle(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.red,
@@ -535,21 +591,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ReorderableModuleGrid(
                     modules: orderedModules,
                     isReorderMode: _isReorderMode,
-                    dynamicData: {
-                      'view_students': '$studentCount qeydiyyatda şagird',
-                      'view_classes':
-                          '${appState.allDistinctClasses.length} Sinif yüksəlişi',
-                      'view_timetable': 'Cədvəl təyini',
-                      'view_users':
-                          '${users.where((u) => u.role == UserRole.teacher || u.role == UserRole.admin).length} İşçi hesabı',
-                      'view_roles': 'Səlahiyyət təyini',
-                      'view_tickets': '$activeTickets Müraciət',
-                      'view_reports': 'KSQ / BSQ / IB',
-                      'view_cafeteria': 'Menyu təyini',
-                      'view_settings': 'Rəsmi bildirişlər',
-                      'view_inventory': 'Texniki xidmət',
-                      'view_library': 'Kitab kolleksiyası',
-                    },
                     onReorder: (newOrder) {
                       appState.updateModuleOrder(newOrder);
                     },

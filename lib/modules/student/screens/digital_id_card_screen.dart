@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/idrak_logo.dart';
 import '../../../core/utils/navigation_utils.dart';
 import '../../../providers/app_state.dart';
+import '../../../l10n/app_localizations.dart';
 
 class DigitalIdCardScreen extends StatefulWidget {
   const DigitalIdCardScreen({super.key});
@@ -195,6 +196,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final appState = Provider.of<AppState>(context);
     final student = appState.student;
     final medCard = appState.medicalCard;
@@ -202,9 +204,9 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
     return Scaffold(
       backgroundColor: const Color(0xFF070913),
       appBar: AppBar(
-        title: const Text(
-          'Rəqəmsal Şagird Vəsiqəsi',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16.5, letterSpacing: -0.2),
+        title: Text(
+          loc.digitalIdCard,
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16.5, letterSpacing: -0.2),
         ),
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
@@ -375,7 +377,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Arxa Tərəf (Tibbi)',
+                                    '${loc.medicalCard}',
                                     style: TextStyle(
                                       color: _showBack ? Colors.white : Colors.white60,
                                       fontWeight: FontWeight.w800,
@@ -458,12 +460,12 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
+                            gradient: const LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                const Color(0xFF1E1B4B),
-                                const Color(0xFF13172E),
+                                Color(0xFF1E1B4B),
+                                Color(0xFF13172E),
                               ],
                             ),
                             borderRadius: BorderRadius.circular(18),
@@ -558,13 +560,13 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              const Text(
-                                'QR Skaner',
-                                style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800),
+                              Text(
+                                loc.scanQrCode,
+                                style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Yeməkxana & Kitabxana',
+                                '${loc.cafeteria} & ${loc.library}',
                                 style: TextStyle(color: Colors.white.withAlpha(140), fontSize: 10.5),
                               ),
                             ],
@@ -602,9 +604,9 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                           children: [
                             Row(
                               children: [
-                                const Text(
-                                  'Aktiv Tələbə Kimliyi',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                                Text(
+                                  '${loc.active} ${loc.student}',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
                                 ),
                                 const SizedBox(width: 6),
                                 Container(
@@ -641,6 +643,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
   // FRONT OF THE STUDENT CARD
   // ─────────────────────────────────────────────────────────────
   Widget _buildCardFront(BuildContext context, dynamic student) {
+    final loc = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 390),
@@ -824,10 +827,10 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(vertical: 2),
                                   color: Colors.black.withAlpha(160),
-                                  child: const Text(
-                                    'AKTİV',
+                                  child: Text(
+                                    loc.active.toUpperCase(),
                                     textAlign: TextAlign.center,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       color: Color(0xFF00E676),
                                       fontSize: 7.5,
                                       fontWeight: FontWeight.w900,
@@ -860,9 +863,9 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                               ),
                             ),
                             const SizedBox(height: 8),
-                            _buildCardField('TƏLƏBƏ KODU', student.studentNumber),
+                            _buildCardField(loc.studentNumber.toUpperCase(), student.studentNumber),
                             const SizedBox(height: 4),
-                            _buildCardField('SİNİF', student.className),
+                            _buildCardField(loc.classLabel.toUpperCase(), student.className),
                             if (student.finCode != null && student.finCode!.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               _buildCardField('FIN KOD', student.finCode!),
@@ -943,6 +946,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
   // BACK OF THE STUDENT CARD (MEDICAL & CONTACTS)
   // ─────────────────────────────────────────────────────────────
   Widget _buildCardBack(BuildContext context, dynamic student, dynamic medCard) {
+    final loc = AppLocalizations.of(context);
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 390),
@@ -1068,16 +1072,16 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                         ),
                         child: Column(
                           children: [
-                            _buildBackRow('🩸 Qan Qrupu:', medCard.bloodGroup, isHighlight: true),
+                            _buildBackRow('🩸 ${loc.bloodGroup}:', medCard.bloodGroup, isHighlight: true),
                             const SizedBox(height: 5),
-                            _buildBackRow('👨‍👩‍👧 Valideyn:', student.parentName),
+                            _buildBackRow('👨‍👩‍👧 ${loc.parent}:', student.parentName),
                             const SizedBox(height: 5),
-                            _buildBackRow('📞 Valideyn Tel:', student.parentPhone),
+                            _buildBackRow('📞 ${loc.parent} ${loc.phone}:', student.parentPhone),
                             const SizedBox(height: 5),
                             _buildBackRow('🏢 Tədris Ocağı:', 'İdrak Liseyi, Bakı'),
                             if (medCard.allergies.isNotEmpty) ...[
                               const SizedBox(height: 5),
-                              _buildBackRow('⚠️ Allergiya:', medCard.allergies.join(', '), isAlert: true),
+                              _buildBackRow('⚠️ ${loc.allergies}:', medCard.allergies.join(', '), isAlert: true),
                             ],
                           ],
                         ),

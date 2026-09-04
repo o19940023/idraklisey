@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../services/app_update_service.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Yeni versiya mövcud olduqda ekranın yuxarısında görünən davamlı banner.
 /// Tətbiq istifadə olunmağa davam edir, amma banner yenilənənə qədər hər
@@ -61,6 +62,7 @@ class _AppUpdateBannerState extends State<AppUpdateBanner>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return SlideTransition(
       position: _slideAnimation,
       child: FadeTransition(
@@ -118,12 +120,12 @@ class _AppUpdateBannerState extends State<AppUpdateBanner>
                         children: [
                           Row(
                             children: [
-                              const Flexible(
+                              Flexible(
                                 child: Text(
-                                  'Yeni versiya mövcuddur!',
+                                  loc != null ? '${loc.version} • ${loc.update}' : 'Yeni versiya mövcuddur!',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
@@ -154,7 +156,7 @@ class _AppUpdateBannerState extends State<AppUpdateBanner>
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Cari: v${widget.updateService.currentVersion} • Yeniləmək üçün toxunun',
+                            '${loc?.version ?? "Versiya"}: v${widget.updateService.currentVersion}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -185,15 +187,15 @@ class _AppUpdateBannerState extends State<AppUpdateBanner>
                                 color: Color(0xFF1E40AF),
                               ),
                             )
-                          : const Row(
+                          : Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.download_rounded,
+                                const Icon(Icons.download_rounded,
                                     color: Color(0xFF1E40AF), size: 14),
-                                SizedBox(width: 4),
+                                const SizedBox(width: 4),
                                 Text(
-                                  'Yenilə',
-                                  style: TextStyle(
+                                  loc?.update ?? 'Yenilə',
+                                  style: const TextStyle(
                                     color: Color(0xFF1E40AF),
                                     fontSize: 12,
                                     fontWeight: FontWeight.w900,
@@ -213,7 +215,7 @@ class _AppUpdateBannerState extends State<AppUpdateBanner>
                           const BoxConstraints(minWidth: 32, minHeight: 32),
                       padding: EdgeInsets.zero,
                       onPressed: _dismiss,
-                      tooltip: 'Bağla (yenilənənə qədər hər açılışda göstəriləcək)',
+                      tooltip: loc?.close ?? 'Bağla',
                     ),
                   ],
                 ),

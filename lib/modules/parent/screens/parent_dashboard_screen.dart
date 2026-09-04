@@ -11,7 +11,10 @@ import 'attendance_calendar_screen.dart';
 import 'medical_card_screen.dart';
 import 'parent_tickets_screen.dart';
 import '../../student/screens/cafeteria_menu_screen.dart';
+import '../../shared/screens/notifications_screen.dart';
+import '../../shared/screens/settings_screen.dart';
 import '../../admin/widgets/reorderable_module_grid.dart';
+import '../../../l10n/app_localizations.dart';
 
 class ParentDashboardScreen extends StatelessWidget {
   const ParentDashboardScreen({super.key});
@@ -20,6 +23,7 @@ class ParentDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final student = appState.student;
+    final loc = AppLocalizations.of(context);
     final isDark = appState.isDarkMode;
     final parentHeaderBase = isDark
         ? const Color(0xFF0F172A)
@@ -37,16 +41,74 @@ class ParentDashboardScreen extends StatelessWidget {
             SliverAppBar(
               expandedHeight: 140,
               floating: false,
-              pinned: false,
+              pinned: true,
               stretch: true,
-              // This is a nested header below MainScreen's app bar. It should
-              // collapse fully instead of leaving an empty green toolbar.
-              primary: false,
-              toolbarHeight: 0,
-              collapsedHeight: 0,
+              primary: true,
+              toolbarHeight: 56,
+              collapsedHeight: 56,
               elevation: 0,
               backgroundColor: parentHeaderBase,
               surfaceTintColor: Colors.transparent,
+              actions: [
+                // Notifications
+                IconButton(
+                  icon: Stack(
+                    children: [
+                      const Icon(
+                        Icons.notifications_outlined,
+                        color: Colors.white,
+                      ),
+                      if (appState.unreadNotificationCount > 0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: AppColors.danger,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              '${appState.unreadNotificationCount}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                // Settings
+                IconButton(
+                  icon: const Icon(
+                    Icons.settings_outlined,
+                    color: Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
               flexibleSpace: FlexibleSpaceBar(
                 stretchModes: const [StretchMode.zoomBackground],
                 background: Container(
@@ -126,9 +188,9 @@ class ParentDashboardScreen extends StatelessWidget {
                                       ).withAlpha(50),
                                     ),
                                   ),
-                                  child: const Text(
-                                    'VALİDEYN KABİNETİ',
-                                    style: TextStyle(
+                                  child: Text(
+                                    loc.parentCabinet,
+                                    style: const TextStyle(
                                       color: Color(0xFF34D399),
                                       fontSize: 9,
                                       fontWeight: FontWeight.w900,
@@ -152,7 +214,7 @@ class ParentDashboardScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Övladınız: ${student.className} • ${student.studentNumber}',
+                              '${loc.student}: ${student.className} • ${student.studentNumber}',
                               style: TextStyle(
                                 color: Colors.white.withAlpha(180),
                                 fontSize: 11.5,
@@ -186,7 +248,7 @@ class ParentDashboardScreen extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'Övladlarınız (${appState.children.length}) — keçid üçün toxunun:',
+                            '${loc.yourChildren} (${appState.children.length}) — :',
                             style: TextStyle(
                               color: Colors.white.withAlpha(190),
                               fontSize: 11,
@@ -293,21 +355,21 @@ class ParentDashboardScreen extends StatelessWidget {
                     Row(
                       children: [
                         _buildParentStatCard(
-                          'GPA Balı',
+                          loc.gpaScore,
                           '${student.gpa}',
                           Icons.star_rounded,
                           const Color(0xFFF59E0B),
                         ),
                         const SizedBox(width: 10),
                         _buildParentStatCard(
-                          'Davamiyyət',
+                          loc.attendance,
                           '${student.attendanceRate}%',
                           Icons.check_circle_rounded,
                           const Color(0xFF10B981),
                         ),
                         const SizedBox(width: 10),
                         _buildParentStatCard(
-                          'Qan Qrupu',
+                          loc.bloodGroup,
                           student.bloodGroup ?? '—',
                           Icons.favorite_rounded,
                           const Color(0xFFEF4444),
@@ -317,10 +379,9 @@ class ParentDashboardScreen extends StatelessWidget {
 
                     const SizedBox(height: 20),
 
-                    const SectionHeader(
-                      title: 'Nəzarət və İzləmə Modulları',
-                      subtitle:
-                          'Qiymətlər, davamiyyət, tibb və müəllim əlaqəsi',
+                    SectionHeader(
+                      title: loc.monitoringModules,
+                      subtitle: loc.monitoringModulesDesc,
                       padding: EdgeInsets.zero,
                     ),
 
@@ -329,13 +390,13 @@ class ParentDashboardScreen extends StatelessWidget {
                     // 2-Column Grid for Parent Modules (Sürükle-Bırak)
                     ReorderableModuleGrid(
                       modules: appState.getOrderedModules(),
-                      dynamicData: const {
-                        'parent_timetable': 'Gündəlik dərslər',
-                        'parent_grades': 'KSQ / BSQ dinamika',
-                        'parent_attendance': 'Rəqəmsal təqvim',
-                        'parent_medical': 'Allergiya & Peyvənd',
-                        'parent_tickets': 'Məktəb & Psixoloq',
-                        'parent_cafeteria': 'Günün nahar menyusu',
+                      dynamicData: {
+                        'parent_timetable': loc.timetableDesc,
+                        'parent_grades': loc.gradesDesc,
+                        'parent_attendance': loc.attendanceDesc,
+                        'parent_medical': loc.medicalCard,
+                        'parent_tickets': loc.helpdeskDesc,
+                        'parent_cafeteria': loc.cafeteriaDesc,
                       },
                       onReorder: (newOrder) {
                         appState.updateModuleOrder(newOrder);

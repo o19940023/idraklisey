@@ -6,6 +6,7 @@ import '../../../core/widgets/modern_avatar.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/idrak_logo.dart';
 import '../../../providers/app_state.dart';
+import '../../shared/screens/settings_screen.dart';
 import 'quick_grading_screen.dart';
 import 'qr_inventory_ticket_screen.dart';
 import 'teacher_students_screen.dart';
@@ -17,6 +18,7 @@ import 'teacher_id_card_screen.dart';
 import '../../student/screens/meet_idrak_screen.dart';
 import '../../shared/screens/notifications_screen.dart';
 import '../../admin/widgets/reorderable_module_grid.dart';
+import '../../../l10n/app_localizations.dart';
 
 class TeacherDashboardScreen extends StatelessWidget {
   const TeacherDashboardScreen({super.key});
@@ -26,8 +28,9 @@ class TeacherDashboardScreen extends StatelessWidget {
     final appState = Provider.of<AppState>(context);
     final currentUser = appState.currentUser;
     final isDark = appState.isDarkMode;
+    final loc = AppLocalizations.of(context);
 
-    final teacherName = currentUser?.fullName ?? 'Müəllim';
+    final teacherName = currentUser?.fullName ?? loc.teacher;
     final teacherSubject = currentUser?.subject ?? 'Tədris Şöbəsi';
     final teacherRoom = currentUser?.roomNumber ?? 'Otaq 302';
     final assignedClasses = currentUser?.assignedClasses ?? [];
@@ -45,8 +48,70 @@ class TeacherDashboardScreen extends StatelessWidget {
               floating: false,
               pinned: true,
               elevation: 0,
-              backgroundColor: isDark ? AppColors.darkSurface : AppColors.primary,
+              backgroundColor: isDark
+                  ? AppColors.darkSurface
+                  : AppColors.primary,
               surfaceTintColor: Colors.transparent,
+              actions: [
+                // Notifications
+                IconButton(
+                  icon: Stack(
+                    children: [
+                      const Icon(
+                        Icons.notifications_outlined,
+                        color: AppColors.goldLight,
+                      ),
+                      if (appState.unreadNotificationCount > 0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: AppColors.danger,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              '${appState.unreadNotificationCount}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                // Settings
+                IconButton(
+                  icon: const Icon(
+                    Icons.settings_outlined,
+                    color: AppColors.goldLight,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
                   decoration: BoxDecoration(
@@ -80,7 +145,12 @@ class TeacherDashboardScreen extends StatelessWidget {
                       ),
                       // Content
                       Padding(
-                        padding: const EdgeInsets.only(left: 20, right: 20, top: 46, bottom: 14),
+                        padding: const EdgeInsets.only(
+                          left: 20,
+                          right: 20,
+                          top: 46,
+                          bottom: 14,
+                        ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
@@ -93,18 +163,26 @@ class TeacherDashboardScreen extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     gradient: const LinearGradient(
-                                      colors: [Color(0xFFFFDF79), Color(0xFFD4AF37), Color(0xFF8C6B1C)],
+                                      colors: [
+                                        Color(0xFFFFDF79),
+                                        Color(0xFFD4AF37),
+                                        Color(0xFF8C6B1C),
+                                      ],
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFFD4AF37).withAlpha(60),
+                                        color: const Color(
+                                          0xFFD4AF37,
+                                        ).withAlpha(60),
                                         blurRadius: 16,
                                         spreadRadius: 2,
                                       ),
                                     ],
                                   ),
                                   child: ModernAvatar(
-                                    imageUrl: currentUser?.photoUrl ?? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
+                                    imageUrl:
+                                        currentUser?.photoUrl ??
+                                        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
                                     name: teacherName,
                                     size: 58,
                                   ),
@@ -112,7 +190,8 @@ class TeacherDashboardScreen extends StatelessWidget {
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
@@ -120,18 +199,26 @@ class TeacherDashboardScreen extends StatelessWidget {
                                           const SizedBox(width: 6),
                                           Flexible(
                                             child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2.5,
+                                                  ),
                                               decoration: BoxDecoration(
                                                 gradient: const LinearGradient(
-                                                  colors: [Color(0xFFD4AF37), Color(0xFFAA7A1E)],
+                                                  colors: [
+                                                    Color(0xFFD4AF37),
+                                                    Color(0xFFAA7A1E),
+                                                  ],
                                                 ),
-                                                borderRadius: BorderRadius.circular(14),
+                                                borderRadius:
+                                                    BorderRadius.circular(14),
                                               ),
-                                              child: const Text(
-                                                'MÜƏLLİM • PEDAQOJİ HEYƏT',
+                                              child: Text(
+                                                '${loc.teacher.toUpperCase()} • ${loc.pedagogicalStaff}',
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
+                                                style: const TextStyle(
                                                   color: Colors.black87,
                                                   fontSize: 8.5,
                                                   fontWeight: FontWeight.w900,
@@ -159,11 +246,22 @@ class TeacherDashboardScreen extends StatelessWidget {
                                         children: [
                                           Flexible(
                                             child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 7,
+                                                    vertical: 2,
+                                                  ),
                                               decoration: BoxDecoration(
-                                                color: const Color(0xFFD4AF37).withAlpha(25),
-                                                borderRadius: BorderRadius.circular(6),
-                                                border: Border.all(color: const Color(0xFFD4AF37).withAlpha(40)),
+                                                color: const Color(
+                                                  0xFFD4AF37,
+                                                ).withAlpha(25),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: const Color(
+                                                    0xFFD4AF37,
+                                                  ).withAlpha(40),
+                                                ),
                                               ),
                                               child: Text(
                                                 teacherSubject,
@@ -178,7 +276,11 @@ class TeacherDashboardScreen extends StatelessWidget {
                                             ),
                                           ),
                                           const SizedBox(width: 6),
-                                          Icon(Icons.door_back_door_outlined, size: 12, color: Colors.white.withAlpha(140)),
+                                          Icon(
+                                            Icons.door_back_door_outlined,
+                                            size: 12,
+                                            color: Colors.white.withAlpha(140),
+                                          ),
                                           const SizedBox(width: 3),
                                           Flexible(
                                             child: Text(
@@ -186,7 +288,9 @@ class TeacherDashboardScreen extends StatelessWidget {
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
-                                                color: Colors.white.withAlpha(140),
+                                                color: Colors.white.withAlpha(
+                                                  140,
+                                                ),
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.w500,
                                               ),
@@ -202,15 +306,29 @@ class TeacherDashboardScreen extends StatelessWidget {
                                           children: [
                                             for (final cls in assignedClasses)
                                               Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 7,
+                                                      vertical: 2,
+                                                    ),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.white.withAlpha(18),
-                                                  borderRadius: BorderRadius.circular(6),
-                                                  border: Border.all(color: Colors.white.withAlpha(30)),
+                                                  color: Colors.white.withAlpha(
+                                                    18,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                  border: Border.all(
+                                                    color: Colors.white
+                                                        .withAlpha(30),
+                                                  ),
                                                 ),
                                                 child: Text(
                                                   cls,
-                                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
                                                 ),
                                               ),
                                           ],
@@ -240,21 +358,21 @@ class TeacherDashboardScreen extends StatelessWidget {
                     Row(
                       children: [
                         _buildMetricChip(
-                          title: 'Şagirdlər',
+                          title: loc.students,
                           value: '${appState.students.length}',
                           icon: Icons.groups_rounded,
                           color: const Color(0xFF3B82F6),
                         ),
                         const SizedBox(width: 10),
                         _buildMetricChip(
-                          title: 'Tapşırıqlar',
+                          title: loc.assignments,
                           value: '${appState.currentTeacherAssignments.length}',
                           icon: Icons.assignment_turned_in_rounded,
                           color: const Color(0xFF8B5CF6),
                         ),
                         const SizedBox(width: 10),
                         _buildMetricChip(
-                          title: 'E-Kitablar',
+                          title: loc.booksCount,
                           value: '${appState.books.length}',
                           icon: Icons.local_library_rounded,
                           color: const Color(0xFF10B981),
@@ -277,7 +395,10 @@ class TeacherDashboardScreen extends StatelessWidget {
                           ],
                         ),
                         borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: const Color(0xFFD4AF37).withAlpha(90), width: 1.4),
+                        border: Border.all(
+                          color: const Color(0xFFD4AF37).withAlpha(90),
+                          width: 1.4,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: const Color(0xFFD4AF37).withAlpha(40),
@@ -292,7 +413,9 @@ class TeacherDashboardScreen extends StatelessWidget {
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const TeacherIdCardScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const TeacherIdCardScreen(),
+                              ),
                             );
                           },
                           borderRadius: BorderRadius.circular(22),
@@ -305,29 +428,39 @@ class TeacherDashboardScreen extends StatelessWidget {
                                   height: 46,
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
-                                      colors: [Color(0xFFD4AF37), Color(0xFFAA7A1E)],
+                                      colors: [
+                                        Color(0xFFD4AF37),
+                                        Color(0xFFAA7A1E),
+                                      ],
                                     ),
                                     borderRadius: BorderRadius.circular(14),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFFD4AF37).withAlpha(80),
+                                        color: const Color(
+                                          0xFFD4AF37,
+                                        ).withAlpha(80),
                                         blurRadius: 10,
                                         offset: const Offset(0, 3),
                                       ),
                                     ],
                                   ),
-                                  child: const Icon(Icons.badge_rounded, color: Colors.black87, size: 24),
+                                  child: const Icon(
+                                    Icons.badge_rounded,
+                                    color: Colors.black87,
+                                    size: 24,
+                                  ),
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
                                           Flexible(
                                             child: Text(
-                                              'Rəqəmsal Müəllim Vəsiqəsi',
+                                              loc.teacherIdCard,
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontSize: 13.5,
@@ -340,10 +473,16 @@ class TeacherDashboardScreen extends StatelessWidget {
                                           ),
                                           const SizedBox(width: 5),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 1.5,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFFD4AF37).withAlpha(25),
-                                              borderRadius: BorderRadius.circular(10),
+                                              color: const Color(
+                                                0xFFD4AF37,
+                                              ).withAlpha(25),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
                                             ),
                                             child: const Text(
                                               '3D PASS',
@@ -358,31 +497,47 @@ class TeacherDashboardScreen extends StatelessWidget {
                                       ),
                                       const SizedBox(height: 3),
                                       Text(
-                                        'NFC Turniket, otaq açarı və 3D səlahiyyət kartı',
-                                        style: TextStyle(color: Colors.white.withAlpha(160), fontSize: 11),
+                                        loc.teacherIdCardDesc,
+                                        style: TextStyle(
+                                          color: Colors.white.withAlpha(160),
+                                          fontSize: 11,
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFD4AF37).withAlpha(20),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: const Color(0xFFD4AF37).withAlpha(40)),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 7,
                                   ),
-                                  child: const Row(
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFFD4AF37,
+                                    ).withAlpha(20),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFFD4AF37,
+                                      ).withAlpha(40),
+                                    ),
+                                  ),
+                                  child: Row(
                                     children: [
                                       Text(
-                                        'Bax',
-                                        style: TextStyle(
+                                        loc.view,
+                                        style: const TextStyle(
                                           color: Color(0xFFFFDF79),
                                           fontSize: 12,
                                           fontWeight: FontWeight.w800,
                                         ),
                                       ),
-                                      SizedBox(width: 4),
-                                      Icon(Icons.arrow_forward_rounded, color: Color(0xFFFFDF79), size: 12),
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.arrow_forward_rounded,
+                                        color: Color(0xFFFFDF79),
+                                        size: 12,
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -401,7 +556,11 @@ class TeacherDashboardScreen extends StatelessWidget {
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [Color(0xFF4F46E5), Color(0xFF6C5CE7), Color(0xFF8B5CF6)],
+                          colors: [
+                            Color(0xFF4F46E5),
+                            Color(0xFF6C5CE7),
+                            Color(0xFF8B5CF6),
+                          ],
                         ),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
@@ -418,7 +577,9 @@ class TeacherDashboardScreen extends StatelessWidget {
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const CreateAssignmentScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const CreateAssignmentScreen(),
+                              ),
                             );
                           },
                           borderRadius: BorderRadius.circular(20),
@@ -432,16 +593,21 @@ class TeacherDashboardScreen extends StatelessWidget {
                                     color: Colors.white.withAlpha(20),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const Icon(Icons.add_task_rounded, color: Colors.white, size: 22),
+                                  child: const Icon(
+                                    Icons.add_task_rounded,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
-                                        'Yeni Tapşırıq Yarat',
-                                        style: TextStyle(
+                                      Text(
+                                        loc.createAssignment,
+                                        style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 15,
                                           fontWeight: FontWeight.w800,
@@ -450,8 +616,11 @@ class TeacherDashboardScreen extends StatelessWidget {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        'Sinif və ya şagirdlərə fərdi dərs tapşırığı təyin edin',
-                                        style: TextStyle(color: Colors.white.withAlpha(178), fontSize: 11),
+                                        loc.assignmentsDesc,
+                                        style: TextStyle(
+                                          color: Colors.white.withAlpha(178),
+                                          fontSize: 11,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -462,7 +631,11 @@ class TeacherDashboardScreen extends StatelessWidget {
                                     color: Colors.white.withAlpha(20),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 14),
+                                  child: const Icon(
+                                    Icons.arrow_forward_rounded,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
                                 ),
                               ],
                             ),
@@ -474,9 +647,9 @@ class TeacherDashboardScreen extends StatelessWidget {
                     const SizedBox(height: 22),
 
                     // ── Section: Müəllim Alətləri ──
-                    const SectionHeader(
-                      title: 'Müəllim Alətləri',
-                      subtitle: 'Tədris, qiymətləndirmə və şagird modulları',
+                    SectionHeader(
+                      title: loc.teacherDashboard,
+                      subtitle: loc.monitoringModulesDesc,
                       padding: EdgeInsets.zero,
                     ),
 
@@ -486,14 +659,16 @@ class TeacherDashboardScreen extends StatelessWidget {
                     ReorderableModuleGrid(
                       modules: appState.getOrderedModules(),
                       dynamicData: {
-                        'teacher_timetable': 'Baxış rejimi',
-                        'teacher_meet': 'Canlı səsli dərs',
-                        'teacher_students': '${appState.students.length} Şagird',
-                        'teacher_assignments': '${appState.currentTeacherAssignments.length} Tapşırıq',
-                        'teacher_grading': 'Voice-to-Text rəy',
-                        'teacher_library': '${appState.books.length} Kitab',
-                        'teacher_notifications': 'Sinif & Valideyn',
-                        'teacher_inventory': 'QR inventar şikayəti',
+                        'teacher_timetable': loc.timetableDesc,
+                        'teacher_meet': loc.meetIdrakDesc,
+                        'teacher_students':
+                            '${appState.students.length} ${loc.student}',
+                        'teacher_assignments':
+                            '${appState.currentTeacherAssignments.length} ${loc.assignments}',
+                        'teacher_grading': loc.voiceToTextReview,
+                        'teacher_library': '${appState.books.length} ${loc.booksCount}',
+                        'teacher_notifications': loc.notificationsDesc,
+                        'teacher_inventory': loc.inventoryDesc,
                       },
                       onReorder: (newOrder) {
                         appState.updateModuleOrder(newOrder);
@@ -501,28 +676,70 @@ class TeacherDashboardScreen extends StatelessWidget {
                       onModuleTap: (moduleId, ctx) {
                         switch (moduleId) {
                           case 'teacher_timetable':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const TeacherTimetableViewScreen()));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const TeacherTimetableViewScreen(),
+                              ),
+                            );
                             break;
                           case 'teacher_meet':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const MeetIdrakScreen()));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) => const MeetIdrakScreen(),
+                              ),
+                            );
                             break;
                           case 'teacher_students':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const TeacherStudentsScreen()));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) => const TeacherStudentsScreen(),
+                              ),
+                            );
                             break;
                           case 'teacher_assignments':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const ReviewSubmissionsScreen()));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) => const ReviewSubmissionsScreen(),
+                              ),
+                            );
                             break;
                           case 'teacher_grading':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const QuickGradingScreen()));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) => const QuickGradingScreen(),
+                              ),
+                            );
                             break;
                           case 'teacher_library':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const LibraryScreen(isTeacherView: true)));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const LibraryScreen(isTeacherView: true),
+                              ),
+                            );
                             break;
                           case 'teacher_notifications':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) => const NotificationsScreen(),
+                              ),
+                            );
                             break;
                           case 'teacher_inventory':
-                            Navigator.push(ctx, MaterialPageRoute(builder: (_) => const QrInventoryTicketScreen()));
+                            Navigator.push(
+                              ctx,
+                              MaterialPageRoute(
+                                builder: (_) => const QrInventoryTicketScreen(),
+                              ),
+                            );
                             break;
                         }
                       },

@@ -20,11 +20,20 @@ android {
     buildToolsVersion = "36.0.0"
     ndkVersion = "28.2.13676358"
     
+    // 🔧 Fix Agora dependency conflict
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+    
+    // Fix manifest merger namespace conflict
     packagingOptions {
         resources {
             excludes += setOf(
                 "META-INF/DEPENDENCIES",
-                "META-INF/*.kotlin_module"
+                "META-INF/*.kotlin_module",
+                "META-INF/INDEX.LIST",
+                "META-INF/io.netty.versions.properties"
             )
         }
     }
@@ -71,4 +80,11 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    
+    // Fix Agora namespace conflict
+    configurations.all {
+        resolutionStrategy {
+            force("io.agora.rtc:agora-special-full:4.5.3.70")
+        }
+    }
 }

@@ -5,6 +5,7 @@ import '../../../providers/app_state.dart';
 import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/student_model.dart';
 import '../../../data/models/attendance_model.dart';
+import '../../../l10n/app_localizations.dart';
 
 class SmartAttendanceScreen extends StatefulWidget {
   final String? targetClass;
@@ -48,6 +49,7 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final appState = Provider.of<AppState>(context);
     final pendingStudents = appState.pendingAttendanceStudents;
     final sessionAttendance = appState.currentSessionAttendance;
@@ -57,8 +59,8 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
     int absentCount = sessionAttendance.values.where((s) => s == AttendanceStatus.absent).length;
 
     final className = appState.currentSessionClass.isNotEmpty ? appState.currentSessionClass : (widget.targetClass ?? '9B Sinfi');
-    final subject = appState.currentSessionSubject.isNotEmpty ? appState.currentSessionSubject : (widget.targetSubject ?? 'Dərs');
-    final timeStr = widget.targetTime ?? 'Dərs Saatı';
+    final subject = appState.currentSessionSubject.isNotEmpty ? appState.currentSessionSubject : (widget.targetSubject ?? loc.lesson);
+    final timeStr = widget.targetTime ?? loc.time;
 
     // ✅ DƏQİQ TARİX VƏ VAXT YOXLAMASI
     bool canAccessAttendance = true;
@@ -99,11 +101,11 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
               final remainingMinutes = diffMinutes % 60;
 
               if (remainingHours > 0) {
-                blockMessage = 'Davamiyyət qeydiyyatına daha $remainingHours saat $remainingMinutes dəqiqə var.\n\n'
-                    'Dərs saatından 10 dəqiqə əvvəl (${tenMinBefore.hour.toString().padLeft(2, '0')}:${tenMinBefore.minute.toString().padLeft(2, '0')}) giriş açılacaq.';
+                blockMessage = '${loc.attendance}: $remainingHours s $remainingMinutes d.\n\n'
+                    '(${tenMinBefore.hour.toString().padLeft(2, '0')}:${tenMinBefore.minute.toString().padLeft(2, '0')})';
               } else {
-                blockMessage = 'Davamiyyət qeydiyyatına daha $diffMinutes dəqiqə var.\n\n'
-                    'Dərs saatından 10 dəqiqə əvvəl (${tenMinBefore.hour.toString().padLeft(2, '0')}:${tenMinBefore.minute.toString().padLeft(2, '0')}) giriş açılacaq.';
+                blockMessage = '${loc.attendance}: $diffMinutes d.\n\n'
+                    '(${tenMinBefore.hour.toString().padLeft(2, '0')}:${tenMinBefore.minute.toString().padLeft(2, '0')})';
               }
             } else {
               canAccessAttendance = true;
@@ -111,8 +113,7 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
           } else if (isFuture) {
             canAccessAttendance = false;
             final monthStr = '${targetLessonDate.day}.${targetLessonDate.month.toString().padLeft(2, '0')}.${targetLessonDate.year}';
-            blockMessage = 'Bu dərs gələcək tarix üçün ($monthStr, saat ${widget.targetTime}) planlaşdırılıb.\n\n'
-                'Davamiyyət qeydiyyatı dərs günü dərsin başlamasına 10 dəqiqə qalmış aktivləşəcək.';
+            blockMessage = '$monthStr, ${widget.targetTime}';
           } else {
             canAccessAttendance = true;
           }
@@ -157,9 +158,9 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
                         child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
                       ),
                     ),
-                    const Text(
-                      'Smart Davamiyyət',
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: -0.3),
+                    Text(
+                      loc.quickAttendance,
+                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: -0.3),
                     ),
                     GestureDetector(
                       onTap: () => appState.resetAttendanceSession(),
@@ -194,7 +195,7 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
                               Icon(Icons.schedule_rounded, size: 12, color: AppColors.goldLight.withAlpha(180)),
                               const SizedBox(width: 4),
                               Text(
-                                '$timeStr • Canlı Qeydiyyat',
+                                '$timeStr • ${loc.attendance}',
                                 style: TextStyle(color: AppColors.goldLight.withAlpha(180), fontSize: 11, fontWeight: FontWeight.w500),
                               ),
                             ],
@@ -233,7 +234,7 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '🔗 Birgə Dərs (${(widget.targetClasses ?? [widget.targetClass ?? ""]).join(" & ")}) ${widget.coTeacherName != null ? "• Həmkar: ${widget.coTeacherName}" : ""}\nDavamiyyəti ilk təsdiqləyən müəllimin qeydləri hər iki sinif üçün keçərli olacaq.',
+                      '🔗 ${loc.mergeClasses} (${(widget.targetClasses ?? [widget.targetClass ?? ""]).join(" & ")}) ${widget.coTeacherName != null ? "• ${widget.coTeacherName}" : ""}',
                       style: const TextStyle(color: AppColors.goldDark, fontSize: 10.5, fontWeight: FontWeight.w700),
                     ),
                   ),
@@ -251,11 +252,11 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
               physics: const BouncingScrollPhysics(),
               child: Row(
                 children: [
-                  _buildGestureHint('⬅️ Sola', 'Qayıb', AppColors.danger),
+                  _buildGestureHint('⬅️', loc.absent, AppColors.danger),
                   const SizedBox(width: 8),
-                  _buildGestureHint('⬆️ Yuxarı', 'Gecikmə', AppColors.warning),
+                  _buildGestureHint('⬆️', loc.late, AppColors.warning),
                   const SizedBox(width: 8),
-                  _buildGestureHint('➡️ Sağa', 'İştirak', AppColors.success),
+                  _buildGestureHint('➡️', loc.present, AppColors.success),
                 ],
               ),
             ),
@@ -265,11 +266,11 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
           Expanded(
             child: Center(
               child: !canAccessAttendance
-                  ? _buildBlockedAccessState(context, blockMessage ?? 'Dərs saatına hələ vaxt var.')
+                  ? _buildBlockedAccessState(context, loc, blockMessage ?? '')
                   : (pendingStudents.isEmpty
                       ? (sessionAttendance.isEmpty
-                          ? _buildEmptyClassState(context, className)
-                          : _buildCompletedState(context, appState, presentCount, lateCount, absentCount))
+                          ? _buildEmptyClassState(context, loc, className)
+                          : _buildCompletedState(context, loc, appState, presentCount, lateCount, absentCount))
                       : Stack(
                           alignment: Alignment.center,
                           children: [
@@ -277,7 +278,7 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
                             if (pendingStudents.length > 1)
                               _buildBackgroundCard(pendingStudents[1]),
                             // Active Swipable Card
-                            _buildActiveSwipableCard(context, appState, pendingStudents.first),
+                            _buildActiveSwipableCard(context, loc, appState, pendingStudents.first),
                           ],
                         )),
             ),
@@ -285,13 +286,13 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
 
           // ── Bottom Action Bar ──
           if (pendingStudents.isNotEmpty && canAccessAttendance)
-            _buildBottomControls(appState, pendingStudents.first),
+            _buildBottomControls(loc, appState, pendingStudents.first),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyClassState(BuildContext context, String className) {
+  Widget _buildEmptyClassState(BuildContext context, AppLocalizations loc, String className) {
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -308,15 +309,15 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
           ),
           const SizedBox(height: 20),
           Text(
-            '$className sinfində hələ heç bir\nşagird qeydiyyatda deyil.',
+            '$className - ${loc.noDataAvailable}',
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Məktəb İnzibatçısı (Admin) şagird yaratdıqda və ya sinfi bu qrupa təyin etdikdə avtomatik siyahıda görünəcək.',
+          Text(
+            loc.noDataAvailable,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white60, fontSize: 12, height: 1.5),
+            style: const TextStyle(color: Colors.white60, fontSize: 12, height: 1.5),
           ),
           const SizedBox(height: 28),
           ElevatedButton.icon(
@@ -328,14 +329,14 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
             ),
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
-            label: const Text('Geri Qayıt', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+            label: Text(loc.back, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBlockedAccessState(BuildContext context, String message) {
+  Widget _buildBlockedAccessState(BuildContext context, AppLocalizations loc, String message) {
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -351,44 +352,16 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
             child: const Icon(Icons.timer_rounded, size: 60, color: AppColors.warning),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Dərs Saatı Hələ Başlamayıb',
+          Text(
+            loc.attendance,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -0.3),
+            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -0.3),
           ),
           const SizedBox(height: 14),
           Text(
             message,
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E3A5F).withAlpha(60),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFF3B82F6).withAlpha(40)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3B82F6).withAlpha(20),
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: const Icon(Icons.info_outline_rounded, color: Color(0xFF60A5FA), size: 16),
-                ),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Text(
-                    'Davamiyyət qeydiyyatı yalnız dərs saatından 10 dəqiqə əvvəl aktivləşir.',
-                    style: TextStyle(color: Color(0xFF93C5FD), fontSize: 11.5, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
           ),
           const SizedBox(height: 32),
           ElevatedButton.icon(
@@ -400,7 +373,7 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
             ),
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
-            label: const Text('Geri Qayıt', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+            label: Text(loc.back, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -492,22 +465,22 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
     );
   }
 
-  Widget _buildActiveSwipableCard(BuildContext context, AppState appState, StudentProfile student) {
+  Widget _buildActiveSwipableCard(BuildContext context, AppLocalizations loc, AppState appState, StudentProfile student) {
     Color overlayColor = Colors.transparent;
     String overlayText = '';
     IconData overlayIcon = Icons.check;
 
     if (_dragOffset.dx > 60) {
       overlayColor = AppColors.success.withAlpha(200);
-      overlayText = 'İŞTİRAK EDİR';
+      overlayText = loc.present.toUpperCase();
       overlayIcon = Icons.check_circle_rounded;
     } else if (_dragOffset.dx < -60) {
       overlayColor = AppColors.danger.withAlpha(200);
-      overlayText = 'QAYIB (Yoxdur)';
+      overlayText = loc.absent.toUpperCase();
       overlayIcon = Icons.cancel_rounded;
     } else if (_dragOffset.dy < -60) {
       overlayColor = AppColors.warning.withAlpha(200);
-      overlayText = 'GECİKİB';
+      overlayText = loc.late.toUpperCase();
       overlayIcon = Icons.access_time_filled_rounded;
     }
 
@@ -617,7 +590,7 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
                                 const SizedBox(width: 6),
                                 Flexible(
                                   child: Text(
-                                    'Allergiya: ${currentMed.allergies.first.name}',
+                                    '${loc.allergies}: ${currentMed.allergies.first.name}',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w700),
@@ -654,14 +627,14 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'ID: ${student.studentNumber}',
+                              '${loc.studentNumber}: ${student.studentNumber}',
                               style: TextStyle(color: Colors.white.withAlpha(180), fontSize: 12, fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Valideyn: ${student.parentName} (${student.parentPhone})',
+                          '${loc.parent}: ${student.parentName} (${student.parentPhone})',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: Colors.white.withAlpha(140), fontSize: 11),
@@ -708,7 +681,7 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
     });
   }
 
-  Widget _buildBottomControls(AppState appState, StudentProfile student) {
+  Widget _buildBottomControls(AppLocalizations loc, AppState appState, StudentProfile student) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
@@ -742,7 +715,7 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
             _buildActionButton(
               icon: Icons.close_rounded,
               color: AppColors.danger,
-              label: 'Qayıb',
+              label: loc.absent,
               onTap: () => _handleSwipe(appState, student.id, AttendanceStatus.absent),
             ),
 
@@ -750,7 +723,7 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
             _buildActionButton(
               icon: Icons.access_time_filled_rounded,
               color: AppColors.warning,
-              label: 'Gecikmə',
+              label: loc.late,
               onTap: () => _handleSwipe(appState, student.id, AttendanceStatus.late),
             ),
 
@@ -758,7 +731,7 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
             _buildActionButton(
               icon: Icons.check_rounded,
               color: AppColors.success,
-              label: 'İştirak',
+              label: loc.present,
               onTap: () => _handleSwipe(appState, student.id, AttendanceStatus.present),
             ),
           ],
@@ -798,6 +771,7 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
 
   Widget _buildCompletedState(
     BuildContext context,
+    AppLocalizations loc,
     AppState appState,
     int present,
     int late,
@@ -818,16 +792,16 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
             child: const Icon(Icons.done_all_rounded, color: AppColors.success, size: 52),
           ),
           const SizedBox(height: 22),
-          const Text(
-            'Bütün Sinfin Davamiyyəti\nTamamlandı!',
+          Text(
+            '${loc.attendance} ${loc.completed}',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -0.3),
+            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -0.3),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Məlumatlar həm Firestore bulud bazasına, həm də\nvalideyn portallarına canlı sinxronizasiya edilir.',
+          Text(
+            loc.successfullySaved,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white60, fontSize: 12, height: 1.5),
+            style: const TextStyle(color: Colors.white60, fontSize: 12, height: 1.5),
           ),
           const SizedBox(height: 28),
 
@@ -835,9 +809,9 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildResultCard('İştirak', '$present', AppColors.success),
-              _buildResultCard('Gecikmə', '$late', AppColors.warning),
-              _buildResultCard('Qayıb', '$absent', AppColors.danger),
+              _buildResultCard(loc.present, '$present', AppColors.success),
+              _buildResultCard(loc.late, '$late', AppColors.warning),
+              _buildResultCard(loc.absent, '$absent', AppColors.danger),
             ],
           ),
 
@@ -854,16 +828,16 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
               appState.completeAttendanceSession();
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Davamiyyət sessiyası uğurla təsdiqləndi və buluda yazıldı!'),
+                SnackBar(
+                  content: Text(loc.successfullySaved),
                   backgroundColor: AppColors.success,
                 ),
               );
             },
             icon: const Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 18),
-            label: const Text(
-              'Davamiyyəti Təsdiqlə və Yadda Saxla',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+            label: Text(
+              loc.saveAttendance,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
             ),
           ),
         ],

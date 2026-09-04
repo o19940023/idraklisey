@@ -8,6 +8,7 @@ import '../../../providers/app_state.dart';
 import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/assignment_model.dart';
 import '../../../data/models/student_model.dart';
+import '../../../l10n/app_localizations.dart';
 
 class CreateAssignmentScreen extends StatefulWidget {
   final StudentProfile? preSelectedStudent;
@@ -147,15 +148,15 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     });
   }
 
-  void _submitAssignment(AppState appState) {
+  void _submitAssignment(AppState appState, AppLocalizations loc) {
     final title = _titleCtrl.text.trim();
     final subject = _subjectCtrl.text.trim();
     final instructions = _instructionsCtrl.text.trim();
 
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Zəhmət olmasa tapşırığın başlığını daxil edin!'),
+        SnackBar(
+          content: Text('${loc.assignmentTitle} - ${loc.required}'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -164,8 +165,8 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
 
     if (subject.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Zəhmət olmasa fənn adını qeyd edin!'),
+        SnackBar(
+          content: Text('${loc.selectSubject} - ${loc.required}'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -174,8 +175,8 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
 
     if (instructions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Zəhmət olmasa tapşırığın ətraflı təlimatını qeyd edin!'),
+        SnackBar(
+          content: Text('${loc.assignmentDescription} - ${loc.required}'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -184,8 +185,8 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
 
     if (_targetType == 1 && _selectedStudentIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Fərdi rejimdə ən azı bir şagird seçilməlidir!'),
+        SnackBar(
+          content: Text('${loc.students} - ${loc.required}'),
           backgroundColor: AppColors.danger,
         ),
       );
@@ -202,7 +203,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
       id: 'hw-${DateTime.now().millisecondsSinceEpoch}',
       subject: subject,
       title: title,
-      teacherName: appState.currentUser?.fullName ?? 'Müəllim',
+      teacherName: appState.currentUser?.fullName ?? loc.teacher,
       instructions: instructions,
       assignedDate: DateTime.now(),
       dueDate: _dueDate,
@@ -217,13 +218,13 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
-          children: const [
-            Icon(Icons.check_circle_rounded, color: Colors.white),
-            SizedBox(width: 10),
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Dərs tapşırığı uğurla yaradıldı və şagirdlərə göndərildi!',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                loc.sentSuccessfully,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -236,6 +237,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final appState = Provider.of<AppState>(context);
     final students = appState.students;
     final allDistinctClasses = appState.allDistinctClasses;
@@ -288,8 +290,8 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                     ),
                     child: const Icon(Icons.check_rounded, size: 18, color: Colors.white),
                   ),
-                  tooltip: 'Tapşırığı Göndər',
-                  onPressed: () => _submitAssignment(appState),
+                  tooltip: loc.send,
+                  onPressed: () => _submitAssignment(appState, loc),
                 ),
               ),
             ],
@@ -330,9 +332,9 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Yeni Dərs Tapşırığı',
-                                      style: TextStyle(
+                                    Text(
+                                      loc.createAssignment,
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 18,
                                         fontWeight: FontWeight.w900,
@@ -341,7 +343,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Tapşırıq təlimatları & Son tarix',
+                                      '${loc.assignmentsDesc} & ${loc.dueDate}',
                                       style: TextStyle(
                                         color: Colors.white.withAlpha(180),
                                         fontSize: 12,
@@ -393,7 +395,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                             ),
                             const SizedBox(width: 10),
                             Text(
-                              'Tapşırıq Məlumatları',
+                              loc.assignments,
                               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
                             ),
                           ],
@@ -404,8 +406,8 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                         TextField(
                           controller: _titleCtrl,
                           decoration: InputDecoration(
-                            labelText: 'Tapşırıq Başlığı *',
-                            hintText: 'Məs: Kvadratik tənliklərin Viyet teoremi ilə həlli',
+                            labelText: '${loc.assignmentTitle} *',
+                            hintText: loc.assignmentTitle,
                             prefixIcon: const Icon(Icons.title_rounded, color: AppColors.primaryAccent, size: 20),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                             enabledBorder: OutlineInputBorder(
@@ -424,8 +426,8 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                         TextField(
                           controller: _subjectCtrl,
                           decoration: InputDecoration(
-                            labelText: 'Fənn *',
-                            hintText: 'Məs: Riyaziyyat, Fizika',
+                            labelText: '${loc.subject} *',
+                            hintText: loc.selectSubject,
                             prefixIcon: const Icon(Icons.menu_book_rounded, color: AppColors.primaryAccent, size: 20),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                             enabledBorder: OutlineInputBorder(
@@ -486,8 +488,8 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                           controller: _instructionsCtrl,
                           maxLines: 4,
                           decoration: InputDecoration(
-                            labelText: 'Ətraflı Təlimat & Məsələ Nömrələri *',
-                            hintText: 'Şagirdin nə etməli olduğunu, dəftərdə yazılacaq məsələləri və qaydaları aydın izah edin...',
+                            labelText: '${loc.assignmentDescription} *',
+                            hintText: loc.assignmentDescription,
                             alignLabelWithHint: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                             enabledBorder: OutlineInputBorder(
@@ -506,8 +508,8 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                         TextField(
                           controller: _attachmentCtrl,
                           decoration: InputDecoration(
-                            labelText: 'Resurs / Dərslik Linki (Könüllü)',
-                            hintText: 'Məs: https://idrakliseyi.edu.az/derslik.pdf və ya Səhifə 45-48',
+                            labelText: '${loc.library} / Link (${loc.optional})',
+                            hintText: 'https://...',
                             prefixIcon: const Icon(Icons.link_rounded, color: AppColors.primaryAccent, size: 20),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                             enabledBorder: OutlineInputBorder(
@@ -553,7 +555,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                 ),
                                 const SizedBox(width: 10),
                                 Text(
-                                  'Son Təhvil Tarixi',
+                                  loc.dueDate,
                                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
                                 ),
                               ],
@@ -578,7 +580,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   side: BorderSide(color: AppColors.cardBorder),
                                 ),
-                                child: const Text('Sabah', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                child: Text(loc.tomorrow, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -590,7 +592,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   side: BorderSide(color: AppColors.cardBorder),
                                 ),
-                                child: const Text('2 gün sonra', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                child: const Text('+2 gün', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -602,7 +604,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   side: BorderSide(color: AppColors.cardBorder),
                                 ),
-                                child: const Text('1 həftə', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                child: Text(loc.thisWeek, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                               ),
                             ),
                           ],
@@ -617,7 +619,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                           ),
                           tileColor: AppColors.background,
                           leading: const Icon(Icons.calendar_today_rounded, color: AppColors.primaryAccent, size: 20),
-                          title: const Text('Xüsusi Gün və Saat Seç', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          title: Text(loc.date, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                           subtitle: Text(
                             dateFormat.format(_dueDate),
                             style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.primaryAccent),
@@ -655,7 +657,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                             ),
                             const SizedBox(width: 10),
                             Text(
-                              'Tapşırıq Kimə Təyin Olunur?',
+                              loc.selectRecipients,
                               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
                             ),
                           ],
@@ -666,11 +668,11 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                         Row(
                           children: [
                             Expanded(
-                              child: _buildTargetToggle(0, '🏫 Sinif Üzrə'),
+                              child: _buildTargetToggle(0, '🏫 ${loc.classes}'),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: _buildTargetToggle(1, '👤 Fərdi Şagirdlər'),
+                              child: _buildTargetToggle(1, '👤 ${loc.students}'),
                             ),
                           ],
                         ),
@@ -684,7 +686,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                 const Icon(Icons.star_rounded, color: AppColors.gold, size: 18),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Sahipliyinizdə Olan Siniflər:',
+                                  '${loc.myClasses}:',
                                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
                                 ),
                               ],
@@ -718,7 +720,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
-                                          '$c ($classCount şagird)',
+                                          '$c ($classCount)',
                                           style: TextStyle(
                                             color: isSelected ? Colors.white : AppColors.textPrimary,
                                             fontWeight: FontWeight.w700,
@@ -749,7 +751,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'Hələlik sinif sahiplənməmisiniz. Aşağıdakı məktəb siniflərindən birini seçə bilərsiniz:',
+                                      loc.selectClass,
                                       style: TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
                                     ),
                                   ),
@@ -760,7 +762,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
 
                           // B) ALL SCHOOL CLASSES / OTHERS
                           Text(
-                            'Digər Siniflər və Məktəb:',
+                            '${loc.classes}:',
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary),
                           ),
                           const SizedBox(height: 10),
@@ -791,7 +793,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
-                                        'Bütün Siniflər (Hamısı)',
+                                        '${loc.all} (${loc.classes})',
                                         style: TextStyle(
                                           color: _selectedClass == 'Hamısı' ? Colors.white : AppColors.textPrimary,
                                           fontWeight: FontWeight.w700,
@@ -854,7 +856,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
-                                        'Digər Sinif',
+                                        loc.addClass,
                                         style: TextStyle(
                                           color: _selectedClass == 'Digər' ? Colors.white : AppColors.textPrimary,
                                           fontWeight: FontWeight.w700,
@@ -873,8 +875,8 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                             TextField(
                               controller: _customClassCtrl,
                               decoration: InputDecoration(
-                                labelText: 'Xüsusi Sinif Adı *',
-                                hintText: 'Məs: 8A, 10C',
+                                labelText: '${loc.classLabel} *',
+                                hintText: '8A, 10C',
                                 prefixIcon: const Icon(Icons.school_rounded, color: AppColors.primaryAccent, size: 20),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                               ),
@@ -897,8 +899,8 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                 Expanded(
                                   child: Text(
                                     _selectedClass == 'Hamısı'
-                                        ? 'Tapşırıq məktəbin bütün siniflərinə göndəriləcək'
-                                        : 'Seçildi: $_selectedClass sinfi (${appState.getStudentsForClass(_selectedClass).length} şagird)',
+                                        ? '${loc.assignments} -> ${loc.all} ${loc.classes}'
+                                        : '${loc.classLabel}: $_selectedClass (${appState.getStudentsForClass(_selectedClass).length})',
                                     style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
@@ -919,9 +921,9 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(color: AppColors.danger.withAlpha(40)),
                               ),
-                              child: const Text(
-                                'Sistemdə hələ heç bir şagird qeydiyyatdan keçməyib. Əvvəlcə Admin panelindən şagird hesabı yaradın.',
-                                style: TextStyle(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.w600),
+                              child: Text(
+                                loc.noDataAvailable,
+                                style: const TextStyle(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.w600),
                               ),
                             )
                           else ...[
@@ -955,7 +957,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                               const SizedBox(width: 4),
                                             ],
                                             Text(
-                                              c == 'Hamısı' ? 'Bütün Şagirdlər' : c,
+                                              c == 'Hamısı' ? loc.all : c,
                                               style: TextStyle(
                                                 color: isSel ? Colors.white : AppColors.textPrimary,
                                                 fontSize: 11,
@@ -976,7 +978,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                             TextField(
                               onChanged: (val) => setState(() => _studentSearchQuery = val),
                               decoration: InputDecoration(
-                                hintText: 'Şagird axtar...',
+                                hintText: '${loc.search} (${loc.student})...',
                                 prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppColors.primaryAccent),
                                 isDense: true,
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -998,7 +1000,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Seçilmiş: ${_selectedStudentIds.length} / ${students.length}',
+                                  '${loc.students}: ${_selectedStudentIds.length} / ${students.length}',
                                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primaryAccent),
                                 ),
                                 Row(
@@ -1012,7 +1014,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                           }
                                         });
                                       },
-                                      child: const Text('Hamısını Seç', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                                      child: Text(loc.all, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
                                     ),
                                     const SizedBox(width: 8),
                                     TextButton(
@@ -1022,7 +1024,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                           _selectedStudentIds.clear();
                                         });
                                       },
-                                      child: const Text('Təmizlə', style: TextStyle(fontSize: 11, color: AppColors.danger, fontWeight: FontWeight.w700)),
+                                      child: Text(loc.clearAll, style: const TextStyle(fontSize: 11, color: AppColors.danger, fontWeight: FontWeight.w700)),
                                     ),
                                   ],
                                 ),
@@ -1041,7 +1043,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                                   ? Padding(
                                       padding: const EdgeInsets.all(16),
                                       child: Center(
-                                        child: Text('Axtarışa uyğun şagird tapılmadı.', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                        child: Text(loc.noResultsFound, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                       ),
                                     )
                                   : ListView.separated(
@@ -1089,11 +1091,11 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         elevation: 0,
                       ),
-                      onPressed: () => _submitAssignment(appState),
+                      onPressed: () => _submitAssignment(appState, loc),
                       icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                      label: const Text(
-                        'Tapşırığı Təsdiqlə və Şagirdlərə Göndər',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+                      label: Text(
+                        loc.send,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
                       ),
                     ),
                   ),

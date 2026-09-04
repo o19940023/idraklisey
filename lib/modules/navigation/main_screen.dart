@@ -9,6 +9,7 @@ import '../../core/widgets/animated_button.dart';
 import '../../core/utils/haptic_helper.dart';
 import '../../data/models/user_preferences_model.dart';
 import '../../providers/app_state.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/app_update_service.dart';
 import '../auth/screens/login_screen.dart';
 import '../shared/screens/notifications_screen.dart';
@@ -240,6 +241,7 @@ class _MainScreenState extends State<MainScreen> {
 
   void _showCustomizeNavSheet(BuildContext context, AppState appState) {
     final availableModules = appState.getAvailableModulesForRole();
+    final loc = AppLocalizations.of(context);
 
     showModalBottomSheet(
       context: context,
@@ -253,7 +255,7 @@ class _MainScreenState extends State<MainScreen> {
             return GlassModalSheet(
               borderRadius: 28,
               blur: 25,
-              child: Container(
+              child: SizedBox(
                 height: MediaQuery.of(context).size.height * 0.78,
                 child: Column(
                   children: [
@@ -281,7 +283,7 @@ class _MainScreenState extends State<MainScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Alt Menyu və Sürətli Tablar',
+                                loc.bottomNavCustomizeTitle,
                                 style: TextStyle(
                                   fontSize: 16.5,
                                   fontWeight: FontWeight.w900,
@@ -290,7 +292,7 @@ class _MainScreenState extends State<MainScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Aşağıda görünəcək düymələri seçin və sıralayın',
+                                loc.bottomNavCustomizeSubtitle,
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   color: AppColors.textSecondary,
@@ -310,9 +312,9 @@ class _MainScreenState extends State<MainScreen> {
                                 horizontal: 16,
                                 vertical: 8,
                               ),
-                              child: const Text(
-                                'Sıfırla',
-                                style: TextStyle(
+                              child: Text(
+                                loc.reset,
+                                style: const TextStyle(
                                   color: AppColors.primaryAccent,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 12.5,
@@ -354,7 +356,7 @@ class _MainScreenState extends State<MainScreen> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    'Aktiv tablar: ${activeNav.length} / 5 (Dəyişmək üçün modulları seçin)',
+                                    '${loc.activeTabs}: ${activeNav.length} / 5',
                                     style: const TextStyle(
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w600,
@@ -368,7 +370,7 @@ class _MainScreenState extends State<MainScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            'Mövcud Bütün Modullar',
+                            loc.allAvailableModules,
                             style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w800,
@@ -424,7 +426,7 @@ class _MainScreenState extends State<MainScreen> {
                                       ),
                                     ),
                                     title: Text(
-                                      module.title,
+                                      module.getLocalizedTitle(loc),
                                       style: TextStyle(
                                         fontSize: 13.5,
                                         fontWeight: isPinned
@@ -436,7 +438,7 @@ class _MainScreenState extends State<MainScreen> {
                                       ),
                                     ),
                                     subtitle: Text(
-                                      module.subtitle,
+                                      module.getLocalizedSubtitle(loc),
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: AppColors.textMuted,
@@ -464,13 +466,13 @@ class _MainScreenState extends State<MainScreen> {
                                             ScaffoldMessenger.of(
                                               context,
                                             ).showSnackBar(
-                                              const SnackBar(
+                                              SnackBar(
                                                 content: Text(
-                                                  'Maksimum 5 alt menyu tabı seçilə bilər.',
+                                                  loc.maxNavLimitReached,
                                                 ),
                                                 backgroundColor:
                                                     AppColors.warning,
-                                                duration: Duration(seconds: 2),
+                                                duration: const Duration(seconds: 2),
                                               ),
                                             );
                                           }
@@ -504,9 +506,9 @@ class _MainScreenState extends State<MainScreen> {
                               ),
                               elevation: 0,
                             ),
-                            child: const Text(
-                              'Tamamla',
-                              style: TextStyle(
+                            child: Text(
+                              loc.done,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
                                 fontSize: 14,
@@ -530,6 +532,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final updateService = Provider.of<AppUpdateService>(context);
+    final loc = AppLocalizations.of(context);
 
     if (!appState.isAuthenticated) {
       return const LoginScreen();
@@ -542,32 +545,12 @@ class _MainScreenState extends State<MainScreen> {
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              CircularProgressIndicator(color: Color(0xFF6C5CE7)),
-              SizedBox(height: 20),
+            children: [
+              const CircularProgressIndicator(color: Color(0xFF6C5CE7)),
+              const SizedBox(height: 20),
               Text(
-                'Yuklenir...',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // iOS FIX: currentUser null ise loading göster (beyaz ekran donma fix)
-    if (appState.currentUser == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF0F172A),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              CircularProgressIndicator(color: Color(0xFF6C5CE7)),
-              SizedBox(height: 20),
-              Text(
-                'Yuklenir...',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                loc.loading,
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
             ],
           ),
@@ -635,85 +618,7 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ],
           ),
-          actions: [
-            // Alt menyunu fərdiləşdir düyməsi
-            IconButton(
-              icon: const Icon(
-                Icons.tune_rounded,
-                color: Colors.white70,
-                size: 20,
-              ),
-              tooltip: 'Alt Menyunu Fərdiləşdir',
-              onPressed: () => _showCustomizeNavSheet(context, appState),
-            ),
-            IconButton(
-              icon: Icon(
-                appState.isDarkMode
-                    ? Icons.light_mode_rounded
-                    : Icons.dark_mode_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
-              tooltip: appState.isDarkMode ? 'Açıq rejim' : 'Tünd rejim',
-              onPressed: () => appState.toggleTheme(),
-            ),
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.notifications_none_rounded,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                  tooltip: 'Bildirişlər & Elanlar',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const NotificationsScreen(),
-                      ),
-                    );
-                  },
-                ),
-                if (appState.unreadNotificationCount > 0)
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: AppColors.danger,
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 15,
-                        minHeight: 15,
-                      ),
-                      child: Text(
-                        '${appState.unreadNotificationCount}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8.5,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            IconButton(
-              icon: const Icon(
-                Icons.logout_rounded,
-                color: Colors.white70,
-                size: 20,
-              ),
-              tooltip: 'Hesabdan Çıxış',
-              onPressed: () => appState.logout(),
-            ),
-            const SizedBox(width: 4),
-          ],
+          actions: const [],
         ),
         body: Stack(
           children: [
@@ -730,13 +635,13 @@ class _MainScreenState extends State<MainScreen> {
           ],
         ),
         // 🆕 iOS Liquid Glass Sürüşən / Üzən Alt Menyu Dok Hədəfi (Dock DragTarget)
-        bottomNavigationBar: _buildBottomNavBar(appState, isDark),
+        bottomNavigationBar: _buildBottomNavBar(appState, isDark, loc),
       ),
     );
   }
 
   /// Build iPhone-style liquid glass bottom navigation with drag-drop support
-  Widget _buildBottomNavBar(AppState appState, bool isDark) {
+  Widget _buildBottomNavBar(AppState appState, bool isDark, AppLocalizations loc) {
     final orderedNavItems = appState.orderedNavigationItems;
     final activeTabIndex = appState.currentTabIndex;
 
@@ -774,7 +679,7 @@ class _MainScreenState extends State<MainScreen> {
                         size: 20,
                       ),
                       const SizedBox(width: 10),
-                      Text('✓ "${module.title}" alt menyuya bərkidildi!'),
+                      Text('✓ "${module.getLocalizedTitle(loc)}" ${loc.pinnedToBottomNav}'),
                     ],
                   ),
                   backgroundColor: AppColors.success,
@@ -790,8 +695,8 @@ class _MainScreenState extends State<MainScreen> {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text(
-                    'Bu modul artıq alt menyudadır və ya limit (5 tab) dolub.',
+                  content: Text(
+                    loc.maxNavLimitReached,
                   ),
                   backgroundColor: AppColors.warning,
                   duration: const Duration(seconds: 2),
@@ -997,7 +902,7 @@ class _MainScreenState extends State<MainScreen> {
                                                   : 0,
                                             ),
                                             child: Text(
-                                              item.label,
+                                              item.getLocalizedLabel(loc),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),

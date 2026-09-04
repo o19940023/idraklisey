@@ -5,7 +5,7 @@ import '../../../core/theme/app_shadows.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../providers/app_state.dart';
 import '../../../data/models/menu_model.dart';
-import '../../../admin/import_menu_helper.dart';
+import '../../../l10n/app_localizations.dart';
 
 class CafeteriaMenuScreen extends StatefulWidget {
   const CafeteriaMenuScreen({super.key});
@@ -41,6 +41,7 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final appState = Provider.of<AppState>(context);
     final allMenus = appState.weeklyMenu;
 
@@ -48,17 +49,23 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
     final thisWeekStart = _weekStart(DateTime.now());
     final weekStart = _selectedWeekStart ?? thisWeekStart;
     final weekEnd = weekStart.add(const Duration(days: 7));
-    final weekMenus = allMenus
-        .where((m) => !m.date.isBefore(weekStart) && m.date.isBefore(weekEnd))
-        .toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final weekMenus =
+        allMenus
+            .where(
+              (m) => !m.date.isBefore(weekStart) && m.date.isBefore(weekEnd),
+            )
+            .toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
     final dayIndex = _selectedDayIndex < weekMenus.length
         ? _selectedDayIndex
         : 0;
     final currentMenu = weekMenus.isNotEmpty ? weekMenus[dayIndex] : null;
 
     // Həftə nişanları: bu həftə + növbəti həftə + menyusu olan bütün gələcək həftələr
-    final weekChipStarts = <DateTime>{thisWeekStart, thisWeekStart.add(const Duration(days: 7))};
+    final weekChipStarts = <DateTime>{
+      thisWeekStart,
+      thisWeekStart.add(const Duration(days: 7)),
+    };
     for (final m in allMenus) {
       final ws = _weekStart(m.date);
       if (!ws.isBefore(thisWeekStart)) weekChipStarts.add(ws);
@@ -74,7 +81,7 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Lisey Yeməkxana Menyusu'),
+        title: Text(loc.cafeteriaMenu),
         elevation: 0,
       ),
       floatingActionButton: canManageMenu
@@ -128,17 +135,6 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                         ),
                       ),
                     ),
-                    // ⚠️ BU DÜYMƏ BİR DƏFƏ İŞLƏDİLDİKDƏN SONRA SİLİNƏCƏK
-                    if (currentUser?.role == UserRole.admin)
-                      IconButton(
-                        icon: const Icon(
-                          Icons.upload_file,
-                          color: AppColors.goldDark,
-                          size: 18,
-                        ),
-                        tooltip: 'Lisey Menyusunu Yüklə (TEK DƏFƏ)',
-                        onPressed: () => _importLiseyMenu(context, appState),
-                      ),
                     IconButton(
                       icon: const Icon(
                         Icons.add_circle_outline_rounded,
@@ -168,10 +164,12 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: weekChips
-                      .map((ws) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: _buildWeekChip(ws, thisWeekStart),
-                          ))
+                      .map(
+                        (ws) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: _buildWeekChip(ws, thisWeekStart),
+                        ),
+                      )
                       .toList(),
                 ),
               ),
@@ -340,12 +338,11 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            onPressed: () =>
-                                _showAddMenuItemDialog(
-                                  context,
-                                  appState,
-                                  currentMenu.date,
-                                ),
+                            onPressed: () => _showAddMenuItemDialog(
+                              context,
+                              appState,
+                              currentMenu.date,
+                            ),
                             icon: const Icon(
                               Icons.add,
                               color: Colors.white,
@@ -503,47 +500,50 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                             onTap: () {
                               showDialog(
                                 context: context,
-                                builder: (dCtx) => AlertDialog(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(18),
-                                  ),
-                                  title: const Text('Yeməyi Sil'),
-                                  content: Text(
-                                    '"${item.name}" menyudan silinsin?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(dCtx),
-                                      child: const Text('Ləğv et'),
+                                builder: (dCtx) {
+                                  final dLoc = AppLocalizations.of(dCtx);
+                                  return AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(18),
                                     ),
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.danger,
+                                    title: Text(dLoc.delete),
+                                    content: Text(
+                                      '"${item.name}" menyudan silinsin?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(dCtx),
+                                        child: Text(dLoc.cancel),
                                       ),
-                                      onPressed: () {
-                                        appState.removeMenuItemFromDay(
-                                          menuDate,
-                                          itemIndex,
-                                        );
-                                        Navigator.pop(dCtx);
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Yemək menyudan silindi.',
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.danger,
+                                        ),
+                                        onPressed: () {
+                                          appState.removeMenuItemFromDay(
+                                            menuDate,
+                                            itemIndex,
+                                          );
+                                          Navigator.pop(dCtx);
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                dLoc.successfullyDeleted,
+                                              ),
+                                              backgroundColor: AppColors.danger,
                                             ),
-                                            backgroundColor: AppColors.danger,
-                                          ),
-                                        );
-                                      },
-                                      child: const Text(
-                                        'Sil',
-                                        style: TextStyle(color: Colors.white),
+                                          );
+                                        },
+                                        child: Text(
+                                          dLoc.delete,
+                                          style: const TextStyle(color: Colors.white),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
+                                    ],
+                                  );
+                                },
                               );
                             },
                             child: const Padding(
@@ -619,14 +619,15 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
   }
 
   Widget _buildWeekChip(DateTime start, DateTime thisWeekStart) {
+    final loc = AppLocalizations.of(context);
     final end = start.add(const Duration(days: 6));
     final isSelected = (_selectedWeekStart ?? thisWeekStart) == start;
     final offsetDays = start.difference(thisWeekStart).inDays;
     final title = offsetDays == 0
-        ? 'Bu həftə'
+        ? loc.thisWeek
         : offsetDays == 7
-            ? 'Növbəti həftə'
-            : '${_fmtDate(start)} – ${_fmtDate(end)}';
+        ? 'Növbəti həftə'
+        : '${_fmtDate(start)} – ${_fmtDate(end)}';
     return InkWell(
       onTap: () => setState(() {
         _selectedWeekStart = start;
@@ -695,6 +696,7 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
     showDialog(
       context: context,
       builder: (ctx) {
+        final dLoc = AppLocalizations.of(ctx);
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
@@ -712,10 +714,12 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                         final picked = await showDatePicker(
                           context: context,
                           initialDate: selectedDate,
-                          firstDate: DateTime.now()
-                              .subtract(const Duration(days: 365)),
-                          lastDate: DateTime.now()
-                              .add(const Duration(days: 365)),
+                          firstDate: DateTime.now().subtract(
+                            const Duration(days: 365),
+                          ),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ),
                           helpText: 'Yeməyin tarixini seçin',
                         );
                         if (picked != null) {
@@ -795,8 +799,8 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                           child: TextField(
                             controller: calCtrl,
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Kalori (kkal) *',
+                            decoration: InputDecoration(
+                              labelText: '${dLoc.calories} (kkal) *',
                             ),
                           ),
                         ),
@@ -814,8 +818,8 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                     const SizedBox(height: 10),
                     TextField(
                       controller: allergenCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Allergenlər (vergüllə ayırın)',
+                      decoration: InputDecoration(
+                        labelText: '${dLoc.allergens} (vergüllə ayırın)',
                         hintText: 'Məs: Qlüten, Süd, Qoz',
                       ),
                     ),
@@ -825,7 +829,7 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Ləğv et'),
+                  child: Text(dLoc.cancel),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -872,9 +876,9 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                       ),
                     );
                   },
-                  child: const Text(
-                    'Əlavə Et',
-                    style: TextStyle(color: Colors.white),
+                  child: Text(
+                    dLoc.add,
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ),
               ],
@@ -882,106 +886,6 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
           },
         );
       },
-    );
-  }
-
-  // Lisey menyusunu Firebase'e yüklə
-  void _importLiseyMenu(BuildContext context, AppState appState) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Row(
-          children: [
-            Icon(Icons.upload_file, color: AppColors.goldDark),
-            SizedBox(width: 8),
-            Text('Lisey Menyusunu Yüklə'),
-          ],
-        ),
-        content: const Text(
-          'Bu həftə və növbəti həftənin menyuları Firebase-ə yükləniləcək. Eyni tarixli günlər yenilənir, digər həftələrin menyusuna toxunulmur.\n\nDavam etmək istəyirsiniz?',
-          style: TextStyle(fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Ləğv et'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.goldDark,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () async {
-              Navigator.pop(ctx);
-
-              // Loading göstər
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (ctx) => const Center(
-                  child: Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(color: AppColors.goldDark),
-                          SizedBox(height: 16),
-                          Text(
-                            'Menyu yüklənir...',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-
-              try {
-                // Menyunu Firebase'e yüklə
-                await MenuImportHelper.importLiseyMenu();
-
-                // Menyunu yenidən yüklə
-                final cloudMenu = await appState.firestoreService
-                    .fetchWeeklyMenu();
-                appState.updateWeeklyMenu(cloudMenu);
-
-                if (context.mounted) {
-                  Navigator.pop(context); // Loading dialog'u bağla
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('✅ Lisey menyusu uğurla yükləndi!'),
-                      backgroundColor: AppColors.success,
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  Navigator.pop(context); // Loading dialog'u bağla
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('❌ Xəta: $e'),
-                      backgroundColor: AppColors.danger,
-                      duration: const Duration(seconds: 5),
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('Yüklə', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -365,14 +365,29 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
   }
 
   void _showStudentDetails(BuildContext context, StudentProfile student, DateFormat dateFormat) {
-    // Valideyn hesabını tap (FIN kodu oradan götürülür) — Övladlar modelinə görə
-    // həm linkedStudentId, həm də linkedStudentIds siyahısı yoxlanılır
+    // Valideyn və Şagird istifadəçi hesablarını tap (Şifrə və FIN üçün)
     final appState = context.read<AppState>();
     AppUser? parentUser;
     for (final u in appState.users) {
       if (u.role == UserRole.parent &&
-          (u.linkedStudentId == student.id || u.linkedStudentIds.contains(student.id))) {
+          (u.linkedStudentId == student.id ||
+              u.linkedStudentIds.contains(student.id) ||
+              ((student.parentEmail ?? '').isNotEmpty && u.email == student.parentEmail) ||
+              (student.parentPhone.isNotEmpty && u.phone == student.parentPhone))) {
         parentUser = u;
+        break;
+      }
+    }
+
+    AppUser? studentUser;
+    for (final u in appState.users) {
+      if (u.role == UserRole.student &&
+          (u.id == 'usr-${student.id}' ||
+              u.id == student.id ||
+              u.idrakCode == student.studentNumber ||
+              (u.finCode != null && u.finCode == student.finCode) ||
+              (u.email != null && u.email == student.email))) {
+        studentUser = u;
         break;
       }
     }
@@ -546,7 +561,32 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                         MapEntry('FIN Kod', _dv(student.finCode)),
                         MapEntry('Ünvan', _dv(student.address)),
                         MapEntry('E-poçt (Login)', _dv(student.email)),
+                        MapEntry('Şifrə', studentUser?.password ?? '123456'),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primaryAccent,
+                          side: const BorderSide(color: AppColors.primaryAccent, width: 1.2),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                        ),
+                        icon: const Icon(Icons.lock_reset_rounded, size: 18),
+                        label: const Text(
+                          'Şagird Şifrəsini Sıfırla (123456)',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                        ),
+                        onPressed: () => _showResetPasswordDialog(
+                          context,
+                          appState,
+                          userName: student.fullName,
+                          userId: studentUser?.id ?? 'usr-${student.id}',
+                          roleLabel: 'Şagird',
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 14),
 
@@ -562,7 +602,32 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                         MapEntry('Doğum Tarixi', parentUser?.birthDate != null ? dateFormat.format(parentUser!.birthDate!) : _empty),
                         MapEntry('E-poçt (Login)', _dv(student.parentEmail)),
                         MapEntry('Ünvan', _dv(student.parentAddress)),
+                        MapEntry('Şifrə', parentUser?.password ?? '123456'),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.goldDark,
+                          side: const BorderSide(color: AppColors.goldDark, width: 1.2),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                        ),
+                        icon: const Icon(Icons.lock_reset_rounded, size: 18),
+                        label: const Text(
+                          'Valideyn Şifrəsini Sıfırla (123456)',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
+                        ),
+                        onPressed: () => _showResetPasswordDialog(
+                          context,
+                          appState,
+                          userName: student.parentName,
+                          userId: parentUser?.id ?? student.id,
+                          roleLabel: 'Valideyn',
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 14),
 
@@ -681,6 +746,102 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
               ],
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  void _showResetPasswordDialog(
+    BuildContext context,
+    AppState appState, {
+    required String userName,
+    required String userId,
+    required String roleLabel,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: AppColors.surface,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryAccent.withAlpha(20),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.lock_reset_rounded, color: AppColors.primaryAccent, size: 22),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Şifrəni Sıfırla',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$userName ($roleLabel) üçün şifrə standart "123456" olaraq sıfırlansın?',
+              style: TextStyle(fontSize: 13.5, color: AppColors.textPrimary, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.primaryAccent),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'İstifadəçi daxil olduqdan sonra öz parametrlərindən yeni şifrə təyin edə bilər.',
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Ləğv et', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final success = await appState.resetUserPasswordByAdmin(userId, newPassword: '123456');
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? '✓ $userName üçün şifrə "123456" olaraq sıfırlandı!'
+                          : 'Xəta: İstifadəçi tapılmadı.',
+                    ),
+                    backgroundColor: success ? AppColors.success : AppColors.danger,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+            },
+            child: const Text('Bəli, Sıfırla (123456)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );

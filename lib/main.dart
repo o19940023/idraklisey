@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_state.dart';
 import 'services/app_update_service.dart';
@@ -30,6 +31,7 @@ void main() async {
   // is applied from the very first splash.
   final appState = AppState();
   await appState.loadThemeMode();
+  await appState.loadLocale();
   appState.initFirebaseData();
 
   // Push bildirişləri (tətbiq bağlı ikən də gəlməsi üçün) — arxa planda
@@ -60,8 +62,11 @@ class IdrakLiseyiApp extends StatelessWidget {
     final appState = Provider.of<AppState>(context);
 
     return MaterialApp(
-      title: 'İdrak Liseyi',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appName,
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: appState.locale,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: appState.isDarkMode ? ThemeMode.dark : ThemeMode.light,

@@ -1,6 +1,8 @@
 // Kullanıcı Tercihleri Modeli
 // Modül sıralama ve navigation bar özelleştirmesi için
 
+import '../../l10n/app_localizations.dart';
+
 class ModuleItem {
   final String id;            // Benzersiz modül ID (view_students, view_classes vb.)
   final String title;         // Modül başlığı
@@ -21,6 +23,59 @@ class ModuleItem {
     this.isVisible = true,
     this.orderIndex = 0,
   });
+
+  String getLocalizedTitle(AppLocalizations loc) {
+    switch (id) {
+      case 'dashboard': return loc.dashboard;
+      case 'view_students': return loc.studentManagement;
+      case 'students': case 'teacher_students': return loc.students;
+      case 'view_classes': return loc.classManagement;
+      case 'classes': return loc.classes;
+      case 'view_timetable': case 'timetable': case 'teacher_timetable': case 'student_timetable': case 'parent_timetable': return loc.timetable;
+      case 'view_users': case 'users': return loc.userManagement;
+      case 'view_roles': return loc.roleManagement;
+      case 'view_tickets': case 'tickets': case 'parent_tickets': return loc.helpdesk;
+      case 'view_reports': case 'analytics': return loc.analytics;
+      case 'grades': case 'student_grades': case 'parent_grades': return loc.grades;
+      case 'view_cafeteria': case 'cafeteria': case 'student_cafeteria': case 'parent_cafeteria': return loc.cafeteria;
+      case 'view_settings': return loc.notifications;
+      case 'view_inventory': case 'inventory': case 'teacher_inventory': return loc.inventory;
+      case 'view_library': case 'library': case 'teacher_library': case 'student_library': return loc.library;
+      case 'student_id': case 'digital_id': return loc.digitalIdCard;
+      case 'student_assignments': case 'assignments': case 'teacher_assignments': return loc.assignments;
+      case 'student_meet': case 'meet': case 'teacher_meet': return loc.meetIdrak;
+      case 'parent_attendance': case 'attendance': case 'teacher_attendance': return loc.attendance;
+      case 'parent_medical': case 'medical': case 'teacher_medical': return loc.medicalCard;
+      case 'teacher_grading': case 'grading': return loc.quickGrading;
+      case 'teacher_notifications': return loc.sendNotification;
+      default: return title;
+    }
+  }
+
+  String getLocalizedSubtitle(AppLocalizations loc) {
+    switch (id) {
+      case 'view_students': case 'students': case 'teacher_students': return loc.studentManagement;
+      case 'view_classes': case 'classes': return loc.classManagement;
+      case 'view_timetable': case 'timetable': case 'teacher_timetable': case 'student_timetable': case 'parent_timetable': return loc.timetableDesc;
+      case 'view_users': case 'users': return loc.userManagement;
+      case 'view_roles': return loc.roleManagement;
+      case 'view_tickets': case 'tickets': case 'parent_tickets': return loc.helpdeskDesc;
+      case 'view_reports': case 'analytics': return loc.analyticsDesc;
+      case 'grades': case 'student_grades': case 'parent_grades': return loc.gradesDesc;
+      case 'view_cafeteria': case 'cafeteria': case 'student_cafeteria': case 'parent_cafeteria': return loc.cafeteriaDesc;
+      case 'view_settings': return loc.notificationsDesc;
+      case 'view_inventory': case 'inventory': case 'teacher_inventory': return loc.inventoryDesc;
+      case 'view_library': case 'library': case 'teacher_library': case 'student_library': return loc.libraryDesc;
+      case 'student_id': case 'digital_id': return loc.digitalIdDesc;
+      case 'student_assignments': case 'assignments': case 'teacher_assignments': return loc.assignmentsDesc;
+      case 'student_meet': case 'meet': case 'teacher_meet': return loc.meetIdrakDesc;
+      case 'parent_attendance': case 'attendance': case 'teacher_attendance': return loc.attendanceDesc;
+      case 'parent_medical': case 'medical': case 'teacher_medical': return loc.medicalCard;
+      case 'teacher_grading': case 'grading': return loc.voiceToTextReview;
+      case 'teacher_notifications': return loc.notificationsDesc;
+      default: return subtitle;
+    }
+  }
 
   ModuleItem copyWith({
     String? id,
@@ -101,6 +156,31 @@ class NavigationItem {
     this.orderIndex = 0,
     this.isPinned = false,
   });
+
+  String getLocalizedLabel(AppLocalizations loc) {
+    switch (id) {
+      case 'dashboard': return loc.dashboard;
+      case 'view_students': case 'students': case 'teacher_students': return loc.students;
+      case 'view_classes': return loc.classes;
+      case 'view_timetable': case 'timetable': case 'teacher_timetable': case 'student_timetable': case 'parent_timetable': return loc.timetable;
+      case 'view_users': case 'users': return loc.userManagement;
+      case 'view_roles': return loc.roleManagement;
+      case 'view_tickets': case 'tickets': case 'parent_tickets': return loc.helpdesk;
+      case 'view_reports': case 'analytics': return loc.analytics;
+      case 'grades': case 'student_grades': case 'parent_grades': return loc.grades;
+      case 'view_cafeteria': case 'cafeteria': case 'student_cafeteria': case 'parent_cafeteria': return loc.cafeteria;
+      case 'view_settings': return loc.notifications;
+      case 'view_inventory': case 'inventory': case 'teacher_inventory': return loc.inventory;
+      case 'view_library': case 'library': case 'teacher_library': case 'student_library': return loc.library;
+      case 'student_id': case 'digital_id': return loc.digitalId;
+      case 'student_assignments': case 'assignments': case 'teacher_assignments': return loc.assignments;
+      case 'student_meet': case 'meet': case 'teacher_meet': return loc.meetIdrak;
+      case 'parent_attendance': case 'attendance': case 'teacher_attendance': return loc.attendance;
+      case 'parent_medical': case 'medical': case 'teacher_medical': return loc.medicalCard;
+      case 'teacher_grading': case 'grading': return loc.quickGrading;
+      default: return label;
+    }
+  }
 
   NavigationItem copyWith({
     String? id,

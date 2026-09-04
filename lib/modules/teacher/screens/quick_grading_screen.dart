@@ -8,6 +8,7 @@ import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/student_model.dart';
 import '../../../data/models/grade_model.dart';
 import '../../../data/mock_data.dart';
+import '../../../l10n/app_localizations.dart';
 
 class QuickGradingScreen extends StatefulWidget {
   final StudentProfile? preSelectedStudent;
@@ -23,7 +24,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
   StudentProfile? _selectedStudent;
   final TextEditingController _scoreController = TextEditingController();
   final TextEditingController _feedbackController = TextEditingController();
-  bool _isVoiceRecording = false;
+  final bool _isVoiceRecording = false;
   AssessmentType _assessmentType = AssessmentType.ksq;
   String _selectedClassFilter = 'Hamısı'; // 'Hamısı' means all
 
@@ -47,9 +48,8 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
     super.dispose();
   }
 
-  Future<void> _toggleVoiceToText() async {
-    // Voice-to-text is currently unavailable (speech_to_text package 
-    // is incompatible with AGP 9+). Show informational dialog.
+  Future<void> _toggleVoiceToText(AppLocalizations loc) async {
+    // Voice-to-text is currently unavailable
     if (!mounted) return;
     showDialog(
       context: context,
@@ -57,23 +57,21 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            Icon(Icons.mic_off_rounded, color: AppColors.warning, size: 28),
+            const Icon(Icons.mic_off_rounded, color: AppColors.warning, size: 28),
             const SizedBox(width: 10),
-            const Expanded(
-              child: Text('Səslə yazma', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            Expanded(
+              child: Text(loc.voiceFeedback, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             ),
           ],
         ),
-        content: const Text(
-          'Azərbaycan dilində səslə yazma funksiyası hazırda inkişaf mərhələsindədir. '
-          'Bu xüsusiyyət tezliklə aktiv olacaq.\n\n'
-          'Hələlik rəyinizi klaviatura ilə yaza bilərsiniz.',
-          style: TextStyle(fontSize: 13, height: 1.5),
+        content: Text(
+          loc.underDevelopment,
+          style: const TextStyle(fontSize: 13, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Anladım', style: TextStyle(fontWeight: FontWeight.w600)),
+            child: Text(loc.ok, style: const TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -82,6 +80,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final appState = Provider.of<AppState>(context);
     final isIbSystem = _selectedAssessmentSystem == 1;
 
@@ -159,13 +158,13 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Sürətli Qiymətləndirmə',
-                                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                                    Text(
+                                      loc.quickGrading,
+                                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: -0.5),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Səsli Rəy & Qiymət Jurnalı',
+                                      '${loc.voiceFeedback} & ${loc.grades}',
                                       style: TextStyle(color: Colors.white.withAlpha(178), fontSize: 12, fontWeight: FontWeight.w500),
                                     ),
                                   ],
@@ -188,9 +187,9 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Row(
                 children: [
-                  Expanded(child: _buildSystemToggleBtn(0, 'AZ / RU Sistemi (100 Bal / KSQ)')),
+                  Expanded(child: _buildSystemToggleBtn(0, 'AZ / RU (100 ${loc.score})')),
                   const SizedBox(width: 8),
-                  Expanded(child: _buildSystemToggleBtn(1, 'IB MYP (STR / Band 1-7)')),
+                  Expanded(child: _buildSystemToggleBtn(1, 'IB MYP (Band 1-7)')),
                 ],
               ),
             ),
@@ -215,7 +214,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Sinif Filteri:',
+                        '${loc.filter} (${loc.classLabel}):',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                       ),
                       const Spacer(),
@@ -226,8 +225,8 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '${availableStudents.length} şagird',
-                          style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.primaryAccent),
+                          '${availableStudents.length} ${loc.students.toLowerCase()}',
+                          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.primaryAccent),
                         ),
                       ),
                     ],
@@ -238,10 +237,10 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                     physics: const BouncingScrollPhysics(),
                     child: Row(
                       children: [
-                        _buildClassFilterChip('Hamısı', allStudents.length),
+                        _buildClassFilterChip('Hamısı', allStudents.length, loc.all),
                         ...distinctClasses.map((cls) {
                           final count = allStudents.where((s) => s.className == cls).length;
-                          return _buildClassFilterChip(cls, count);
+                          return _buildClassFilterChip(cls, count, cls);
                         }),
                       ],
                     ),
@@ -256,7 +255,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
               child: Text(
-                'Şagirdi Seçin (${availableStudents.length} Şagird):',
+                '${loc.student} (${availableStudents.length}):',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
               ),
             ),
@@ -269,7 +268,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                     padding: const EdgeInsets.all(20),
                     child: Center(
                       child: Text(
-                        '$_selectedClassFilter sinifində şagird tapılmadı.',
+                        loc.noResultsFound,
                         style: TextStyle(color: AppColors.textMuted, fontSize: 13),
                       ),
                     ),
@@ -386,7 +385,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                     ),
                   ),
                   StatusBadge(
-                    label: activeStudent.gpa > 0 ? 'GPA: ${activeStudent.gpa}' : 'Yeni',
+                    label: activeStudent.gpa > 0 ? '${loc.gpaScore}: ${activeStudent.gpa}' : 'GPA',
                     color: AppColors.primaryAccent,
                   ),
                 ],
@@ -426,7 +425,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Qiymətləndirmə Növü & Bal',
+                        loc.gradeStudents,
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
                       ),
                     ],
@@ -437,7 +436,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                   DropdownButtonFormField<AssessmentType>(
                     initialValue: _assessmentType,
                     decoration: InputDecoration(
-                      labelText: 'Qiymətləndirmə Tipi',
+                      labelText: loc.grades,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -463,8 +462,8 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                     controller: _scoreController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      labelText: isIbSystem ? 'IB Band Qiyməti (1 - 7)' : 'Toplanmış Bal (0 - 100)',
-                      hintText: isIbSystem ? 'Məs: 6' : 'Məs: 88.5',
+                      labelText: isIbSystem ? 'IB Band (1 - 7)' : '${loc.score} (0 - 100)',
+                      hintText: isIbSystem ? '6' : '88.5',
                       prefixIcon: const Icon(Icons.grade_rounded, color: AppColors.primaryAccent),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                       enabledBorder: OutlineInputBorder(
@@ -485,11 +484,11 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Pedaqoji Rəy & Şərh',
+                        loc.feedback,
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                       ),
                       GestureDetector(
-                        onTap: _toggleVoiceToText,
+                        onTap: () => _toggleVoiceToText(loc),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
@@ -509,7 +508,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                               ),
                               const SizedBox(width: 5),
                               Text(
-                                _isVoiceRecording ? 'Dinlənilir (Dayandır)' : 'Səslə Rəy (AZ)',
+                                loc.voiceFeedback,
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
@@ -529,7 +528,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                     controller: _feedbackController,
                     maxLines: 3,
                     decoration: InputDecoration(
-                      hintText: 'Şagirdin dərslərdəki fəallığı və tərəqqisi barədə rəy daxil edin...',
+                      hintText: loc.feedback,
                       hintStyle: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                       enabledBorder: OutlineInputBorder(
@@ -559,8 +558,8 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                         final rawScoreText = _scoreController.text.trim().replaceAll(',', '.');
                         if (rawScoreText.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Zəhmət olmasa toplanmış balı daxil edin!'),
+                            SnackBar(
+                              content: Text('${loc.score} - ${loc.required}'),
                               backgroundColor: AppColors.danger,
                             ),
                           );
@@ -570,8 +569,8 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                         final parsedScore = double.tryParse(rawScoreText);
                         if (parsedScore == null || parsedScore < 0) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Düzgün rəqəm daxil edin!'),
+                            SnackBar(
+                              content: Text(loc.error),
                               backgroundColor: AppColors.danger,
                             ),
                           );
@@ -582,7 +581,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                           if (parsedScore < 1 || parsedScore > 7) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('IB MYP Band qiyməti 1 ilə 7 arasında olmalıdır!'),
+                                content: Text('IB MYP Band: 1 - 7'),
                                 backgroundColor: AppColors.danger,
                               ),
                             );
@@ -591,8 +590,8 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                         } else {
                           if (parsedScore > 100) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Bal 0 ilə 100 arasında olmalıdır!'),
+                              SnackBar(
+                                content: Text('${loc.score}: 0 - 100'),
                                 backgroundColor: AppColors.danger,
                               ),
                             );
@@ -601,7 +600,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                         }
 
                         final score = parsedScore;
-                        final teacherSubject = appState.currentUser?.subject ?? 'Fənn';
+                        final teacherSubject = appState.currentUser?.subject ?? loc.subject;
 
                         final newGrade = GradeRecord(
                           id: 'gr-${DateTime.now().millisecondsSinceEpoch}',
@@ -625,15 +624,15 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('${activeStudent.fullName} üçün qiymət qeydə alındı və GPA yeniləndi!'),
+                            content: Text('${activeStudent.fullName} - ${loc.successfullySaved}'),
                             backgroundColor: AppColors.success,
                           ),
                         );
                       },
                       icon: const Icon(Icons.save_rounded, color: Colors.white, size: 18),
-                      label: const Text(
-                        'Qiyməti Rəsmi Jurnala Daxil Et',
-                        style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w700),
+                      label: Text(
+                        loc.save,
+                        style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),
@@ -677,8 +676,9 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
     );
   }
 
-  Widget _buildClassFilterChip(String cls, int count) {
+  Widget _buildClassFilterChip(String cls, int count, [String? label]) {
     final isSelected = _selectedClassFilter == cls;
+    final displayLabel = label ?? cls;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: GestureDetector(
@@ -703,7 +703,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                 : [],
           ),
           child: Text(
-            '$cls ($count)',
+            '$displayLabel ($count)',
             style: TextStyle(
               color: isSelected ? Colors.white : AppColors.textPrimary,
               fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,

@@ -22,6 +22,7 @@ class AuthStorageService {
   static const _keyPassword = 'saved_password';
   static const _keyBiometricEnabled = 'biometric_enabled';
   static const _keyThemeMode = 'theme_mode';
+  static const _keyLanguageCode = 'language_code';
   static const _keySessionToken = 'session_token'; // API session token (cookie)
 
   /// Check if device supports biometric authentication (Android & iOS)
@@ -162,6 +163,26 @@ class AuthStorageService {
       await _storage.write(key: _keyThemeMode, value: dark ? 'dark' : 'light');
     } catch (e) {
       debugPrint('[AuthStorage] Save theme mode error: $e');
+    }
+  }
+
+  /// Persisted language preference ('az' / 'en' / 'ru').
+  /// Device-level setting, survives logout.
+  /// Returns null when the user never picked a language (follow system).
+  Future<String?> getLanguageCode() async {
+    try {
+      return await _storage.read(key: _keyLanguageCode);
+    } catch (e) {
+      debugPrint('[AuthStorage] Read language error: $e');
+      return null;
+    }
+  }
+
+  Future<void> saveLanguageCode(String code) async {
+    try {
+      await _storage.write(key: _keyLanguageCode, value: code);
+    } catch (e) {
+      debugPrint('[AuthStorage] Save language error: $e');
     }
   }
 

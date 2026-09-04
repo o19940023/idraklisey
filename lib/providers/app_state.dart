@@ -88,6 +88,27 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- LANGUAGE (az / en / ru) ---
+  /// null => follow the system locale
+  Locale? _locale;
+  Locale? get locale => _locale;
+
+  /// Restores the persisted language before the first frame.
+  Future<void> loadLocale() async {
+    final code = await _authStorage.getLanguageCode();
+    _locale = code != null ? Locale(code) : null;
+  }
+
+  /// [code] is a supported language code ('az', 'en', 'ru').
+  /// Pass null to follow the device language.
+  Future<void> setLocale(String? code) async {
+    _locale = code != null ? Locale(code) : null;
+    if (code != null) {
+      await _authStorage.saveLanguageCode(code);
+    }
+    notifyListeners();
+  }
+
   // Current Logged In User
   AppUser? _currentUser;
   AppUser? get currentUser => _currentUser;
@@ -2158,6 +2179,52 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// İstifadəçinin öz şifrəsini parametrlərdən (Settings) dəyişdirməsi üçün
+  Future<bool> changeCurrentUserPassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    if (_currentUser == null) return false;
+    final currentPass = _currentUser!.password;
+    if (currentPass != oldPassword.trim()) {
+      return false; // Köhnə şifrə yanlışdır
+    }
+
+    final updated = _currentUser!.copyWith(password: newPassword.trim());
+    updateUserAccount(updated);
+
+    // Əgər cihazda biometrik / avto login yadda saxlanılıbsa AuthStorageService-də də yenilə
+    try {
+      final saved = await _authStorage.getSavedCredentials();
+      if (saved != null && saved['username'] != null) {
+        await _authStorage.saveCredentials(saved['username']!, newPassword.trim());
+      }
+    } catch (_) {}
+
+    return true;
+  }
+
+  /// Adminin istənilən istifadəçinin (müəllim, şagird, valideyn, işçi) şifrəsini sıfırlaması
+  /// Standart sıfırlama şifrəsi: 123456
+  Future<bool> resetUserPasswordByAdmin(String userId, {String newPassword = '123456'}) async {
+    int index = _users.indexWhere((u) => u.id == userId);
+    if (index == -1) {
+      final clean = userId.trim().toLowerCase();
+      index = _users.indexWhere((u) =>
+          u.username.toLowerCase() == clean ||
+          u.idrakCode.toLowerCase() == clean ||
+          (u.finCode != null && u.finCode!.toLowerCase() == clean) ||
+          (u.email != null && u.email!.toLowerCase() == clean) ||
+          u.id == 'usr-$userId' ||
+          (u.linkedStudentId != null && u.linkedStudentId == userId));
+    }
+    if (index == -1) return false;
+
+    final updated = _users[index].copyWith(password: newPassword.trim());
+    updateUserAccount(updated);
+    return true;
+  }
+
   /// Şagird profilini (students kolleksiyası) yeniləşdirir
   void updateStudentRecord(StudentProfile updated) {
     final index = _students.indexWhere((s) => s.id == updated.id);
@@ -3057,17 +3124,16 @@ class AppState extends ChangeNotifier {
   final List<BookItem> _books = [];
   List<BookItem> get books => _books;
 
-  void addBook(BookItem book) {
-    _books.insert(0, book);
-    _firestoreService.saveBook(book);
+  // Kitabları yenilə (Firebase-dən gələn yeni kitabları set et)
+  void updateBooks(List<BookItem> newBooks) {
+    _books.clear();
+    _books.addAll(newBooks);
     notifyListeners();
   }
 
-  /// Kitab siyahısını birdən dəyişir (məs. toplu yükləmədən sonra)
-  void updateBooks(List<BookItem> books) {
-    _books
-      ..clear()
-      ..addAll(books);
+  void addBook(BookItem book) {
+    _books.insert(0, book);
+    _firestoreService.saveBook(book);
     notifyListeners();
   }
 
@@ -3165,8 +3231,7 @@ class AppState extends ChangeNotifier {
           dayName: day.dayName,
           date: day.date,
           mealTime: day.mealTime,
-          totalCalories:
-              (day.totalCalories - removed.calories).clamp(0, 99999),
+          totalCalories: (day.totalCalories - removed.calories).clamp(0, 99999),
           items: List<MenuItem>.from(day.items)..removeAt(itemIndex),
         );
         _firestoreService.saveWeeklyMenu(_weeklyMenu);
@@ -3653,5 +3718,18 @@ class AppState extends ChangeNotifier {
     _notifications.removeWhere((n) => n.id == notifId);
     await _firestoreService.deleteNotification(notifId);
     notifyListeners();
+  }
+
+  // --- MEMORY MANAGEMENT ---
+
+  /// Dispose method to cleanup resources and prevent memory leaks
+  @override
+  void dispose() {
+    // Cancel all active stream subscriptions
+    _meetRoomsSubscription?.cancel();
+    _notificationsSubscription?.cancel();
+
+    debugPrint('✓ AppState disposed - subscriptions canceled');
+    super.dispose();
   }
 }

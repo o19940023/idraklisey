@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:local_auth/local_auth.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/widgets/idrak_logo.dart';
@@ -18,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usernameCtrl = TextEditingController();
   final TextEditingController _passwordCtrl = TextEditingController();
   final AuthStorageService _authStorage = AuthStorageService();
-  
+
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   bool _isCheckingAutoLogin = true;
@@ -52,12 +53,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    final loc = AppLocalizations.of(context);
     final userToLogin = _usernameCtrl.text.trim();
     final passToLogin = _passwordCtrl.text.trim();
 
     if (userToLogin.isEmpty || passToLogin.isEmpty) {
       setState(() {
-        _errorMessage = 'Zəhmət olmasa istifadəçi adı və şifrəni daxil edin.';
+        _errorMessage = loc.loginError;
       });
       return;
     }
@@ -120,6 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
     String password,
     List<BiometricType> types,
   ) async {
+    final loc = AppLocalizations.of(dialogContext);
     final biometricName = _authStorage.getBiometricName(types);
 
     await showDialog<bool>(
@@ -144,22 +147,32 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Text(
-                'Biometrik Giriş',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                loc.biometricLogin,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
         ),
         content: Text(
-          '$biometricName istifadə edərək növbəti girişlərdə daha sürətli və təhlükəsiz giriş edə bilərsiniz. Aktivləşdirmək istəyirsiniz?',
-          style: TextStyle(fontSize: 13.5, height: 1.4, color: AppColors.textSecondary),
+          loc.biometricSetupMessage(biometricName),
+          style: TextStyle(
+            fontSize: 13.5,
+            height: 1.4,
+            color: AppColors.textSecondary,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('Xeyr', style: TextStyle(color: AppColors.textMuted)),
+            child: Text(
+              loc.notNow,
+              style: TextStyle(color: AppColors.textMuted),
+            ),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -171,9 +184,17 @@ class _LoginScreenState extends State<LoginScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryAccent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Aktivləşdir', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(
+              loc.enableBiometric,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -182,23 +203,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+
     if (_isCheckingAutoLogin) {
       return Scaffold(
         backgroundColor: AppColors.primary,
-        body: const Center(
+        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              IdrakLogo(size: 80, showText: false, isLightText: true),
-              SizedBox(height: 24),
-              CircularProgressIndicator(
+              const IdrakLogo(size: 80, showText: false, isLightText: true),
+              const SizedBox(height: 24),
+              const CircularProgressIndicator(
                 color: AppColors.primaryAccent,
                 strokeWidth: 2.5,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Text(
-                'Yüklənir...',
-                style: TextStyle(
+                loc.loading,
+                style: const TextStyle(
                   color: Colors.white70,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -227,11 +250,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   const IdrakLogo(size: 84, showText: true, isLightText: false),
                   const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primaryAccent.withAlpha(15),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.primaryAccent.withAlpha(40)),
+                      border: Border.all(
+                        color: AppColors.primaryAccent.withAlpha(40),
+                      ),
                     ),
                     child: const Text(
                       'BEYNƏLXALQ TƏHSİL PORTALI',
@@ -270,7 +298,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 4),
                         Text(
                           'Şəxsi istifadəçi məlumatlarınızla portala daxil olun.',
-                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                         const SizedBox(height: 20),
 
@@ -281,16 +312,26 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: BoxDecoration(
                               color: AppColors.danger.withAlpha(15),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.danger.withAlpha(40)),
+                              border: Border.all(
+                                color: AppColors.danger.withAlpha(40),
+                              ),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 18),
+                                const Icon(
+                                  Icons.error_outline_rounded,
+                                  color: AppColors.danger,
+                                  size: 18,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     _errorMessage!,
-                                    style: const TextStyle(fontSize: 12, color: AppColors.danger, fontWeight: FontWeight.w600),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.danger,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -302,30 +343,52 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Email / FIN / Username / Idrak Code Input
                         Text(
                           'E-poçt, FIN, İstifadəçi Adı və ya İdrak Kodu',
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         TextField(
                           controller: _usernameCtrl,
                           textInputAction: TextInputAction.next,
                           decoration: InputDecoration(
-                            hintText: 'Məs: ayse.memmedova@idrak.edu.az və ya 1234567',
-                            hintStyle: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
-                            prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.primaryAccent, size: 20),
+                            hintText:
+                                'Məs: ayse.memmedova@idrak.edu.az və ya 1234567',
+                            hintStyle: TextStyle(
+                              fontSize: 12.5,
+                              color: AppColors.textMuted,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.person_outline_rounded,
+                              color: AppColors.primaryAccent,
+                              size: 20,
+                            ),
                             filled: true,
                             fillColor: AppColors.background,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 13,
+                              horizontal: 16,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: AppColors.cardBorder),
+                              borderSide: BorderSide(
+                                color: AppColors.cardBorder,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: AppColors.cardBorder),
+                              borderSide: BorderSide(
+                                color: AppColors.cardBorder,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: AppColors.primaryAccent, width: 1.5),
+                              borderSide: const BorderSide(
+                                color: AppColors.primaryAccent,
+                                width: 1.5,
+                              ),
                             ),
                           ),
                         ),
@@ -335,7 +398,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Password Input
                         Text(
                           'Şifrə',
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         TextField(
@@ -345,30 +412,51 @@ class _LoginScreenState extends State<LoginScreen> {
                           onSubmitted: (_) => _handleLogin(),
                           decoration: InputDecoration(
                             hintText: 'Şifrənizi daxil edin',
-                            hintStyle: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
-                            prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.primaryAccent, size: 20),
+                            hintStyle: TextStyle(
+                              fontSize: 12.5,
+                              color: AppColors.textMuted,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.lock_outline_rounded,
+                              color: AppColors.primaryAccent,
+                              size: 20,
+                            ),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _isPasswordVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                _isPasswordVisible
+                                    ? Icons.visibility_off_rounded
+                                    : Icons.visibility_rounded,
                                 color: AppColors.textMuted,
                                 size: 19,
                               ),
-                              onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                              onPressed: () => setState(
+                                () => _isPasswordVisible = !_isPasswordVisible,
+                              ),
                             ),
                             filled: true,
                             fillColor: AppColors.background,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 13,
+                              horizontal: 16,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: AppColors.cardBorder),
+                              borderSide: BorderSide(
+                                color: AppColors.cardBorder,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: AppColors.cardBorder),
+                              borderSide: BorderSide(
+                                color: AppColors.cardBorder,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: const BorderSide(color: AppColors.primaryAccent, width: 1.5),
+                              borderSide: const BorderSide(
+                                color: AppColors.primaryAccent,
+                                width: 1.5,
+                              ),
                             ),
                           ),
                         ),
@@ -388,24 +476,37 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                             ),
                             onPressed: _isLoading ? null : _handleLogin,
                             child: _isLoading
                                 ? const SizedBox(
                                     width: 20,
                                     height: 20,
-                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.2,
+                                    ),
                                   )
                                 : const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
                                         'Daxil Ol',
-                                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white),
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                       SizedBox(width: 8),
-                                      Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                                      Icon(
+                                        Icons.arrow_forward_rounded,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
                                     ],
                                   ),
                           ),
@@ -418,7 +519,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // Security Badge
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 14,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(14),
@@ -427,11 +531,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.shield_outlined, color: AppColors.primaryAccent, size: 15),
+                        const Icon(
+                          Icons.shield_outlined,
+                          color: AppColors.primaryAccent,
+                          size: 15,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           '256-Bit SSL Təhlükəsiz Şifrələmə • İdrak Liseyi',
-                          style: TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),

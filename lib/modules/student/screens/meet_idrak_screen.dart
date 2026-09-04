@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/widgets/status_badge.dart';
@@ -8,28 +9,77 @@ import '../../../providers/app_state.dart';
 import '../../../data/models/meet_model.dart';
 import '../../shared/screens/voice_room_screen.dart';
 import '../../teacher/screens/create_meet_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../l10n/app_localizations.dart';
 
-class MeetIdrakScreen extends StatelessWidget {
+class MeetIdrakScreen extends StatefulWidget {
   const MeetIdrakScreen({super.key});
 
   @override
+  State<MeetIdrakScreen> createState() => _MeetIdrakScreenState();
+}
+
+class _MeetIdrakScreenState extends State<MeetIdrakScreen> {
+  bool _isOfflineMode = false;
+  Timer? _connectivityCheckTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConnectivity();
+
+    // Check connectivity every 10 seconds
+    _connectivityCheckTimer = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _checkConnectivity(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _connectivityCheckTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Check if Firestore is online or serving from cache
+  Future<void> _checkConnectivity() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('meet_rooms')
+          .limit(1)
+          .get(const GetOptions(source: Source.server));
+
+      if (mounted) {
+        setState(() => _isOfflineMode = false);
+      }
+    } catch (e) {
+      // Failed to reach server - we're offline
+      if (mounted) {
+        setState(() => _isOfflineMode = true);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final appState = Provider.of<AppState>(context);
     final user = appState.currentUser;
-    final isTeacherOrAdmin = user?.role == UserRole.teacher || user?.role == UserRole.admin;
+    final isTeacherOrAdmin =
+        user?.role == UserRole.teacher || user?.role == UserRole.admin;
     final rooms = appState.getMeetRoomsForCurrentUser();
     final timeFormat = DateFormat('HH:mm');
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Meet İdrak • Canlı Səsli Dərslər'),
+        title: Text('${loc.meetIdrak} • ${loc.voiceRoom}'),
         elevation: 0,
         actions: [
           if (isTeacherOrAdmin)
             IconButton(
               icon: const Icon(Icons.add_call, color: AppColors.primaryAccent),
-              tooltip: 'Yeni Görüş Yarat',
+              tooltip: loc.createMeet,
               onPressed: () {
                 Navigator.push(
                   context,
@@ -63,7 +113,11 @@ class MeetIdrakScreen extends StatelessWidget {
                     children: [
                       Row(
                         children: const [
-                          Icon(Icons.mic_external_on_rounded, color: AppColors.primaryAccent, size: 22),
+                          Icon(
+                            Icons.mic_external_on_rounded,
+                            color: AppColors.primaryAccent,
+                            size: 22,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             'MEET İDRAK',
@@ -77,26 +131,46 @@ class MeetIdrakScreen extends StatelessWidget {
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.success.withAlpha(30),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.success.withAlpha(80)),
+                          border: Border.all(
+                            color: AppColors.success.withAlpha(80),
+                          ),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.circle, color: AppColors.success, size: 6),
-                            SizedBox(width: 4),
-                            Text('Canlı', style: TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold)),
+                            const Icon(
+                              Icons.circle,
+                              color: AppColors.success,
+                              size: 6,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              loc.active,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Gecikməsiz real-vaxt səsli dərslər, sinif müzakirələri və interaktiv virtual otaqlar.',
-                    style: TextStyle(color: Colors.white70, fontSize: 11.5, height: 1.35),
+                  Text(
+                    loc.meetIdrakDesc,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11.5,
+                      height: 1.35,
+                    ),
                   ),
 
                   if (isTeacherOrAdmin) ...[
@@ -106,19 +180,31 @@ class MeetIdrakScreen extends StatelessWidget {
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryAccent,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 10),
                         ),
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const CreateMeetScreen()),
+                            MaterialPageRoute(
+                              builder: (_) => const CreateMeetScreen(),
+                            ),
                           );
                         },
-                        icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white, size: 16),
-                        label: const Text(
-                          'Yeni Səsli Toplantı Başlat',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.5),
+                        icon: const Icon(
+                          Icons.add_circle_outline_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        label: Text(
+                          loc.createMeet,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12.5,
+                          ),
                         ),
                       ),
                     ),
@@ -127,18 +213,75 @@ class MeetIdrakScreen extends StatelessWidget {
               ),
             ),
 
+            // 🌐 Offline Mode Banner
+            if (_isOfflineMode)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withAlpha(20),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.warning.withAlpha(60)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.cloud_off_rounded,
+                      color: AppColors.warning,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Offline Rejimdəsiniz',
+                            style: TextStyle(
+                              color: AppColors.warning,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Göstərilən məlumatlar köhnə ola bilər. İnternet bağlantınızı yoxlayın.',
+                            style: TextStyle(
+                              color: AppColors.warning,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Aktiv & Planlaşdırılmış Dərslər',
-                    style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary, letterSpacing: -0.2),
+                    '${loc.active} • ${loc.timetable}',
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.2,
+                    ),
                   ),
                   Text(
-                    '${rooms.length} Otaq',
-                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.primaryAccent),
+                    '${rooms.length} ${loc.voiceRoom}',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryAccent,
+                    ),
                   ),
                 ],
               ),
@@ -156,27 +299,39 @@ class MeetIdrakScreen extends StatelessWidget {
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(Icons.voice_over_off_rounded, size: 44, color: AppColors.textMuted),
+                      Icon(
+                        Icons.voice_over_off_rounded,
+                        size: 44,
+                        color: AppColors.textMuted,
+                      ),
                       const SizedBox(height: 12),
                       Text(
-                        'Hal-hazırda aktiv dərs və ya toplantı yoxdur',
+                        loc.noDataAvailable,
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: AppColors.textPrimary),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13.5,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        isTeacherOrAdmin
-                            ? 'Yuxarıdakı düyməyə basaraq sinifiniz üçün yeni canlı səsli görüş başlada bilərsiniz.'
-                            : 'Müəlliminiz dərs başlatdıqda burada görünəcək.',
+                        loc.meetIdrakDesc,
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
                 ),
               )
             else
-              ...rooms.map((room) => _buildRoomCard(context, room, timeFormat, isTeacherOrAdmin)),
+              ...rooms.map(
+                (room) =>
+                    _buildRoomCard(context, room, timeFormat, isTeacherOrAdmin),
+              ),
           ],
         ),
       ),
@@ -184,7 +339,13 @@ class MeetIdrakScreen extends StatelessWidget {
           ? FloatingActionButton.extended(
               backgroundColor: AppColors.primaryAccent,
               icon: const Icon(Icons.mic_rounded, color: Colors.white),
-              label: const Text('Görüş Yarat', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              label: Text(
+                loc.createMeet,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -196,9 +357,16 @@ class MeetIdrakScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRoomCard(BuildContext context, MeetRoom room, DateFormat timeFormat, bool isTeacherOrAdmin) {
+  Widget _buildRoomCard(
+    BuildContext context,
+    MeetRoom room,
+    DateFormat timeFormat,
+    bool isTeacherOrAdmin,
+  ) {
+    final loc = AppLocalizations.of(context);
     final isLive = room.isLive;
-    final currentUserId = Provider.of<AppState>(context, listen: false).currentUser?.id ?? '';
+    final currentUserId =
+        Provider.of<AppState>(context, listen: false).currentUser?.id ?? '';
     final isHost = room.hostId == currentUserId;
 
     return Container(
@@ -207,7 +375,9 @@ class MeetIdrakScreen extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isLive ? AppColors.success.withAlpha(80) : AppColors.cardBorder,
+          color: isLive
+              ? AppColors.success.withAlpha(80)
+              : AppColors.cardBorder,
           width: isLive ? 1.5 : 1,
         ),
         boxShadow: AppShadows.sm,
@@ -227,18 +397,25 @@ class MeetIdrakScreen extends StatelessWidget {
                 ),
                 if (isLive)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2.5,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.danger,
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Icons.circle, color: Colors.white, size: 6),
-                        SizedBox(width: 4),
+                        const Icon(Icons.circle, color: Colors.white, size: 6),
+                        const SizedBox(width: 4),
                         Text(
-                          'CANLI',
-                          style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
+                          loc.active.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ],
                     ),
@@ -246,7 +423,11 @@ class MeetIdrakScreen extends StatelessWidget {
                 else
                   Text(
                     room.status,
-                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
               ],
             ),
@@ -266,24 +447,37 @@ class MeetIdrakScreen extends StatelessWidget {
                 CircleAvatar(
                   radius: 10,
                   backgroundImage: NetworkImage(
-                    room.hostPhotoUrl ?? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
+                    room.hostPhotoUrl ??
+                        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
                   ),
                 ),
                 const SizedBox(width: 7),
                 Text(
-                  'Təşkilatçı: ${room.hostName}',
-                  style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                  '${loc.teacher}: ${room.hostName}',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 5),
             Row(
               children: [
-                const Icon(Icons.people_alt_outlined, size: 13, color: AppColors.primaryAccent),
+                const Icon(
+                  Icons.people_alt_outlined,
+                  size: 13,
+                  color: AppColors.primaryAccent,
+                ),
                 const SizedBox(width: 4),
                 Text(
-                  '${room.participants.length} İştirakçı içəridədir',
-                  style: const TextStyle(fontSize: 10.5, color: AppColors.primaryAccent, fontWeight: FontWeight.bold),
+                  '${room.participants.length} ${loc.students}',
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    color: AppColors.primaryAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -294,13 +488,25 @@ class MeetIdrakScreen extends StatelessWidget {
                 spacing: 5,
                 children: room.targetClasses.map((cls) {
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2.5,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primaryAccent.withAlpha(12),
                       borderRadius: BorderRadius.circular(5),
-                      border: Border.all(color: AppColors.primaryAccent.withAlpha(30)),
+                      border: Border.all(
+                        color: AppColors.primaryAccent.withAlpha(30),
+                      ),
                     ),
-                    child: Text('Sinif $cls', style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: AppColors.primaryAccent)),
+                    child: Text(
+                      '${loc.classLabel} $cls',
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryAccent,
+                      ),
+                    ),
                   );
                 }).toList(),
               ),
@@ -316,9 +522,13 @@ class MeetIdrakScreen extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isLive ? AppColors.success : AppColors.primaryAccent,
+                      backgroundColor: isLive
+                          ? AppColors.success
+                          : AppColors.primaryAccent,
                       padding: const EdgeInsets.symmetric(vertical: 9),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     onPressed: () {
                       Navigator.push(
@@ -328,10 +538,18 @@ class MeetIdrakScreen extends StatelessWidget {
                         ),
                       );
                     },
-                    icon: Icon(isLive ? Icons.mic_rounded : Icons.headset_mic_outlined, color: Colors.white, size: 16),
+                    icon: Icon(
+                      isLive ? Icons.mic_rounded : Icons.headset_mic_outlined,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                     label: Text(
-                      isLive ? 'Dərsə Canlı Qoşul' : 'Otağa Daxil Ol',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      isLive ? 'Dərsə Canlı Qoşul' : loc.joinMeet,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ),
@@ -339,14 +557,24 @@ class MeetIdrakScreen extends StatelessWidget {
                 if (isHost || isTeacherOrAdmin) ...[
                   const SizedBox(width: 6),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger, size: 18),
-                    tooltip: 'Otağı Sil',
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: AppColors.danger,
+                      size: 18,
+                    ),
+                    tooltip: loc.delete,
                     onPressed: () async {
-                      final appState = Provider.of<AppState>(context, listen: false);
+                      final appState = Provider.of<AppState>(
+                        context,
+                        listen: false,
+                      );
                       await appState.deleteMeetRoom(room.id);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Toplantı otağı silindi'), backgroundColor: AppColors.danger),
+                          SnackBar(
+                            content: Text(loc.successfullyDeleted),
+                            backgroundColor: AppColors.danger,
+                          ),
                         );
                       }
                     },

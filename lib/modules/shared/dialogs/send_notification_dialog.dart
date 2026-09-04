@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../providers/app_state.dart';
 import '../../../data/models/notification_model.dart';
 import '../../../data/models/student_model.dart';
+import '../../../l10n/app_localizations.dart';
 
 class SendNotificationDialog extends StatefulWidget {
   final StudentProfile? directStudent; // Optional: If sending direct note to a specific student/parent
@@ -171,6 +172,7 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final appState = Provider.of<AppState>(context);
     final user = appState.currentUser;
     final isDirectStudent = widget.directStudent != null;
@@ -214,7 +216,7 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
                         Text(
                           isDirectStudent
                               ? '${widget.directStudent!.fullName} • ${widget.directStudent!.className}'
-                              : (isTeacher ? '${user?.fullName} • ${user?.subject ?? "Müəllim"}' : 'İnzibatçı / Rəhbərlik Paneli'),
+                              : (isTeacher ? '${user?.fullName} • ${user?.subject ?? (loc?.teacher ?? "Müəllim")}' : 'İnzibatçı / Rəhbərlik Paneli'),
                           style: const TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                       ],
@@ -252,7 +254,7 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
                                 radius: 20,
                                 onBackgroundImageError: (e, s) {},
                                 backgroundImage: NetworkImage(widget.directStudent!.photoUrl),
-                                child: null, // No overlay icon
+                                child: null,
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -264,7 +266,7 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
                                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                                     ),
                                     Text(
-                                      'Valideyn: ${widget.directStudent!.parentName} (${widget.directStudent!.parentPhone})',
+                                      '${loc?.parent ?? "Valideyn"}: ${widget.directStudent!.parentName} (${widget.directStudent!.parentPhone})',
                                       style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
                                     ),
                                   ],
@@ -278,7 +280,7 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
 
                       // Target Selection (Teacher or Admin)
                       if (!isDirectStudent && isTeacher) ...[
-                        const Text('Hansı Sinifə Göndərilsin?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text('Hansı Sinifə Göndərilsin?', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         const SizedBox(height: 6),
                         Wrap(
                           spacing: 8,
@@ -297,42 +299,42 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
 
                       if (!isDirectStudent && !isTeacher) ...[
                         // Admin target selection
-                        const Text('Kimlərə Göndərilsin?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text('Kimlərə Göndərilsin?', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         const SizedBox(height: 6),
                         Wrap(
                           spacing: 6,
                           runSpacing: 6,
                           children: [
                             ChoiceChip(
-                              label: const Text('🌍 Hamıya (Bütün Lisey)'),
+                              label: Text('🌍 Hamıya (Bütün Lisey)'),
                               selected: _adminTargetGroup == 'all',
                               selectedColor: AppColors.primary,
                               labelStyle: TextStyle(color: _adminTargetGroup == 'all' ? Colors.white : AppColors.textPrimary, fontSize: 11),
                               onSelected: (_) => setState(() => _adminTargetGroup = 'all'),
                             ),
                             ChoiceChip(
-                              label: const Text('👨‍🏫 Müəllimlərə'),
+                              label: Text('👨‍🏫 Müəllimlərə'),
                               selected: _adminTargetGroup == 'teachers',
                               selectedColor: AppColors.primary,
                               labelStyle: TextStyle(color: _adminTargetGroup == 'teachers' ? Colors.white : AppColors.textPrimary, fontSize: 11),
                               onSelected: (_) => setState(() => _adminTargetGroup = 'teachers'),
                             ),
                             ChoiceChip(
-                              label: const Text('🎓 Şagirdlərə'),
+                              label: Text('🎓 Şagirdlərə'),
                               selected: _adminTargetGroup == 'students',
                               selectedColor: AppColors.primary,
                               labelStyle: TextStyle(color: _adminTargetGroup == 'students' ? Colors.white : AppColors.textPrimary, fontSize: 11),
                               onSelected: (_) => setState(() => _adminTargetGroup = 'students'),
                             ),
                             ChoiceChip(
-                              label: const Text('👨‍👩‍👧 Valideynlərə'),
+                              label: Text('👨‍👩‍👧 Valideynlərə'),
                               selected: _adminTargetGroup == 'parents',
                               selectedColor: AppColors.primary,
                               labelStyle: TextStyle(color: _adminTargetGroup == 'parents' ? Colors.white : AppColors.textPrimary, fontSize: 11),
                               onSelected: (_) => setState(() => _adminTargetGroup = 'parents'),
                             ),
                             ChoiceChip(
-                              label: const Text('🏫 Xüsusi Siniflər'),
+                              label: Text('🏫 Xüsusi Siniflər'),
                               selected: _adminTargetGroup == 'custom_classes',
                               selectedColor: AppColors.primary,
                               labelStyle: TextStyle(color: _adminTargetGroup == 'custom_classes' ? Colors.white : AppColors.textPrimary, fontSize: 11),
@@ -369,28 +371,28 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
 
                       // Recipient Role Selection for Teacher
                       if (isTeacher || isDirectStudent) ...[
-                        const Text('Qəbul Edən Tərəf:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text('Qəbul Edən Tərəf:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         const SizedBox(height: 6),
                         Wrap(
                           spacing: 6,
                           runSpacing: 6,
                           children: [
                             ChoiceChip(
-                              label: const Text('👨‍👩‍👧 Valideyn', style: TextStyle(fontSize: 11)),
+                              label: Text('👨‍👩‍👧 ${loc?.parent ?? "Valideyn"}', style: const TextStyle(fontSize: 11)),
                               selected: _teacherRecipientType == 'parent',
                               selectedColor: AppColors.primary,
                               labelStyle: TextStyle(color: _teacherRecipientType == 'parent' ? Colors.white : AppColors.textPrimary),
                               onSelected: (_) => setState(() => _teacherRecipientType = 'parent'),
                             ),
                             ChoiceChip(
-                              label: const Text('🎓 Şagird', style: TextStyle(fontSize: 11)),
+                              label: Text('🎓 ${loc?.student ?? "Şagird"}', style: const TextStyle(fontSize: 11)),
                               selected: _teacherRecipientType == 'student',
                               selectedColor: AppColors.primary,
                               labelStyle: TextStyle(color: _teacherRecipientType == 'student' ? Colors.white : AppColors.textPrimary),
                               onSelected: (_) => setState(() => _teacherRecipientType = 'student'),
                             ),
                             ChoiceChip(
-                              label: const Text('👥 Hər İkisi', style: TextStyle(fontSize: 11)),
+                              label: Text('👥 Hər İkisi', style: const TextStyle(fontSize: 11)),
                               selected: _teacherRecipientType == 'parent_and_student',
                               selectedColor: AppColors.primary,
                               labelStyle: TextStyle(color: _teacherRecipientType == 'parent_and_student' ? Colors.white : AppColors.textPrimary),
@@ -402,7 +404,7 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
                       ],
 
                       // Title Input
-                      const Text('Başlıq / Mövzu *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      Text('Başlıq / Mövzu *', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _titleController,
@@ -446,7 +448,7 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
                       const SizedBox(height: 14),
 
                       // Message Body
-                      const Text('Bildiriş Mətni *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      Text('Bildiriş Mətni *', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _messageController,
@@ -463,28 +465,28 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
                       const SizedBox(height: 14),
 
                       // Priority
-                      const Text('Dərəcə / Vaciblik:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      Text('Dərəcə / Vaciblik:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       const SizedBox(height: 6),
                       Wrap(
                         spacing: 8,
                         runSpacing: 6,
                         children: [
                           ChoiceChip(
-                            label: const Text('Adi (Normal)'),
+                            label: Text('Adi (Normal)'),
                             selected: _priority == 'normal',
                             selectedColor: AppColors.primary,
                             labelStyle: TextStyle(color: _priority == 'normal' ? Colors.white : AppColors.textPrimary, fontSize: 11),
                             onSelected: (_) => setState(() => _priority = 'normal'),
                           ),
                           ChoiceChip(
-                            label: const Text('⚠️ Vacib'),
+                            label: Text('⚠️ Vacib'),
                             selected: _priority == 'important',
                             selectedColor: AppColors.goldDark,
                             labelStyle: TextStyle(color: _priority == 'important' ? Colors.white : AppColors.textPrimary, fontSize: 11),
                             onSelected: (_) => setState(() => _priority = 'important'),
                           ),
                           ChoiceChip(
-                            label: const Text('🚨 Təcili'),
+                            label: Text('🚨 Təcili'),
                             selected: _priority == 'urgent',
                             selectedColor: AppColors.danger,
                             labelStyle: TextStyle(color: _priority == 'urgent' ? Colors.white : AppColors.textPrimary, fontSize: 11),
@@ -514,7 +516,7 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                       : const Icon(Icons.send_rounded, color: Colors.white),
                   label: Text(
-                    _isSending ? 'Göndərilir...' : 'Bildirişi Göndər',
+                    _isSending ? 'Göndərilir...' : (loc?.sendNotification ?? 'Bildirişi Göndər'),
                     style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),

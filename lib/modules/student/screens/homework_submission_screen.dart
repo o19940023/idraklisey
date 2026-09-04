@@ -7,6 +7,7 @@ import '../../../core/widgets/status_badge.dart';
 import '../../../providers/app_state.dart';
 import '../../../data/models/assignment_model.dart';
 import '../../../services/cloudinary_service.dart';
+import '../../../l10n/app_localizations.dart';
 
 class HomeworkSubmissionScreen extends StatefulWidget {
   final HomeworkAssignment assignment;
@@ -78,6 +79,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final appState = Provider.of<AppState>(context);
     final currentStudent = appState.student;
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
@@ -89,7 +91,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Tapşırıq & Kamera Təhvili'),
+        title: Text(loc.submitHomework),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -176,7 +178,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                       const Icon(Icons.assignment_outlined, color: AppColors.primaryAccent, size: 18),
                       const SizedBox(width: 8),
                       Text(
-                        'Müəllimin Tapşırıq Təlimatı',
+                        loc.assignmentDescription,
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
                       ),
                     ],
@@ -218,7 +220,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                               );
                             },
                             icon: const Icon(Icons.visibility_outlined, size: 15),
-                            label: const Text('Bax', style: TextStyle(fontSize: 12)),
+                            label: Text(loc.view, style: const TextStyle(fontSize: 12)),
                           ),
                         ],
                       ),
@@ -248,18 +250,18 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
-                          children: const [
-                            Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
-                            SizedBox(width: 8),
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
+                            const SizedBox(width: 8),
                             Text(
-                              'Tapşırığınız Təhvil Verilib!',
-                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.success),
+                              loc.submitted,
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.success),
                             ),
                           ],
                         ),
                         if (isGraded && mySubmission.score != null)
                           StatusBadge(
-                            label: '${mySubmission.score!.toInt()} Bal',
+                            label: '${mySubmission.score!.toInt()} ${loc.score}',
                             color: AppColors.primaryAccent,
                             fontSize: 11,
                           ),
@@ -294,13 +296,13 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text('Müəllim Qiymətləndirməsi:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                                Text('${mySubmission.score} / 100 Bal', style: const TextStyle(color: AppColors.primaryAccent, fontWeight: FontWeight.w900, fontSize: 14)),
+                                Text('${loc.teacher} ${loc.feedback}:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                Text('${mySubmission.score} / 100 ${loc.score}', style: const TextStyle(color: AppColors.primaryAccent, fontWeight: FontWeight.w900, fontSize: 14)),
                               ],
                             ),
                             if (mySubmission.teacherComment != null && mySubmission.teacherComment!.isNotEmpty) ...[
                               const SizedBox(height: 4),
-                              Text('Müəllim rəyi: "${mySubmission.teacherComment}"', style: TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic, color: AppColors.textSecondary)),
+                              Text('${loc.feedback}: "${mySubmission.teacherComment}"', style: TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic, color: AppColors.textSecondary)),
                             ],
                           ],
                         ),
@@ -435,7 +437,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                             children: [
                               const CircularProgressIndicator(color: AppColors.primaryAccent, strokeWidth: 2),
                               const SizedBox(height: 8),
-                              Text('Foto yüklənir...', style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+                              Text('${loc.loading}', style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
                             ],
                           ),
                         ),
@@ -475,8 +477,8 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                     TextField(
                       controller: _noteController,
                       maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Müəllim üçün qeyd (İstəyə bağlı)',
+                      decoration: InputDecoration(
+                        labelText: '${loc.feedback} (${loc.optional})',
                         hintText: 'Məsələn: 18-ci məsələdə 2 müxtəlif üsul tətbiq etmişəm...',
                       ),
                     ),
@@ -504,8 +506,8 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                                   note: _noteController.text.trim(),
                                 );
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Ev tapşırığınız uğurla təhvil verildi!'),
+                                  SnackBar(
+                                    content: Text(loc.successfullySaved),
                                     backgroundColor: AppColors.success,
                                   ),
                                 );
@@ -518,7 +520,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                                 child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                               )
                             : const Icon(Icons.send_rounded, size: 16, color: Colors.white),
-                        label: const Text('Müəllimə Təhvil Ver', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        label: Text(loc.submitHomework, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                       ),
                     ),
                   ],

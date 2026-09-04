@@ -7,6 +7,7 @@ import '../../../core/widgets/status_badge.dart';
 import '../../../providers/app_state.dart';
 import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/assignment_model.dart';
+import '../../../l10n/app_localizations.dart';
 import 'homework_submission_screen.dart';
 
 class AssignmentsTimelineScreen extends StatefulWidget {
@@ -65,6 +66,7 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final appState = Provider.of<AppState>(context);
     final currentStudent = appState.student;
     final allAssignments = appState.assignments;
@@ -151,7 +153,7 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Tapşırıqlar',
+                                    loc.assignments,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 20,
@@ -161,7 +163,7 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '${currentStudent.fullName} • ${relevantAssignments.length} tapşırıq',
+                                    '${currentStudent.fullName} • ${relevantAssignments.length} ${loc.assignmentsCount}',
                                     style: TextStyle(
                                       color: Colors.white.withAlpha(178),
                                       fontSize: 12,
@@ -188,7 +190,7 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
               child: Row(
                 children: [
                   _buildStatCard(
-                    'Gözləyir',
+                    loc.pending,
                     pendingCount,
                     Icons.hourglass_top_rounded,
                     const Color(0xFFF59E0B),
@@ -196,7 +198,7 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
                   ),
                   const SizedBox(width: 10),
                   _buildStatCard(
-                    'Təhvil',
+                    loc.submitted,
                     submittedCount,
                     Icons.mark_email_read_rounded,
                     const Color(0xFF0D9488),
@@ -204,7 +206,7 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
                   ),
                   const SizedBox(width: 10),
                   _buildStatCard(
-                    'Yoxlanıldı',
+                    loc.completed,
                     gradedCount,
                     Icons.check_circle_rounded,
                     const Color(0xFF22C55E),
@@ -224,13 +226,13 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
                 physics: const BouncingScrollPhysics(),
                 child: Row(
                   children: [
-                    _buildFilterChip('Hamısı', relevantAssignments.length, null),
+                    _buildFilterChip(loc.all, relevantAssignments.length, null),
                     const SizedBox(width: 6),
-                    _buildFilterChip('Gözləyir', pendingCount, AssignmentStatus.pending),
+                    _buildFilterChip(loc.pending, pendingCount, AssignmentStatus.pending),
                     const SizedBox(width: 6),
-                    _buildFilterChip('Təhvil Verildi', submittedCount, AssignmentStatus.submitted),
+                    _buildFilterChip(loc.submitted, submittedCount, AssignmentStatus.submitted),
                     const SizedBox(width: 6),
-                    _buildFilterChip('Qiymətləndirilən', gradedCount, AssignmentStatus.graded),
+                    _buildFilterChip(loc.completed, gradedCount, AssignmentStatus.graded),
                   ],
                 ),
               ),
@@ -257,7 +259,7 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Tapşırıq tapılmadı',
+                        loc.noAssignments,
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 17,
@@ -267,7 +269,7 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Seçilmiş kateqoriya üzrə aktiv\nev tapşırığı mövcud deyil.',
+                        loc.noDataAvailable,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.textSecondary,
@@ -398,6 +400,7 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
 
   // ── Timeline Card with left connector ──
   Widget _buildTimelineCard(BuildContext context, HomeworkAssignment assignment, String studentId, bool isLast) {
+    final loc = AppLocalizations.of(context);
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
     final status = assignment.getStatusForStudent(studentId);
     final mySub = assignment.getSubmissionForStudent(studentId);
@@ -415,22 +418,22 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
     switch (status) {
       case AssignmentStatus.pending:
         statusColor = isOverdue ? AppColors.danger : AppColors.warning;
-        statusTitle = isOverdue ? 'Müddəti Bitib' : 'Gözləmədə';
+        statusTitle = isOverdue ? 'Müddəti Bitib' : loc.pending;
         statusIcon = isOverdue ? Icons.error_outline_rounded : Icons.hourglass_top_rounded;
         break;
       case AssignmentStatus.inProgress:
         statusColor = AppColors.primaryAccent;
-        statusTitle = 'İcrada';
+        statusTitle = loc.inProgress;
         statusIcon = Icons.edit_note_rounded;
         break;
       case AssignmentStatus.submitted:
         statusColor = const Color(0xFF0D9488);
-        statusTitle = 'Təhvil Verildi';
+        statusTitle = loc.submitted;
         statusIcon = Icons.mark_email_read_rounded;
         break;
       case AssignmentStatus.graded:
         statusColor = AppColors.success;
-        statusTitle = 'Yoxlanıldı (${mySub?.score?.toInt()} Bal)';
+        statusTitle = '${loc.completed} (${mySub?.score?.toInt()} ${loc.score})';
         statusIcon = Icons.check_circle_rounded;
         break;
     }
@@ -609,7 +612,7 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
                                       const SizedBox(width: 4),
                                       Flexible(
                                         child: Text(
-                                          'Son: ${dateFormat.format(assignment.dueDate)}',
+                                          '${loc.deadline}: ${dateFormat.format(assignment.dueDate)}',
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
                                             fontSize: 11,
@@ -628,7 +631,7 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
                                             border: Border.all(color: AppColors.warning.withAlpha(50)),
                                           ),
                                           child: Text(
-                                            diffHours < 24 ? 'Bu gün' : 'Sabah',
+                                            diffHours < 24 ? loc.today : loc.tomorrow,
                                             style: const TextStyle(
                                               fontSize: 9.5,
                                               fontWeight: FontWeight.w800,
@@ -652,8 +655,8 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
                                     children: [
                                       Text(
                                         status == AssignmentStatus.graded
-                                            ? 'Qiymətə Bax'
-                                            : (status == AssignmentStatus.submitted ? 'Təhvilə Bax' : 'Təhvil Ver'),
+                                            ? '${loc.view} (${loc.score})'
+                                            : (status == AssignmentStatus.submitted ? loc.submitted : loc.submitHomework),
                                         style: const TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w700,

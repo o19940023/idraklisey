@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/widgets/status_badge.dart';
@@ -19,18 +20,19 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   String _selectedFilter = 'all';
 
-  String _formatTimeAgo(DateTime dt) {
+  String _formatTimeAgo(DateTime dt, AppLocalizations loc) {
     final diff = DateTime.now().difference(dt);
     if (diff.inMinutes < 1) return 'İndicə';
     if (diff.inMinutes < 60) return '${diff.inMinutes} dəq əvvəl';
     if (diff.inHours < 24) return '${diff.inHours} saat əvvəl';
-    if (diff.inDays == 1) return 'Dünən ${DateFormat('HH:mm').format(dt)}';
+    if (diff.inDays == 1) return '${loc.yesterday} ${DateFormat('HH:mm').format(dt)}';
     if (diff.inDays < 7) return '${diff.inDays} gün əvvəl';
     return DateFormat('dd.MM.yyyy HH:mm').format(dt);
   }
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     final appState = Provider.of<AppState>(context);
     final user = appState.currentUser;
     final userId = user?.id ?? '';
@@ -88,12 +90,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     icon: const Icon(Icons.done_all_rounded, size: 16),
-                    label: const Text('Hamısını Oxu', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                    label: Text(loc.markAllAsRead, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
                     onPressed: () async {
                       await appState.markAllNotificationsAsRead();
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Bütün bildirişlər oxundu işarələndi'), duration: Duration(seconds: 1)),
+                          SnackBar(content: Text(loc.success), duration: const Duration(seconds: 1)),
                         );
                       }
                     },
@@ -111,7 +113,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ),
                       child: const Icon(Icons.add_comment_rounded, size: 18, color: Colors.white),
                     ),
-                    tooltip: 'Yeni Bildiriş Göndər',
+                    tooltip: loc.sendNotification,
                     onPressed: () {
                       showDialog(
                         context: context,
@@ -158,9 +160,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Bildirişlər & Elanlar',
-                                      style: TextStyle(
+                                    Text(
+                                      '${loc.notifications} & ${loc.announcements}',
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 18,
                                         fontWeight: FontWeight.w900,
@@ -169,7 +171,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      unreadCount > 0 ? '$unreadCount oxunmamış bildirişiniz var' : 'Bütün bildirişlər oxunub',
+                                      unreadCount > 0 ? '$unreadCount ${loc.notificationsDesc}' : loc.noNotifications,
                                       style: TextStyle(
                                         color: Colors.white.withAlpha(180),
                                         fontSize: 12,
@@ -199,13 +201,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 physics: const BouncingScrollPhysics(),
                 child: Row(
                   children: [
-                    _buildFilterChip('all', 'Hamısı (${allNotifs.length})'),
+                    _buildFilterChip('all', '${loc.all} (${allNotifs.length})'),
                     const SizedBox(width: 8),
-                    _buildFilterChip('unread', 'Oxunmamışlar ($unreadCount)', isHighlighted: unreadCount > 0),
+                    _buildFilterChip('unread', 'Oxunmamış ($unreadCount)', isHighlighted: unreadCount > 0),
                     const SizedBox(width: 8),
-                    _buildFilterChip('teacher', '👨‍🏫 Müəllim Mesajları'),
+                    _buildFilterChip('teacher', '👨‍🏫 ${loc.teacher}'),
                     const SizedBox(width: 8),
-                    _buildFilterChip('general', '📢 Rəsmi Elanlar'),
+                    _buildFilterChip('general', '📢 ${loc.announcements}'),
                   ],
                 ),
               ),
@@ -232,12 +234,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Bildiriş tapılmadı',
+                        loc.noNotifications,
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Məktəb rəhbərliyindən və ya müəllimlərinizdən gələn bütün bildirişlər burada toplanacaq.',
+                        loc.noDataAvailable,
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       ),
@@ -271,10 +273,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       onDismissed: (_) {
                         appState.deleteNotification(notif.id);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Bildiriş silindi')),
+                          SnackBar(content: Text(loc.successfullyDeleted)),
                         );
                       },
-                      child: _buildNotificationCard(context, notif, isRead, appState),
+                      child: _buildNotificationCard(context, notif, isRead, appState, loc),
                     );
                   },
                   childCount: filteredNotifs.length,
@@ -287,7 +289,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ? FloatingActionButton.extended(
               backgroundColor: AppColors.primaryAccent,
               icon: const Icon(Icons.send_rounded, color: Colors.white),
-              label: const Text('Bildiriş Göndər', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+              label: Text(loc.sendNotification, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
               onPressed: () {
                 showDialog(
                   context: context,
@@ -308,26 +310,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected
-              ? (isHighlighted ? AppColors.danger : AppColors.primaryAccent)
-              : AppColors.surface,
+              ? AppColors.primaryAccent
+              : (isHighlighted ? AppColors.warning.withAlpha(20) : AppColors.surface),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
-                ? (isHighlighted ? AppColors.danger : AppColors.primaryAccent)
-                : AppColors.cardBorder,
+                ? AppColors.primaryAccent
+                : (isHighlighted ? AppColors.warning.withAlpha(80) : AppColors.cardBorder),
             width: isSelected ? 1.5 : 1,
           ),
           boxShadow: isSelected
-              ? [BoxShadow(color: (isHighlighted ? AppColors.danger : AppColors.primaryAccent).withAlpha(30), blurRadius: 6, offset: const Offset(0, 2))]
+              ? [BoxShadow(color: AppColors.primaryAccent.withAlpha(30), blurRadius: 6, offset: const Offset(0, 2))]
               : [],
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected
-                ? Colors.white
-                : (isHighlighted ? AppColors.danger : AppColors.textPrimary),
-            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+            color: isSelected ? Colors.white : (isHighlighted ? AppColors.warning : AppColors.textPrimary),
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
             fontSize: 12,
           ),
         ),
@@ -335,66 +335,60 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Widget _buildNotificationCard(BuildContext context, AppNotification notif, bool isRead, AppState appState) {
-    final isTeacherSender = notif.senderRole == 'teacher';
+  Widget _buildNotificationCard(
+    BuildContext context,
+    AppNotification notif,
+    bool isRead,
+    AppState appState,
+    AppLocalizations loc,
+  ) {
     final isUrgent = notif.priority == 'urgent';
+    final isTeacherSender = notif.senderRole == 'teacher';
 
     return GestureDetector(
       onTap: () {
-        if (!isRead) {
-          appState.markNotificationAsRead(notif.id);
-        }
-        _showNotificationDetailDialog(context, notif);
+        appState.markNotificationAsRead(notif.id);
+        _showNotificationDetailDialog(context, notif, loc);
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: isRead ? AppColors.surface : const Color(0xFFEEF2FF),
-          borderRadius: BorderRadius.circular(18),
+          color: isRead ? AppColors.surface : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isUrgent
-                ? AppColors.danger
-                : (isRead ? AppColors.cardBorder : AppColors.primaryAccent.withAlpha(100)),
-            width: isRead ? 1 : 1.5,
+                ? AppColors.danger.withAlpha(120)
+                : (!isRead ? AppColors.primaryAccent.withAlpha(80) : AppColors.cardBorder),
+            width: !isRead ? 1.5 : 1,
           ),
-          boxShadow: AppShadows.sm,
+          boxShadow: isRead ? AppShadows.sm : [BoxShadow(color: AppColors.primaryAccent.withAlpha(15), blurRadius: 10, offset: const Offset(0, 3))],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Row: Sender Info & Time
+              // Header: Avatar, Sender Name & Badge
               Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   if (notif.senderPhotoUrl != null)
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.primaryAccent.withAlpha(30)),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(11),
-                        child: Image.network(
-                          notif.senderPhotoUrl!,
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.person_rounded, size: 22, color: AppColors.primaryAccent),
-                        ),
-                      ),
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundImage: NetworkImage(notif.senderPhotoUrl!),
+                      onBackgroundImageError: (_, _) {},
                     )
                   else
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: isTeacherSender ? const Color(0xFF7C3AED).withAlpha(15) : AppColors.primaryAccent.withAlpha(15),
-                        borderRadius: BorderRadius.circular(12),
+                        color: (isUrgent ? AppColors.danger : AppColors.primaryAccent).withAlpha(15),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
-                        isTeacherSender ? Icons.psychology_rounded : Icons.school_rounded,
-                        color: isTeacherSender ? const Color(0xFF7C3AED) : AppColors.primaryAccent,
+                        isUrgent
+                            ? Icons.warning_rounded
+                            : (isTeacherSender ? Icons.person_rounded : Icons.school_rounded),
+                        color: isUrgent ? AppColors.danger : AppColors.primaryAccent,
                         size: 22,
                       ),
                     ),
@@ -414,20 +408,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            if (!isRead) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                width: 7,
-                                height: 7,
-                                decoration: const BoxDecoration(color: AppColors.primaryAccent, shape: BoxShape.circle),
-                              ),
-                            ],
                           ],
                         ),
                         Text(
                           isTeacherSender
-                              ? 'Müəllim • ${notif.senderSubject ?? "Fənn"}'
-                              : 'İdrak Liseyi Rəhbərliyi',
+                              ? '${loc.teacher} • ${notif.senderSubject ?? loc.subject}'
+                              : 'İdrak Liseyi',
                           style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                         ),
                       ],
@@ -440,7 +426,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   else if (notif.category == NotificationCategory.teacherDirect)
                     const StatusBadge(label: '👨‍👩‍👧 Qeyd', color: Color(0xFF0D9488), fontSize: 9)
                   else
-                    StatusBadge(label: '📢 Elan', color: AppColors.primaryAccent, fontSize: 9),
+                    StatusBadge(label: '📢 ${loc.announcements}', color: AppColors.primaryAccent, fontSize: 9),
                 ],
               ),
 
@@ -482,7 +468,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            'Sinif: ${notif.targetClasses.join(", ")}',
+                            '${loc.classLabel}: ${notif.targetClasses.join(", ")}',
                             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryAccent),
                           ),
                         ),
@@ -495,7 +481,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            'Şagird: ${notif.targetStudentName}',
+                            '${loc.student}: ${notif.targetStudentName}',
                             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0D9488)),
                           ),
                         ),
@@ -503,7 +489,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ],
                   ),
                   Text(
-                    _formatTimeAgo(notif.createdAt),
+                    _formatTimeAgo(notif.createdAt, loc),
                     style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
                   ),
                 ],
@@ -515,7 +501,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  void _showNotificationDetailDialog(BuildContext context, AppNotification notif) {
+  void _showNotificationDetailDialog(BuildContext context, AppNotification notif, AppLocalizations loc) {
     showDialog(
       context: context,
       builder: (ctx) {
@@ -553,8 +539,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ),
                         Text(
                           notif.senderSubject != null
-                              ? 'Müəllim • ${notif.senderSubject}'
-                              : 'İdrak Liseyi Rəsmi Bildirişi',
+                              ? '${loc.teacher} • ${notif.senderSubject}'
+                              : 'İdrak Liseyi',
                           style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                         ),
                       ],
@@ -591,7 +577,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Bağla', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: Text(loc.close, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -599,3 +585,4 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 }
+

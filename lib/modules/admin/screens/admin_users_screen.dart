@@ -477,7 +477,33 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                           'Şifrə: ${user.password}',
                           style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppColors.textMuted),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => _showResetPasswordDialog(context, appState, user),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryAccent.withAlpha(15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.lock_reset_rounded, size: 12, color: AppColors.primaryAccent),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Sıfırla',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.primaryAccent,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
                         GestureDetector(
                           onTap: () => appState.toggleUserStatus(user.id),
                           child: Container(
@@ -748,6 +774,21 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         MapEntry('Qeydiyyat', dateFormat.format(user.createdAt)),
                       ],
                     ),
+                    const SizedBox(height: 14),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primaryAccent,
+                        side: const BorderSide(color: AppColors.primaryAccent, width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
+                      ),
+                      icon: const Icon(Icons.lock_reset_rounded, size: 20),
+                      label: const Text(
+                        'Şifrəni Sıfırla (123456)',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                      ),
+                      onPressed: () => _showResetPasswordDialog(context, appState, user),
+                    ),
                   ],
                 ),
               ),
@@ -755,6 +796,96 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           ),
         );
       },
+    );
+  }
+
+  void _showResetPasswordDialog(BuildContext context, AppState appState, AppUser user) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: AppColors.surface,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryAccent.withAlpha(20),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.lock_reset_rounded, color: AppColors.primaryAccent, size: 22),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Şifrəni Sıfırla',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${user.fullName} üçün şifrə standart "123456" olaraq sıfırlansın?',
+              style: TextStyle(fontSize: 13.5, color: AppColors.textPrimary, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.primaryAccent),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'İstifadəçi növbəti dəfə daxil olduqdan sonra öz parametrlərindən yeni şifrə təyin edə bilər.',
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Ləğv et', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final success = await appState.resetUserPasswordByAdmin(user.id, newPassword: '123456');
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? '✓ ${user.fullName} üçün şifrə "123456" olaraq sıfırlandı!'
+                          : 'Xəta: İstifadəçi tapılmadı.',
+                    ),
+                    backgroundColor: success ? AppColors.success : AppColors.danger,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+            },
+            child: const Text('Bəli, Sıfırla (123456)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 

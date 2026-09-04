@@ -5,6 +5,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../providers/app_state.dart';
 import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/meet_model.dart';
+import '../../../services/agora_service.dart';
+import '../../../l10n/app_localizations.dart';
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
 class VoiceRoomScreen extends StatefulWidget {
   final MeetRoom room;
@@ -23,6 +26,11 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
   bool _isHandRaised = false;
   late AppState _appState;
 
+  // 🎤 AGORA VOICE ENGINE
+  final AgoraService _agoraService = AgoraService();
+  bool _isAgoraInitialized = false;
+  bool _isJoiningVoiceChannel = false;
+
   late AnimationController _pulseController;
 
   @override
@@ -40,7 +48,83 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
 
     _appState = Provider.of<AppState>(context, listen: false);
     _appState.addListener(_syncForcedMuteState);
+
+    // 🎤 Initialize Agora Voice Engine
+    unawaited(_initializeAgoraAndJoin());
+
+    // Firebase presence registration
     unawaited(_registerMeetPresence(_appState));
+  }
+
+  /// 🎤 Initialize Agora RTC Engine and join voice channel
+  Future<void> _initializeAgoraAndJoin() async {
+    setState(() => _isJoiningVoiceChannel = true);
+
+    try {
+      // Step 1: Initialize Agora
+      final initialized = await _agoraService.initialize();
+      if (!initialized) {
+        throw Exception(
+          'Agora initialization failed - Microphone permission denied',
+        );
+      }
+
+      setState(() => _isAgoraInitialized = true);
+
+      // Step 2: Setup callbacks for speaking detection
+      _agoraService.onAudioVolumeIndication = (speakers, totalVolume) {
+        for (var speaker in speakers) {
+          final isSpeaking = speaker.volume! > 10;
+          final uid = speaker.uid.toString();
+
+          // Update speaking state in Firebase
+          _appState.updateParticipantSpeaking(widget.room.id, uid, isSpeaking);
+        }
+      };
+
+      // Step 3: Setup error handler
+      _agoraService.onError = (err, msg) {
+        debugPrint('⚠️ Agora error: $err - $msg');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Səs bağlantısı xətası: $msg'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+        }
+      };
+
+      // Step 4: Join voice channel
+      final userId = _appState.currentUser?.id ?? _appState.student.id;
+      final joined = await _agoraService.joinChannel(
+        channelId: widget.room.id,
+        userId: userId,
+      );
+
+      if (!joined) {
+        throw Exception('Failed to join voice channel');
+      }
+
+      debugPrint(
+        '✓ Successfully joined Agora voice channel: ${widget.room.id}',
+      );
+    } catch (e) {
+      debugPrint('⚠️ Agora setup failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Səsli otağa qoşula bilmədiniz: ${e.toString()}'),
+            backgroundColor: AppColors.danger,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isJoiningVoiceChannel = false);
+      }
+    }
   }
 
   Future<void> _registerMeetPresence(AppState appState) async {
@@ -60,7 +144,25 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
         }
       }
     }
+
+    // ⚠️ IMPROVED ERROR HANDLING
     debugPrint('⚠️ Meet presence registration failed after 5 attempts');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Otağa qoşula bilmədiniz. Zəhmət olmasa yenidən cəhd edin.',
+          ),
+          backgroundColor: AppColors.danger,
+          duration: Duration(seconds: 5),
+        ),
+      );
+
+      // Exit after 2 seconds
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) Navigator.pop(context);
+      });
+    }
   }
 
   void _syncForcedMuteState() {
@@ -84,6 +186,10 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
     _pulseController.dispose();
     _appState.removeListener(_syncForcedMuteState);
     _appState.leaveMeetRoom(widget.room.id);
+
+    // 🎤 Cleanup Agora resources
+    _agoraService.dispose();
+
     super.dispose();
   }
 
@@ -111,7 +217,13 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
       );
       return;
     }
+
+    // 🎤 Toggle microphone in Agora
+    await _agoraService.muteLocalAudio(!_isLocalMuted);
+
+    // Update Firebase state
     await appState.toggleMyMuteInRoom(widget.room.id);
+
     setState(() {
       _isLocalMuted = !_isLocalMuted;
     });
@@ -128,6 +240,7 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
     String hostId,
   ) {
     if (!isHost) return;
+    final loc = AppLocalizations.of(context);
     final appState = Provider.of<AppState>(context, listen: false);
     final isTargetHost = participant.userId == hostId;
 
@@ -170,7 +283,7 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                 ),
               ),
               Text(
-                '${participant.role == 'host' ? 'Host (Müəllim)' : (participant.role == 'teacher' ? 'Müəllim' : 'Şagird')} • ${participant.className ?? 'İdrak'}',
+                '${participant.role == 'host' ? 'Host (Müəllim)' : (participant.role == 'teacher' ? (loc?.teacher ?? 'Müəllim') : (loc?.student ?? 'Şagird'))} • ${participant.className ?? 'İdrak'}',
                 style: const TextStyle(
                   color: AppColors.goldLight,
                   fontSize: 12,
@@ -190,8 +303,8 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                   ),
                   title: Text(
                     participant.isMuted
-                        ? 'Səsini Aç (Unmute)'
-                        : 'Səsini Susdur (Mute)',
+                        ? (loc?.unmute ?? 'Səsini Aç')
+                        : (loc?.mute ?? 'Səsini Susdur'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
@@ -231,16 +344,16 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                     Icons.person_remove_rounded,
                     color: AppColors.danger,
                   ),
-                  title: const Text(
+                  title: Text(
                     'Otaqdan Çıxar',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.danger,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  subtitle: const Text(
+                  subtitle: Text(
                     'İştirakçını bu toplantıdan uzaqlaşdır',
-                    style: TextStyle(color: Colors.white54, fontSize: 11),
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
@@ -262,11 +375,11 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                   },
                 ),
               ] else ...[
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Text(
                     'Bu istifadəçi otağın təşkilatçısıdır (Host).',
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                 ),
               ],
@@ -278,6 +391,7 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
   }
 
   void _showMuteAllDialog() {
+    final loc = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) {
@@ -286,29 +400,38 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(22),
           ),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.volume_off_rounded, color: AppColors.danger),
-              SizedBox(width: 8),
+              const Icon(Icons.volume_off_rounded, color: AppColors.danger),
+              const SizedBox(width: 8),
               Text(
                 'Hamını Susdur?',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
-          content: const Text(
+          content: Text(
             'Bütün şagird və iştirakçıların mikrofonları bağlanacaq. Yalnız siz danışa biləcəksiniz.',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Ləğv et', style: TextStyle(color: Colors.white54)),
+              child: Text(
+                loc?.cancel ?? 'Ləğv et',
+                style: const TextStyle(color: Colors.white54),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.danger,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: () async {
                 Navigator.pop(ctx);
@@ -316,14 +439,17 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                 await appState.muteAllInRoom(widget.room.id, true);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text('Bütün iştirakçılar susduruldu'),
                       backgroundColor: AppColors.danger,
                     ),
                   );
                 }
               },
-              child: const Text('Hamısını Susdur', style: TextStyle(color: Colors.white)),
+              child: Text(
+                'Hamısını Susdur',
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -332,6 +458,7 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
   }
 
   void _showEndMeetingDialog() {
+    final loc = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) {
@@ -340,29 +467,38 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(22),
           ),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.call_end_rounded, color: AppColors.danger),
-              SizedBox(width: 8),
+              const Icon(Icons.call_end_rounded, color: AppColors.danger),
+              const SizedBox(width: 8),
               Text(
                 'Toplantını Bitir?',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
-          content: const Text(
+          content: Text(
             'Bu görüş bütün iştirakçılar üçün sonlandırılacaq və otaq bağlanacaq.',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Ləğv et', style: TextStyle(color: Colors.white54)),
+              child: Text(
+                loc?.cancel ?? 'Ləğv et',
+                style: const TextStyle(color: Colors.white54),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.danger,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: () async {
                 Navigator.pop(ctx);
@@ -370,7 +506,10 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                 await appState.endMeetRoom(widget.room.id);
                 if (mounted) Navigator.pop(context);
               },
-              child: const Text('Toplantını Bitir', style: TextStyle(color: Colors.white)),
+              child: Text(
+                'Toplantını Bitir',
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -410,6 +549,7 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final appState = Provider.of<AppState>(context);
     final currentUserId = appState.currentUser?.id ?? appState.student.id;
 
@@ -438,7 +578,11 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
               color: Colors.white.withAlpha(15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
+            child: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 16,
+              color: Colors.white,
+            ),
           ),
           onPressed: _leaveRoom,
         ),
@@ -449,7 +593,11 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
               currentRoom.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: -0.2),
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.2,
+              ),
             ),
             Row(
               children: [
@@ -464,7 +612,11 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                 const SizedBox(width: 5),
                 Text(
                   '${currentRoom.subject} • ${_formatDuration(_secondsElapsed)} • ${participants.length} İştirakçı',
-                  style: const TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -479,7 +631,11 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                   color: Colors.white.withAlpha(15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.volume_off_rounded, color: AppColors.goldLight, size: 18),
+                child: const Icon(
+                  Icons.volume_off_rounded,
+                  color: AppColors.goldLight,
+                  size: 18,
+                ),
               ),
               tooltip: 'Hamını Susdur',
               onPressed: _showMuteAllDialog,
@@ -491,7 +647,11 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                   color: AppColors.danger.withAlpha(25),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.power_settings_new_rounded, color: AppColors.danger, size: 18),
+                child: const Icon(
+                  Icons.power_settings_new_rounded,
+                  color: AppColors.danger,
+                  size: 18,
+                ),
               ),
               tooltip: 'Toplantını Bitir',
               onPressed: _showEndMeetingDialog,
@@ -512,14 +672,18 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: AppColors.gold.withAlpha(50)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.admin_panel_settings_rounded, color: AppColors.goldLight, size: 18),
-                  SizedBox(width: 8),
+                  const Icon(
+                    Icons.admin_panel_settings_rounded,
+                    color: AppColors.goldLight,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Siz Hostsuz. İştirakçının üzərinə toxunaraq səsini aça və ya bağlaya bilərsiniz.',
-                      style: TextStyle(
+                      'Siz Hostsunuz. İştirakçının üzərinə toxunaraq səsini aça və ya bağlaya bilərsiniz.',
+                      style: const TextStyle(
                         color: AppColors.goldLight,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -536,7 +700,11 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Row(
                 children: [
-                  const Icon(Icons.groups_rounded, color: Colors.white54, size: 14),
+                  const Icon(
+                    Icons.groups_rounded,
+                    color: Colors.white54,
+                    size: 14,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'İcazəli Siniflər: ${currentRoom.targetClasses.join(', ')}',
@@ -566,11 +734,14 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                   final isParticipantSpeaking = p.isSpeaking;
 
                   return GestureDetector(
-                    onTap: () => _showParticipantOptions(p, isHost, currentRoom.hostId),
+                    onTap: () =>
+                        _showParticipantOptions(p, isHost, currentRoom.hostId),
                     child: AnimatedBuilder(
                       animation: _pulseController,
                       builder: (context, child) {
-                        final glow = isParticipantSpeaking ? (_pulseController.value * 8 + 4) : 0.0;
+                        final glow = isParticipantSpeaking
+                            ? (_pulseController.value * 8 + 4)
+                            : 0.0;
                         return Container(
                           decoration: BoxDecoration(
                             color: const Color(0xFF1E293B).withAlpha(180),
@@ -578,8 +749,12 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                             border: Border.all(
                               color: isParticipantSpeaking
                                   ? AppColors.success
-                                  : (isParticipantHost ? AppColors.gold : Colors.white12),
-                              width: isParticipantSpeaking ? 2 : (isParticipantHost ? 1.5 : 1),
+                                  : (isParticipantHost
+                                        ? AppColors.gold
+                                        : Colors.white12),
+                              width: isParticipantSpeaking
+                                  ? 2
+                                  : (isParticipantHost ? 1.5 : 1),
                             ),
                             boxShadow: isParticipantSpeaking
                                 ? [
@@ -610,7 +785,8 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
                                               border: Border.all(
-                                                color: AppColors.success.withAlpha(120),
+                                                color: AppColors.success
+                                                    .withAlpha(120),
                                                 width: 3,
                                               ),
                                             ),
@@ -635,30 +811,41 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 12.5,
-                                        fontWeight: isMe ? FontWeight.w900 : FontWeight.w700,
+                                        fontWeight: isMe
+                                            ? FontWeight.w900
+                                            : FontWeight.w700,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
 
                                     // Role Badge
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: isParticipantHost
                                             ? AppColors.gold.withAlpha(30)
                                             : (p.role == 'teacher'
-                                                ? AppColors.primaryAccent.withAlpha(30)
-                                                : Colors.white.withAlpha(15)),
+                                                  ? AppColors.primaryAccent
+                                                        .withAlpha(30)
+                                                  : Colors.white.withAlpha(15)),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
                                         isParticipantHost
                                             ? '👑 Host'
-                                            : (p.role == 'teacher' ? '👨‍🏫 Müəllim' : (p.className ?? '🎓 Şagird')),
+                                            : (p.role == 'teacher'
+                                                  ? '👨‍🏫 ${loc?.teacher ?? "Müəllim"}'
+                                                  : (p.className ??
+                                                        '🎓 ${loc?.student ?? "Şagird"}')),
                                         style: TextStyle(
                                           color: isParticipantHost
                                               ? AppColors.goldLight
-                                              : (p.role == 'teacher' ? AppColors.primaryAccent : Colors.white70),
+                                              : (p.role == 'teacher'
+                                                    ? AppColors.primaryAccent
+                                                    : Colors.white70),
                                           fontSize: 9.5,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -675,14 +862,20 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                                 child: Container(
                                   padding: const EdgeInsets.all(5),
                                   decoration: BoxDecoration(
-                                    color: p.isMuted ? AppColors.danger : AppColors.success.withAlpha(40),
+                                    color: p.isMuted
+                                        ? AppColors.danger
+                                        : AppColors.success.withAlpha(40),
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: p.isMuted ? AppColors.danger : AppColors.success,
+                                      color: p.isMuted
+                                          ? AppColors.danger
+                                          : AppColors.success,
                                     ),
                                   ),
                                   child: Icon(
-                                    p.isMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
+                                    p.isMuted
+                                        ? Icons.mic_off_rounded
+                                        : Icons.mic_rounded,
                                     color: Colors.white,
                                     size: 12,
                                   ),
@@ -723,7 +916,9 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
               color: const Color(0xFF0F172A),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
               border: Border.all(color: Colors.white.withAlpha(15)),
               boxShadow: const [
                 BoxShadow(
@@ -750,17 +945,25 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                           height: 56,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _isLocalMuted ? AppColors.danger : AppColors.success,
+                            color: _isLocalMuted
+                                ? AppColors.danger
+                                : AppColors.success,
                             boxShadow: [
                               BoxShadow(
-                                color: (_isLocalMuted ? AppColors.danger : AppColors.success).withAlpha(100),
+                                color:
+                                    (_isLocalMuted
+                                            ? AppColors.danger
+                                            : AppColors.success)
+                                        .withAlpha(100),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
                             ],
                           ),
                           child: Icon(
-                            _isLocalMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
+                            _isLocalMuted
+                                ? Icons.mic_off_rounded
+                                : Icons.mic_rounded,
                             color: Colors.white,
                             size: 26,
                           ),
@@ -769,7 +972,9 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                         Text(
                           _isLocalMuted ? 'Səssiz' : 'Danışırsınız',
                           style: TextStyle(
-                            color: _isLocalMuted ? Colors.white60 : AppColors.success,
+                            color: _isLocalMuted
+                                ? Colors.white60
+                                : AppColors.success,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -785,7 +990,9 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            _isHandRaised ? 'Əl qaldırdınız ✋' : 'Əlinizi endirdiniz',
+                            _isHandRaised
+                                ? 'Əl qaldırdınız ✋'
+                                : 'Əlinizi endirdiniz',
                           ),
                           duration: const Duration(seconds: 1),
                         ),
@@ -800,14 +1007,20 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                           height: 48,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _isHandRaised ? AppColors.gold.withAlpha(40) : Colors.white.withAlpha(15),
+                            color: _isHandRaised
+                                ? AppColors.gold.withAlpha(40)
+                                : Colors.white.withAlpha(15),
                             border: Border.all(
-                              color: _isHandRaised ? AppColors.gold : Colors.white24,
+                              color: _isHandRaised
+                                  ? AppColors.gold
+                                  : Colors.white24,
                             ),
                           ),
                           child: Icon(
                             Icons.front_hand_rounded,
-                            color: _isHandRaised ? AppColors.goldLight : Colors.white,
+                            color: _isHandRaised
+                                ? AppColors.goldLight
+                                : Colors.white,
                             size: 22,
                           ),
                         ),
@@ -815,7 +1028,9 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                         Text(
                           _isHandRaised ? 'Əl aktiv' : 'Əl qaldır',
                           style: TextStyle(
-                            color: _isHandRaised ? AppColors.goldLight : Colors.white70,
+                            color: _isHandRaised
+                                ? AppColors.goldLight
+                                : Colors.white70,
                             fontSize: 11,
                           ),
                         ),
@@ -835,7 +1050,9 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: AppColors.danger.withAlpha(25),
-                            border: Border.all(color: AppColors.danger.withAlpha(60)),
+                            border: Border.all(
+                              color: AppColors.danger.withAlpha(60),
+                            ),
                           ),
                           child: const Icon(
                             Icons.call_end_rounded,
@@ -844,9 +1061,9 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                           ),
                         ),
                         const SizedBox(height: 6),
-                        const Text(
+                        Text(
                           'Çıxış',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.danger,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
