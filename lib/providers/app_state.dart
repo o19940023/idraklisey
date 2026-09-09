@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../core/theme/app_colors.dart';
+import '../core/utils/password_hasher.dart';
 import '../data/models/timetable_model.dart';
 import '../data/models/grade_model.dart';
 import '../data/models/attendance_model.dart';
@@ -25,6 +27,7 @@ import '../services/firestore_service.dart';
 import '../services/auth_storage_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/push_relay_service.dart';
+import '../services/agora_token_service.dart';
 
 enum UserRole {
   admin, // Məktəb İdarəetməsi (Admin)
@@ -66,9 +69,37 @@ class AppState extends ChangeNotifier {
   final AuthStorageService _authStorage = AuthStorageService();
   StreamSubscription<List<MeetRoom>>? _meetRoomsSubscription;
   StreamSubscription<List<AppNotification>>? _notificationsSubscription;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   // Public getter for FirestoreService
   FirestoreService get firestoreService => _firestoreService;
+
+  // --- CONNECTIVITY (Oflay xəbərdarlıq banneri üçün) ---
+  bool _isOnline = true;
+  bool get isOnline => _isOnline;
+
+  AppState() {
+    _initConnectivity();
+  }
+
+  /// Şəbəkə vəziyyətini izləyir. Bağlantı kəsilib sonra bərpa olunarsa və
+  /// ilkin sinxronizasiya əvvəl uğursuz olubsa (bax: initFirebaseData catch)
+  /// sinxronizasiyanı avtomatik yenidən başladır.
+  void _initConnectivity() {
+    _connectivitySubscription?.cancel();
+    _connectivitySubscription = Connectivity()
+        .onConnectivityChanged
+        .listen((results) {
+      final online =
+          results.isNotEmpty && results.any((r) => r != ConnectivityResult.none);
+      if (online == _isOnline) return;
+      _isOnline = online;
+      notifyListeners();
+      if (online && _initFuture == null) {
+        unawaited(ensureDataReady());
+      }
+    });
+  }
 
   // --- APPEARANCE (Light / Dark) ---
   bool _isDarkMode = false;
@@ -139,7 +170,10 @@ class AppState extends ChangeNotifier {
   List<StudentProfile> get students => _students;
 
   // Explicit distinct classes created by Admin
-  final Set<String> _customClasses = {'9B', '10A', '11A'};
+  // Yalnız real mənbələrdən (admin yaratdığı siniflər, Firestore class
+  // detalları, müəllim təyinatları) doldurulur — hardcoded demo siniflər
+  // istehsalat datalarına qarışmamalıdır.
+  final Set<String> _customClasses = {};
 
   // Sinif detalları (otaq, rəhbər, təhsil ili, qeyd) — Firestore-da saxlanır
   final Map<String, ClassDetails> _classDetailsMap = {};
@@ -668,6 +702,11 @@ class AppState extends ChangeNotifier {
   // --- INITIALIZE & SYNC FROM FIRESTORE ---
   Future<void>? _initFuture;
 
+  /// İlk Firestore sinxronizasiyası tamamlandımı? Ekranlar boş siyahını
+  /// "məlumat yoxdur" kimi göstərməzdən əvvəl bunu yoxlamalıdır.
+  bool _isInitialDataLoaded = false;
+  bool get isInitialDataLoaded => _isInitialDataLoaded;
+
   /// Returns the ongoing (or a new) Firestore sync so callers can await it
   /// before relying on cloud data (e.g. auto-login needs the users list).
   Future<void> ensureDataReady() {
@@ -799,9 +838,17 @@ class AppState extends ChangeNotifier {
         _customClasses.addAll(cloudClassDetails.keys);
       }
 
+      _isInitialDataLoaded = true;
       notifyListeners();
     } catch (e) {
+      // Sinxronizasiya yarım qala bilər (şəbəkə ortada kəsildi). Future-u
+      // sıfırlayırıq ki, növbəti ensureDataReady() çağrısı (login, şəbəkə
+      // bərpası və s.) yenidən cəhd etsin — əks halda tətbiq bağlanana
+      // qədər yarım datayla qalır.
+      _initFuture = null;
+      _isInitialDataLoaded = true; // yükləmə bitdi; boş ekranlar retry göstərə bilər
       debugPrint('Firestore initialization sync notice: $e');
+      notifyListeners();
     }
   }
 
@@ -849,10 +896,19 @@ class AppState extends ChangeNotifier {
     final cleanUsername = username.trim().toLowerCase();
     final cleanPass = password.trim();
 
-    debugPrint(
-      '[AppState] Login attempt - username: "$cleanUsername", password length: ${cleanPass.length}',
-    );
+    // Loglarda parola uzunluğu / istifadəçi adı barədə məlumat saxlanmır —
+    // release buildlərdə də logcat-ə düşmür.
+    debugPrint('[AppState] Login attempt (user lookup)');
     debugPrint('[AppState] Total users in database: ${_users.length}');
+
+    // Firestore-da parolalar `sha256:<hex>` formatında saxlanır (bax:
+    // PasswordHasher). Köhnə qeydlərdə hələ də düz mətn ola bilər — hər iki
+    // format dəstəklənir, düz mətnlə uğurlu girişdə dərhal hash-ə köçürülür.
+    bool passwordMatches(AppUser u) {
+      if (cleanPass.isEmpty) return false;
+      if (PasswordHasher.verify(u.id, cleanPass, u.password)) return true;
+      return !PasswordHasher.isHash(u.password) && u.password == cleanPass;
+    }
 
     final user = _users.firstWhere(
       (u) =>
@@ -860,7 +916,7 @@ class AppState extends ChangeNotifier {
               u.idrakCode.toLowerCase() == cleanUsername ||
               (u.email ?? '').toLowerCase() == cleanUsername ||
               (u.finCode ?? '').toLowerCase() == cleanUsername) &&
-          u.password == cleanPass,
+          passwordMatches(u),
       orElse: () => AppUser(
         id: '',
         username: '',
@@ -883,6 +939,20 @@ class AppState extends ChangeNotifier {
 
     debugPrint('[AppState] ✓ Login successful - user: ${user.fullName}');
     _currentUser = user;
+
+    // Lazy migration: köhnə düz mətn parolayla giriş uğurlu olubsa, yaddaşda
+    // və Firestore-da hash-ə köçürülür.
+    if (!PasswordHasher.isHash(user.password)) {
+      final migrated = user.copyWith(
+        password: PasswordHasher.hash(user.id, cleanPass),
+      );
+      _currentUser = migrated;
+      final userIndex = _users.indexWhere((u) => u.id == user.id);
+      if (userIndex != -1) {
+        _users[userIndex] = migrated;
+      }
+      unawaited(_firestoreService.saveUser(migrated));
+    }
 
     // Səlahiyyət qapısı üçün rollar mütləq yüklənməlidir —
     // manual loginda auto-login yolu işləmir, buradan yükləyirik.
@@ -948,10 +1018,7 @@ class AppState extends ChangeNotifier {
 
       if (credentials == null) return false;
 
-      debugPrint('[AppState] Saved username: "${credentials['username']}"');
-      debugPrint(
-        '[AppState] Saved password length: ${credentials['password']?.length}',
-      );
+      debugPrint('[AppState] Stored credentials found, attempting login');
 
       final error = login(
         credentials['username']!,
@@ -2166,42 +2233,58 @@ class AppState extends ChangeNotifier {
 
   /// İstənilən istifadəçinin (işçi/müəllim/şagird/valideyn) məlumatlarını
   /// yeniləşdirir — admin və edit_users səlahiyyəti olanlar üçün.
-  void updateUserAccount(AppUser updated) {
+  /// Firestore yazması uğurlu oldursa true qaytarır.
+  Future<bool> updateUserAccount(AppUser updated) async {
     final index = _users.indexWhere((u) => u.id == updated.id);
-    if (index != -1) {
-      _users[index] = updated;
-      _firestoreService.saveUser(updated);
-      // Cari istifadəçinin öz məlumatı yenilənibsə panel də yenilənsin
-      if (_currentUser?.id == updated.id) {
-        _currentUser = updated;
-      }
-      notifyListeners();
+    if (index == -1) return false;
+    _users[index] = updated;
+    final saved = await _firestoreService.saveUser(updated);
+    // Cari istifadəçinin öz məlumatı yenilənibsə panel də yenilənsin
+    if (saved && _currentUser?.id == updated.id) {
+      _currentUser = updated;
     }
+    notifyListeners();
+    return saved;
   }
 
-  /// İstifadəçinin öz şifrəsini parametrlərdən (Settings) dəyişdirməsi üçün
-  Future<bool> changeCurrentUserPassword({
+  /// İstifadəçinin öz şifrəsini parametrlərdən (Settings) dəyişdirməsi üçün.
+  /// Uğurlu dəyişiklikdə null, xətada istifadəçiyə göstəriləcək mesaj qaytarır.
+  Future<String?> changeCurrentUserPassword({
     required String oldPassword,
     required String newPassword,
   }) async {
-    if (_currentUser == null) return false;
-    final currentPass = _currentUser!.password;
-    if (currentPass != oldPassword.trim()) {
-      return false; // Köhnə şifrə yanlışdır
+    if (_currentUser == null) return 'İstifadəçi tapılmadı.';
+    final old = oldPassword.trim();
+    final fresh = newPassword.trim();
+
+    // Minimum parola siyasəti
+    if (fresh.length < 6) {
+      return 'Yeni şifrə ən azı 6 simvol olmalıdır.';
     }
 
-    final updated = _currentUser!.copyWith(password: newPassword.trim());
-    updateUserAccount(updated);
+    final stored = _currentUser!.password;
+    // Həm yeni hash formatı, həm köhnə düz mətn qeydləri yoxlanılır
+    final oldOk = PasswordHasher.verify(_currentUser!.id, old, stored) ||
+        (!PasswordHasher.isHash(stored) && stored == old);
+    if (!oldOk) {
+      return 'Cari şifrəniz yanlışdır. Yenidən cəhd edin.';
+    }
+
+    final updated = _currentUser!.copyWith(password: fresh);
+    final saved = await updateUserAccount(updated);
+    if (!saved) {
+      return 'Şifrə saxlanmadı — internet bağlantısını yoxlayıb yenidən cəhd edin.';
+    }
 
     // Əgər cihazda biometrik / avto login yadda saxlanılıbsa AuthStorageService-də də yenilə
     try {
-      final saved = await _authStorage.getSavedCredentials();
-      if (saved != null && saved['username'] != null) {
-        await _authStorage.saveCredentials(saved['username']!, newPassword.trim());
+      final savedCreds = await _authStorage.getSavedCredentials();
+      if (savedCreds != null && savedCreds['username'] != null) {
+        await _authStorage.saveCredentials(savedCreds['username']!, fresh);
       }
     } catch (_) {}
 
-    return true;
+    return null;
   }
 
   /// Adminin istənilən istifadəçinin (müəllim, şagird, valideyn, işçi) şifrəsini sıfırlaması
@@ -2221,8 +2304,7 @@ class AppState extends ChangeNotifier {
     if (index == -1) return false;
 
     final updated = _users[index].copyWith(password: newPassword.trim());
-    updateUserAccount(updated);
-    return true;
+    return updateUserAccount(updated);
   }
 
   /// Şagird profilini (students kolleksiyası) yeniləşdirir
@@ -2259,7 +2341,10 @@ class AppState extends ChangeNotifier {
 
   // --- TIMETABLE (DƏRS CƏDVƏLİ) ---
   List<DayTimetable> get weeklyTimetable {
-    final cls = student.className.isNotEmpty ? student.className : '9B';
+    final cls = student.className.isNotEmpty
+        ? student.className
+        : (allDistinctClasses.isNotEmpty ? allDistinctClasses.first : '');
+    if (cls.isEmpty) return const [];
     return getClassTimetable(cls);
   }
 
@@ -2322,7 +2407,8 @@ class AppState extends ChangeNotifier {
     );
   }
 
-  void addGrade(GradeRecord grade, [String? studentId]) {
+  /// Cloud yazmasının nəticəsini qaytarır — true: Firestore-a yazıldı.
+  Future<bool> addGrade(GradeRecord grade, [String? studentId]) async {
     final targetStdId = studentId ?? grade.studentId ?? student.id;
     final stdIndex = _students.indexWhere((s) => s.id == targetStdId);
     final stdName = stdIndex != -1
@@ -2354,10 +2440,15 @@ class AppState extends ChangeNotifier {
     );
 
     _grades.insert(0, completeGrade);
-    _firestoreService.saveGrade(completeGrade, targetStdId, stdName);
+    final saved = await _firestoreService.saveGrade(
+      completeGrade,
+      targetStdId,
+      stdName,
+    );
 
     recalculateStudentGpa(targetStdId);
     notifyListeners();
+    return saved;
   }
 
   void deleteGrade(String gradeId, [String? studentId]) {
@@ -2597,9 +2688,10 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void addTicket(HelpdeskTicket ticket) {
+  /// Cloud yazmasının nəticəsini qaytarır — true: Firestore-a yazıldı.
+  Future<bool> addTicket(HelpdeskTicket ticket) async {
     _tickets.insert(0, ticket);
-    _firestoreService.saveTicket(ticket);
+    final saved = await _firestoreService.saveTicket(ticket);
     // Yalnız məsul şöbəyə bildiriş (valideyn/şagirdlərə YOX)
     final recipients = _ticketRecipients(
       ticket,
@@ -2617,6 +2709,7 @@ class AppState extends ChangeNotifier {
       );
     }
     notifyListeners();
+    return saved;
   }
 
   void addTicketMessage(String ticketId, TicketMessage message) {
@@ -2709,10 +2802,12 @@ class AppState extends ChangeNotifier {
     }).toList();
   }
 
-  void createAssignment(HomeworkAssignment assignment) {
+  /// Cloud yazmasının nəticəsini qaytarır — true: Firestore-a yazıldı.
+  Future<bool> createAssignment(HomeworkAssignment assignment) async {
     _assignments.insert(0, assignment);
-    _firestoreService.saveAssignment(assignment);
+    final saved = await _firestoreService.saveAssignment(assignment);
     notifyListeners();
+    return saved;
   }
 
   void submitHomework({
@@ -2904,6 +2999,9 @@ class AppState extends ChangeNotifier {
     bool allowTeachers = true,
     bool allowStudents = true,
     DateTime? scheduledTime,
+    bool hasVideo = false,
+    bool allowGuestLink = false,
+    int guestLimit = 10,
   }) async {
     final host = _currentUser;
     final hostId = host?.id ?? 'usr-tch-1';
@@ -2936,10 +3034,26 @@ class AppState extends ChangeNotifier {
       status: 'live',
       scheduledTime: scheduledTime,
       participants: [hostParticipant],
+      hasVideo: hasVideo,
+      allowGuestLink: allowGuestLink,
+      guestLimit: guestLimit,
     );
 
     _meetRooms.insert(0, room);
     await _firestoreService.saveMeetRoom(room);
+
+    // Register room on Render Agora Token Server for Web Guests
+    if (allowGuestLink) {
+      unawaited(AgoraTokenService.registerRoom(
+        roomId: roomId,
+        title: title,
+        hostName: hostName,
+        allowGuestLink: allowGuestLink,
+        guestLimit: guestLimit,
+        hasVideo: hasVideo,
+      ));
+    }
+
     notifyListeners();
     return room;
   }
@@ -2949,6 +3063,7 @@ class AppState extends ChangeNotifier {
     if (index != -1) {
       _meetRooms[index] = _meetRooms[index].copyWith(status: 'ended');
       await _firestoreService.setMeetRoomStatus(roomId, 'ended');
+      unawaited(AgoraTokenService.endRoom(roomId));
       notifyListeners();
     }
   }
@@ -2956,6 +3071,7 @@ class AppState extends ChangeNotifier {
   Future<void> deleteMeetRoom(String roomId) async {
     _meetRooms.removeWhere((r) => r.id == roomId);
     await _firestoreService.deleteMeetRoom(roomId);
+    unawaited(AgoraTokenService.endRoom(roomId));
     notifyListeners();
   }
 

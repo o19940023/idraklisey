@@ -40,7 +40,14 @@ class _SmartAttendanceScreenState extends State<SmartAttendanceScreen> with Sing
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appState = Provider.of<AppState>(context, listen: false);
-      final classes = widget.targetClasses ?? (widget.targetClass != null ? [widget.targetClass!] : (appState.currentTeacherClasses.isNotEmpty ? [appState.currentTeacherClasses.first] : ['9B']));
+      final classes = widget.targetClasses ??
+          (widget.targetClass != null
+              ? [widget.targetClass!]
+              : (appState.currentTeacherClasses.isNotEmpty
+                  ? [appState.currentTeacherClasses.first]
+                  : (appState.allDistinctClasses.isNotEmpty
+                      ? [appState.allDistinctClasses.first]
+                      : <String>[])));
       final sub = widget.targetSubject ?? (appState.currentUser?.subject ?? 'Dərs');
       final tim = widget.targetTime ?? '08:30 - 09:15';
       appState.startAttendanceForLesson(classNames: classes, subject: sub, time: tim);

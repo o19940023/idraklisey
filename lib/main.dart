@@ -10,6 +10,7 @@ import 'core/theme/app_theme.dart';
 import 'providers/app_state.dart';
 import 'services/app_update_service.dart';
 import 'services/push_notification_service.dart';
+import 'core/widgets/offline_banner.dart';
 import 'modules/auth/screens/video_splash_screen.dart';
 
 void main() async {
@@ -70,6 +71,10 @@ class IdrakLiseyiApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: appState.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      builder: (context, child) => OfflineBanner(
+        isOnline: appState.isOnline,
+        child: child ?? const SizedBox.shrink(),
+      ),
       home: const VideoSplashScreen(),
     );
   }

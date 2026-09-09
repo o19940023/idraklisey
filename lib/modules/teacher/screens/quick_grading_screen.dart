@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
+import '../../../core/utils/haptic_helper.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../providers/app_state.dart';
 import '../../../core/utils/navigation_utils.dart';
@@ -554,9 +555,10 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         elevation: 0,
                       ),
-                      onPressed: () {
+                      onPressed: () async {
                         final rawScoreText = _scoreController.text.trim().replaceAll(',', '.');
                         if (rawScoreText.isEmpty) {
+                          HapticHelper.error();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('${loc.score} - ${loc.required}'),
@@ -568,6 +570,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
 
                         final parsedScore = double.tryParse(rawScoreText);
                         if (parsedScore == null || parsedScore < 0) {
+                          HapticHelper.error();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(loc.error),
@@ -579,6 +582,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
 
                         if (isIbSystem) {
                           if (parsedScore < 1 || parsedScore > 7) {
+                            HapticHelper.error();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('IB MYP Band: 1 - 7'),
@@ -589,6 +593,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                           }
                         } else {
                           if (parsedScore > 100) {
+                            HapticHelper.error();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('${loc.score}: 0 - 100'),
@@ -618,16 +623,28 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                           teacherFeedback: _feedbackController.text.trim(),
                         );
 
-                        appState.addGrade(newGrade, activeStudent.id);
+                        final saved = await appState.addGrade(newGrade, activeStudent.id);
                         _scoreController.clear();
                         _feedbackController.clear();
 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${activeStudent.fullName} - ${loc.successfullySaved}'),
-                            backgroundColor: AppColors.success,
-                          ),
-                        );
+                        if (!context.mounted) return;
+                        if (saved) {
+                          HapticHelper.success();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${activeStudent.fullName} - ${loc.successfullySaved}'),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+                        } else {
+                          HapticHelper.error();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Məlumat yerli yadda saxlandı, buluda yazıla bilmədi.'),
+                              backgroundColor: AppColors.warning,
+                            ),
+                          );
+                        }
                       },
                       icon: const Icon(Icons.save_rounded, color: Colors.white, size: 18),
                       label: Text(

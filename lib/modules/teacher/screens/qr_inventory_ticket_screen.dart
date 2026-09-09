@@ -65,7 +65,7 @@ class _QrInventoryTicketScreenState extends State<QrInventoryTicketScreen> {
     }
   }
 
-  void _submitTicket(AppState appState) {
+  Future<void> _submitTicket(AppState appState) async {
     if (_problemTitleCtrl.text.trim().isEmpty || _problemDescCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Zəhmət olmasa problem başlığını və izahını qeyd edin!')),
@@ -99,7 +99,7 @@ class _QrInventoryTicketScreenState extends State<QrInventoryTicketScreen> {
       ],
     );
 
-    appState.addTicket(newTicket);
+    final saved = await appState.addTicket(newTicket);
 
     _problemTitleCtrl.clear();
     _problemDescCtrl.clear();
@@ -108,10 +108,15 @@ class _QrInventoryTicketScreenState extends State<QrInventoryTicketScreen> {
       _scannedItem = null;
     });
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Müraciət helpdesk/IT şöbəsinə göndərildi! Cavabı bildirimlər bölməsində alacaqsınız.'),
-        backgroundColor: AppColors.success,
+      SnackBar(
+        content: Text(
+          saved
+              ? 'Müraciət helpdesk/IT şöbəsinə göndərildi! Cavabı bildirimlər bölməsində alacaqsınız.'
+              : 'Müraciət yerli saxlandı, lakin şəbəkə səbəbilə buluda göndərilə bilmədi.',
+        ),
+        backgroundColor: saved ? AppColors.success : AppColors.warning,
       ),
     );
   }

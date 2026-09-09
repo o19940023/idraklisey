@@ -13,7 +13,7 @@ class ManageTimetableScreen extends StatefulWidget {
 }
 
 class _ManageTimetableScreenState extends State<ManageTimetableScreen> {
-  String _selectedClass = '9B';
+  String _selectedClass = '';
   int _selectedDayIndex = 0;
 
   final List<String> _daysList = [

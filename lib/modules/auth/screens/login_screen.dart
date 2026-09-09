@@ -69,8 +69,6 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
-    await Future.delayed(const Duration(milliseconds: 400));
-
     if (!mounted) return;
 
     final rootContext = Navigator.of(context, rootNavigator: true).context;

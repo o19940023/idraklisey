@@ -17,6 +17,7 @@ import '../data/models/inventory_model.dart';
 import '../data/models/role_model.dart';
 import '../data/models/class_details_model.dart';
 import '../data/models/user_preferences_model.dart';
+import '../core/utils/password_hasher.dart';
 
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();
@@ -31,12 +32,17 @@ class FirestoreService {
   }
 
   // --- USERS ---
-  Future<void> saveUser(AppUser user) async {
+  /// Parola heç vaxt düz mətn yazılmır: saxlanmazdan əvvəl hash-ə çevrilir.
+  /// UI-da kritik yazmaların nəticəsini bildirmək üçün `Future<bool>` qaytarır.
+  Future<bool> saveUser(AppUser user) async {
     try {
+      final storedPassword = PasswordHasher.isHash(user.password)
+          ? user.password
+          : PasswordHasher.hash(user.id, user.password);
       await db.collection('users').doc(user.id).set({
         'id': user.id,
         'username': user.username,
-        'password': user.password,
+        'password': storedPassword,
         'fullName': user.fullName,
         // 🆕 HR məlumatları
         'firstName': user.firstName,
@@ -81,8 +87,10 @@ class FirestoreService {
               }
             : null,
       });
+      return true;
     } catch (e) {
       debugPrint('Firestore saveUser error: $e');
+      return false;
     }
   }
 
@@ -160,15 +168,17 @@ class FirestoreService {
     }
   }
 
-  Future<void> updateUserStatus(String userId, bool isActive) async {
+  Future<bool> updateUserStatus(String userId, bool isActive) async {
     try {
       await db.collection('users').doc(userId).update({'isActive': isActive});
     } catch (e) {
       debugPrint('Firestore updateUserStatus error: $e');
+      return false;
     }
+    return true;
   }
 
-  Future<void> updateTeacherPermissions(
+  Future<bool> updateTeacherPermissions(
     String userId,
     TeacherPermissions perms,
   ) async {
@@ -182,10 +192,12 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Firestore updateTeacherPermissions error: $e');
+      return false;
     }
+    return true;
   }
 
-  Future<void> updateTeacherAssignedClasses(
+  Future<bool> updateTeacherAssignedClasses(
     String userId,
     List<String> classes,
   ) async {
@@ -195,11 +207,13 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Firestore updateTeacherAssignedClasses error: $e');
+      return false;
     }
+    return true;
   }
 
   // --- TIMETABLE PER CLASS ---
-  Future<void> saveClassTimetable(
+  Future<bool> saveClassTimetable(
     String className,
     List<DayTimetable> timetable,
   ) async {
@@ -244,7 +258,9 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Firestore saveClassTimetable error: $e');
+      return false;
     }
+    return true;
   }
 
   Future<Map<String, List<DayTimetable>>> fetchAllClassTimetables() async {
@@ -306,7 +322,7 @@ class FirestoreService {
   }
 
   // --- STUDENTS ---
-  Future<void> saveStudent(StudentProfile student) async {
+  Future<bool> saveStudent(StudentProfile student) async {
     try {
       await db.collection('students').doc(student.id).set({
         'id': student.id,
@@ -339,10 +355,12 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Firestore saveStudent error: $e');
+      return false;
     }
+    return true;
   }
 
-  Future<void> updateStudentClass(String studentId, String newClassName) async {
+  Future<bool> updateStudentClass(String studentId, String newClassName) async {
     try {
       await db.collection('students').doc(studentId).update({
         'className': newClassName,
@@ -352,10 +370,12 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Firestore updateStudentClass error: $e');
+      return false;
     }
+    return true;
   }
 
-  Future<void> updateStudentGPA(
+  Future<bool> updateStudentGPA(
     String studentId,
     double gpa,
     int attendanceRate,
@@ -367,7 +387,9 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Firestore updateStudentGPA error: $e');
+      return false;
     }
+    return true;
   }
 
   Future<List<StudentProfile>> fetchStudents() async {
@@ -416,7 +438,7 @@ class FirestoreService {
   }
 
   // --- MEDICAL CARDS (Per Student) ---
-  Future<void> saveMedicalCard(
+  Future<bool> saveMedicalCard(
     String studentId,
     StudentMedicalCard card,
   ) async {
@@ -463,7 +485,9 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Firestore saveMedicalCard error: $e');
+      return false;
     }
+    return true;
   }
 
   Future<StudentMedicalCard?> fetchMedicalCard(String studentId) async {
@@ -581,7 +605,7 @@ class FirestoreService {
   }
 
   // --- HOMEWORK ASSIGNMENTS ---
-  Future<void> saveAssignment(HomeworkAssignment assignment) async {
+  Future<bool> saveAssignment(HomeworkAssignment assignment) async {
     try {
       final submissionsData = <String, dynamic>{};
       assignment.submissions.forEach((k, v) {
@@ -603,7 +627,9 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Firestore saveAssignment error: $e');
+      return false;
     }
+    return true;
   }
 
   Future<List<HomeworkAssignment>> fetchAssignments() async {
@@ -650,21 +676,25 @@ class FirestoreService {
     }
   }
 
-  Future<void> deleteAssignment(String assignmentId) async {
+  Future<bool> deleteAssignment(String assignmentId) async {
     try {
       await db.collection('assignments').doc(assignmentId).delete();
     } catch (e) {
       debugPrint('Firestore deleteAssignment error: $e');
+      return false;
     }
+    return true;
   }
 
   // --- LIBRARY BOOKS ---
-  Future<void> saveBook(BookItem book) async {
+  Future<bool> saveBook(BookItem book) async {
     try {
       await db.collection('books').doc(book.id).set(bookToMap(book));
     } catch (e) {
       debugPrint('Firestore saveBook error: $e');
+      return false;
     }
+    return true;
   }
 
   Future<List<BookItem>> fetchBooks() async {
@@ -777,7 +807,7 @@ class FirestoreService {
     };
   }
 
-  Future<void> saveWeeklyMenu(List<DailyMenu> menu) async {
+  Future<bool> saveWeeklyMenu(List<DailyMenu> menu) async {
     try {
       final batch = db.batch();
       for (final day in menu) {
@@ -787,7 +817,9 @@ class FirestoreService {
       await batch.commit();
     } catch (e) {
       debugPrint('Firestore saveWeeklyMenu error: $e');
+      return false;
     }
+    return true;
   }
 
   /// Toplu menyu yükləmə. Köhnə formatlı (gün adı ID-li) sənədləri təmizləyir,
@@ -859,7 +891,7 @@ class FirestoreService {
   }
 
   // --- GRADES ---
-  Future<void> saveGrade(
+  Future<bool> saveGrade(
     GradeRecord grade,
     String studentId,
     String? studentName,
@@ -880,7 +912,9 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Firestore saveGrade error: $e');
+      return false;
     }
+    return true;
   }
 
   Future<List<GradeRecord>> fetchGrades(String? studentId) async {
@@ -915,16 +949,18 @@ class FirestoreService {
     }
   }
 
-  Future<void> deleteGrade(String gradeId) async {
+  Future<bool> deleteGrade(String gradeId) async {
     try {
       await db.collection('grades').doc(gradeId).delete();
     } catch (e) {
       debugPrint('Firestore deleteGrade error: $e');
+      return false;
     }
+    return true;
   }
 
   // --- ATTENDANCE ---
-  Future<void> saveStudentDayAttendance(
+  Future<bool> saveStudentDayAttendance(
     String studentId,
     int dayOfMonth,
     DayAttendance attendance,
@@ -949,7 +985,9 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Firestore saveStudentDayAttendance error: $e');
+      return false;
     }
+    return true;
   }
 
   Future<Map<int, DayAttendance>> fetchAttendance(String studentId) async {
@@ -1039,7 +1077,7 @@ class FirestoreService {
   }
 
   // --- QR INVENTORY ITEMS ---
-  Future<void> saveInventoryItem(InventoryItem item) async {
+  Future<bool> saveInventoryItem(InventoryItem item) async {
     try {
       await db.collection('inventory_items').doc(item.id).set({
         'id': item.id,
@@ -1054,7 +1092,9 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Firestore saveInventoryItem error: $e');
+      return false;
     }
+    return true;
   }
 
   Future<List<InventoryItem>> fetchInventoryItems() async {
@@ -1081,27 +1121,31 @@ class FirestoreService {
     }
   }
 
-  Future<void> deleteInventoryItem(String id) async {
+  Future<bool> deleteInventoryItem(String id) async {
     try {
       await db.collection('inventory_items').doc(id).delete();
     } catch (e) {
       debugPrint('Firestore deleteInventoryItem error: $e');
+      return false;
     }
+    return true;
   }
 
   // --- TICKETS ---
   /// Biletin statusunu yeniləyir (helpdesk / admin)
-  Future<void> updateTicketStatus(String ticketId, TicketStatus status) async {
+  Future<bool> updateTicketStatus(String ticketId, TicketStatus status) async {
     try {
       await db.collection('tickets').doc(ticketId).update({
         'status': status.name,
       });
     } catch (e) {
       debugPrint('Firestore updateTicketStatus error: $e');
+      return false;
     }
+    return true;
   }
 
-  Future<void> saveTicket(HelpdeskTicket ticket) async {
+  Future<bool> saveTicket(HelpdeskTicket ticket) async {
     try {
       await db.collection('tickets').doc(ticket.id).set({
         'id': ticket.id,
@@ -1130,7 +1174,9 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Firestore saveTicket error: $e');
+      return false;
     }
+    return true;
   }
 
   Future<List<HelpdeskTicket>> fetchTickets() async {
@@ -1185,12 +1231,14 @@ class FirestoreService {
   }
 
   // --- MEET IDRAK ROOMS ---
-  Future<void> saveMeetRoom(MeetRoom room) async {
+  Future<bool> saveMeetRoom(MeetRoom room) async {
     try {
       await db.collection('meet_rooms').doc(room.id).set(room.toJson());
     } catch (e) {
       debugPrint('Firestore saveMeetRoom error: $e');
+      return false;
     }
+    return true;
   }
 
   Future<List<MeetRoom>> fetchMeetRooms() async {
@@ -1343,7 +1391,7 @@ class FirestoreService {
   }
 
   // --- NOTIFICATIONS ---
-  Future<void> saveNotification(AppNotification notification) async {
+  Future<bool> saveNotification(AppNotification notification) async {
     try {
       await db
           .collection('notifications')
@@ -1351,7 +1399,9 @@ class FirestoreService {
           .set(notification.toJson());
     } catch (e) {
       debugPrint('Firestore saveNotification error: $e');
+      return false;
     }
+    return true;
   }
 
   Future<List<AppNotification>> fetchNotifications() async {
@@ -1380,7 +1430,7 @@ class FirestoreService {
         );
   }
 
-  Future<void> markNotificationRead(
+  Future<bool> markNotificationRead(
     String notificationId,
     String userId,
   ) async {
@@ -1390,24 +1440,30 @@ class FirestoreService {
       });
     } catch (e) {
       debugPrint('Firestore markNotificationRead error: $e');
+      return false;
     }
+    return true;
   }
 
-  Future<void> deleteNotification(String notificationId) async {
+  Future<bool> deleteNotification(String notificationId) async {
     try {
       await db.collection('notifications').doc(notificationId).delete();
     } catch (e) {
       debugPrint('Firestore deleteNotification error: $e');
+      return false;
     }
+    return true;
   }
 
   // --- CLASS DETAILS (sinif detalları: otaq, rəhbər, il, qeyd) ---
-  Future<void> saveClassDetails(ClassDetails details) async {
+  Future<bool> saveClassDetails(ClassDetails details) async {
     try {
       await db.collection('classes').doc(details.name).set(details.toJson());
     } catch (e) {
       debugPrint('Firestore saveClassDetails error: $e');
+      return false;
     }
+    return true;
   }
 
   Future<Map<String, ClassDetails>> fetchClassDetails() async {
@@ -1425,22 +1481,26 @@ class FirestoreService {
     }
   }
 
-  Future<void> deleteClassDetails(String name) async {
+  Future<bool> deleteClassDetails(String name) async {
     try {
       await db.collection('classes').doc(name).delete();
     } catch (e) {
       debugPrint('Firestore deleteClassDetails error: $e');
+      return false;
     }
+    return true;
   }
 
   // --- ROLES & PERMISSIONS ---
   /// Rol kaydetme
-  Future<void> saveRole(Role role) async {
+  Future<bool> saveRole(Role role) async {
     try {
       await db.collection('roles').doc(role.id).set(role.toJson());
     } catch (e) {
       debugPrint('Firestore saveRole error: $e');
+      return false;
     }
+    return true;
   }
 
   /// Tüm rolleri getir
@@ -1496,21 +1556,25 @@ class FirestoreService {
   }
 
   /// Rol güncelleme
-  Future<void> updateRole(Role role) async {
+  Future<bool> updateRole(Role role) async {
     try {
       await db.collection('roles').doc(role.id).update(role.toJson());
     } catch (e) {
       debugPrint('Firestore updateRole error: $e');
+      return false;
     }
+    return true;
   }
 
   /// Rol silme
-  Future<void> deleteRole(String roleId) async {
+  Future<bool> deleteRole(String roleId) async {
     try {
       await db.collection('roles').doc(roleId).delete();
     } catch (e) {
       debugPrint('Firestore deleteRole error: $e');
+      return false;
     }
+    return true;
   }
 
   /// Kullanıcıya rol atama (yeni sistem)

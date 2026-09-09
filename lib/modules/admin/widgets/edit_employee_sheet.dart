@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/fin_code_formatter.dart';
+import '../../../core/utils/password_hasher.dart';
 import '../../../data/models/user_model.dart';
 import '../../../providers/app_state.dart';
 
@@ -327,7 +328,7 @@ class _EditEmployeeFormState extends State<_EditEmployeeForm> {
                     _label('Müqavilə Bitmə'),
                     _dateField(_contractEnd, dateFormat, () => _pick(_contractEnd, (d) => _contractEnd = d)),
                     _label('Şifrə *'),
-                    _field(_pass, 'Şifrə', validator: (v) => (v ?? '').trim().length < 4 ? 'Ən azı 4 simvol' : null),
+                    _field(_pass, 'Şifrə', validator: (v) => PasswordHasher.validate(v, minLength: 6)),
                     const SizedBox(height: 16),
                     SizedBox(
                       height: 50,

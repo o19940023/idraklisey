@@ -511,7 +511,7 @@ class _TeacherTimetableViewScreenState extends State<TeacherTimetableViewScreen>
     final isFuture = selectedDate.isAfter(today);
 
     // Dərsin sinfini tap
-    String targetClass = '9B';
+    String targetClass = appState.allDistinctClasses.isNotEmpty ? appState.allDistinctClasses.first : '';
     for (final cls in appState.allDistinctClasses) {
       final timetable = appState.getClassTimetable(cls);
       for (final day in timetable) {

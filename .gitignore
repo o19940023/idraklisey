@@ -48,6 +48,8 @@ infra/push-relay/.wrangler/
 workers/agora-token/node_modules/
 workers/agora-token/.worker-bundle/
 workers/agora-token/.worker-min/
+agora-token-server/node_modules/
+agora-token-server/
 
 # Kotlin cache
 **/android/.kotlin/

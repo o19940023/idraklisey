@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
+import '../../../core/utils/haptic_helper.dart';
+import '../../../core/widgets/empty_state_widget.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../providers/app_state.dart';
 import '../../../data/models/ticket_model.dart';
@@ -43,15 +45,12 @@ class _ParentTicketsScreenState extends State<ParentTicketsScreen> {
         label: const Text('Yeni Müraciət', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: parentTickets.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.inbox_outlined, size: 56, color: AppColors.textMuted),
-                  const SizedBox(height: 12),
-                  Text('Hələ ki, heç bir müraciətiniz yoxdur.', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-                ],
-              ),
+          ? EmptyStateWidget(
+              icon: Icons.inbox_outlined,
+              title: 'Müraciət Tapılmadı',
+              message: 'Hələ ki, heç bir elektron müraciətiniz qeydə alınmayıb.',
+              actionLabel: 'Yeni Müraciət Yarat',
+              onAction: () => _showCreateTicketDialog(context),
             )
           : ListView.builder(
               physics: const BouncingScrollPhysics(),
@@ -537,7 +536,7 @@ class _ParentTicketsScreenState extends State<ParentTicketsScreen> {
                         backgroundColor: AppColors.primaryAccent,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      onPressed: () {
+                      onPressed: () async {
                         if (titleCtrl.text.isNotEmpty && descCtrl.text.isNotEmpty) {
                           final senderRoleLabel = switch (appState.currentRole) {
                             UserRole.teacher => 'Müəllim',
@@ -564,11 +563,21 @@ class _ParentTicketsScreenState extends State<ParentTicketsScreen> {
                               ),
                             ],
                           );
-                          Provider.of<AppState>(context, listen: false).addTicket(newTicket);
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Müraciətiniz uğurla göndərildi!'), backgroundColor: AppColors.success),
-                          );
+                          final saved = await Provider.of<AppState>(context, listen: false).addTicket(newTicket);
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            if (saved) {
+                              HapticHelper.success();
+                            } else {
+                              HapticHelper.error();
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(saved ? 'Müraciətiniz uğurla göndərildi!' : 'Müraciət yerli yadda saxlandı, buluda göndərilə bilmədi.'),
+                                backgroundColor: saved ? AppColors.success : AppColors.warning,
+                              ),
+                            );
+                          }
                         }
                       },
                       child: const Text('Müraciəti Göndər', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),

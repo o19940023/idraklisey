@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/fin_code_formatter.dart';
+import '../../../core/utils/password_hasher.dart';
 import '../../../data/models/student_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../providers/app_state.dart';
@@ -303,7 +304,7 @@ class _EditStudentFormState extends State<_EditStudentForm> {
                     _label('Alergiyalar (vergüllə)'),
                     _field(_allergies, 'Fıstıq, toz'),
                     _label('Şagird şifrəsi'),
-                    _field(_studentPass, 'Şifrə', validator: (v) => (v ?? '').trim().length < 4 ? 'Ən azı 4 simvol' : null),
+                    _field(_studentPass, 'Şifrə', validator: (v) => PasswordHasher.validate(v, minLength: 6)),
                     const SizedBox(height: 14),
                     _sectionTitle('Valideyn', AppColors.goldDark),
                     _label('Ad Soyad *'),
@@ -333,7 +334,7 @@ class _EditStudentFormState extends State<_EditStudentForm> {
                     _label('Ünvan'),
                     _field(_parentAddress, 'Ünvan'),
                     _label('Valideyn şifrəsi'),
-                    _field(_parentPass, 'Şifrə', validator: (v) => (v ?? '').trim().length < 4 ? 'Ən azı 4 simvol' : null),
+                    _field(_parentPass, 'Şifrə', validator: (v) => PasswordHasher.validate(v, minLength: 6)),
                     const SizedBox(height: 16),
                     SizedBox(
                       height: 50,

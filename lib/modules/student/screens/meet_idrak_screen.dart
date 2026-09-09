@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import 'dart:async';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
@@ -44,7 +43,8 @@ class _MeetIdrakScreenState extends State<MeetIdrakScreen> {
   /// Check if Firestore is online or serving from cache
   Future<void> _checkConnectivity() async {
     try {
-      final snapshot = await FirebaseFirestore.instance
+      // Sorgunun kendisi bağlantı testidir; sonuç verisi kullanılmıyor
+      await FirebaseFirestore.instance
           .collection('meet_rooms')
           .limit(1)
           .get(const GetOptions(source: Source.server));
@@ -68,7 +68,6 @@ class _MeetIdrakScreenState extends State<MeetIdrakScreen> {
     final isTeacherOrAdmin =
         user?.role == UserRole.teacher || user?.role == UserRole.admin;
     final rooms = appState.getMeetRoomsForCurrentUser();
-    final timeFormat = DateFormat('HH:mm');
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -330,7 +329,7 @@ class _MeetIdrakScreenState extends State<MeetIdrakScreen> {
             else
               ...rooms.map(
                 (room) =>
-                    _buildRoomCard(context, room, timeFormat, isTeacherOrAdmin),
+                    _buildRoomCard(context, room, isTeacherOrAdmin),
               ),
           ],
         ),
@@ -360,7 +359,6 @@ class _MeetIdrakScreenState extends State<MeetIdrakScreen> {
   Widget _buildRoomCard(
     BuildContext context,
     MeetRoom room,
-    DateFormat timeFormat,
     bool isTeacherOrAdmin,
   ) {
     final loc = AppLocalizations.of(context);

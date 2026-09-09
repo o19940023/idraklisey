@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/utils/email_generator.dart';
 import '../../../core/utils/fin_code_formatter.dart';
+import '../../../core/utils/password_hasher.dart';
 import '../../../core/widgets/profile_photo_picker.dart';
 import '../../../data/models/user_model.dart';
 import '../../../providers/app_state.dart';
@@ -554,10 +555,10 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
                     _buildText(
                       _passCtrl,
                       'Şifrə *',
-                      'Ən azı 4 simvol',
+                      'Ən azı 6 simvol',
                       icon: Icons.lock_outline_rounded,
                       obscure: true,
-                      validator: (v) => (v ?? '').trim().length < 4 ? 'Şifrə ən azı 4 simvol olmalıdır' : null,
+                      validator: (v) => PasswordHasher.validate(v, minLength: 6),
                     ),
                   ],
                 ),

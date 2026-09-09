@@ -90,6 +90,9 @@ class MeetRoom {
   final DateTime? scheduledTime;
   final List<MeetParticipant> participants;
   final List<String> materials; // PDF links or slide notes
+  final bool hasVideo; // Görüntülü oda (Discord tipli kamera grid) yoxsa yalnız səs
+  final bool allowGuestLink; // Veb brauzer vasitəsilə qonaq qoşulması
+  final int guestLimit; // Maksimum qonaq sayı (0 = limitsiz)
 
   MeetRoom({
     required this.id,
@@ -106,6 +109,9 @@ class MeetRoom {
     this.scheduledTime,
     this.participants = const [],
     this.materials = const [],
+    this.hasVideo = false,
+    this.allowGuestLink = false,
+    this.guestLimit = 10,
   }) : createdAt = createdAt ?? DateTime.now();
 
   bool get isLive => status == 'live' || status == 'Canlı Dərs Gedir';
@@ -125,6 +131,9 @@ class MeetRoom {
     DateTime? scheduledTime,
     List<MeetParticipant>? participants,
     List<String>? materials,
+    bool? hasVideo,
+    bool? allowGuestLink,
+    int? guestLimit,
   }) {
     return MeetRoom(
       id: id ?? this.id,
@@ -141,6 +150,9 @@ class MeetRoom {
       scheduledTime: scheduledTime ?? this.scheduledTime,
       participants: participants ?? this.participants,
       materials: materials ?? this.materials,
+      hasVideo: hasVideo ?? this.hasVideo,
+      allowGuestLink: allowGuestLink ?? this.allowGuestLink,
+      guestLimit: guestLimit ?? this.guestLimit,
     );
   }
 
@@ -159,6 +171,9 @@ class MeetRoom {
     'scheduledTime': scheduledTime?.toIso8601String(),
     'participants': participants.map((p) => p.toJson()).toList(),
     'materials': materials,
+    'hasVideo': hasVideo,
+    'allowGuestLink': allowGuestLink,
+    'guestLimit': guestLimit,
   };
 
   factory MeetRoom.fromJson(Map<String, dynamic> json) {
@@ -193,6 +208,11 @@ class MeetRoom {
               ?.map((e) => e.toString())
               .toList() ??
           [],
+      hasVideo: json['hasVideo'] ?? false,
+      allowGuestLink: json['allowGuestLink'] ?? false,
+      guestLimit: json['guestLimit'] is int
+          ? json['guestLimit']
+          : (json['guestLimit'] != null ? int.tryParse(json['guestLimit'].toString()) ?? 10 : 10),
     );
   }
 }

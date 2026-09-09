@@ -29,11 +29,11 @@ class AppColors {
   static const Color info = Color(0xFF3B82F6);
   static const Color infoLight = Color(0xFFDBEAFE);
 
-  // Dark palette
-  static const Color darkBackground = Color(0xFF0E0F19);
-  static const Color darkSurface = Color(0xFF161827);
-  static const Color darkCard = Color(0xFF1F2238);
-  static const Color darkBorder = Color(0xFF2D3150);
+  // Dark palette (OLED Pure Black #000000 & WCAG AA Compliance)
+  static const Color darkBackground = Color(0xFF000000); // Pure OLED Black
+  static const Color darkSurface = Color(0xFF0F1118); // Elevated OLED Surface
+  static const Color darkCard = Color(0xFF161924); // Card Container
+  static const Color darkBorder = Color(0xFF262B3D); // High Contrast Border
 
   // Light palette
   static const Color _lightBackground = Color(0xFFF7F7FB);
@@ -43,9 +43,10 @@ class AppColors {
   static const Color _lightTextSecondary = Color(0xFF6B6E8A);
   static const Color _lightTextMuted = Color(0xFF9EA2BD);
 
-  static const Color _darkTextPrimary = Color(0xFFF0F1F8);
-  static const Color _darkTextSecondary = Color(0xFF9EA2BD);
-  static const Color _darkTextMuted = Color(0xFF6B6E8A);
+  // WCAG AA compliant text contrast (>4.5:1 ratio on OLED Black & Surfaces)
+  static const Color _darkTextPrimary = Color(0xFFFAFBFD); // 19.8:1 contrast
+  static const Color _darkTextSecondary = Color(0xFFB4B9D2); // 9.2:1 contrast (WCAG AA+)
+  static const Color _darkTextMuted = Color(0xFF888EA8); // 5.5:1 contrast (WCAG AA)
 
   static Color background = _lightBackground;
   static Color surface = _lightSurface;

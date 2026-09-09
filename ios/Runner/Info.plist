@@ -35,7 +35,6 @@
 	<array>
 		<string>remote-notification</string>
 		<string>audio</string>
-		<string>voip</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -44,9 +43,9 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Şagird vəsiqəsi və QR kodların oxunması, profil şəkli və ev tapşırıqlarının təhvili üçün kamera icazəsi lazımdır.</string>
+	<string>Canlı video dərslər və görüşmələr, şagird vəsiqəsi və QR kodların oxunması, profil şəkli və ev tapşırıqlarının təhvili üçün kamera icazəsi lazımdır.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Canlı dərslər və səsli pedaqoji rəy daxil etmək üçün mikrofon icazəsi lazımdır.</string>
+	<string>Canlı dərslər, səsli görüşmələr və pedaqoji rəy daxil etmək üçün mikrofon icazəsi lazımdır.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Səsli rəyləri avtomatik mətnə çevirmək üçün nitqin tanınması icazəsi tələb olunur.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -54,6 +53,8 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Ev tapşırıqları və profil şəkli yükləmək üçün foto qalereya icazəsi lazımdır.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Turniket və rəqəmsal vəsiqə Bluetooth/NFC bağlantısı üçün icazə tələb olunur.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>Turniket və rəqəmsal vəsiqə Bluetooth/NFC bağlantısı üçün icazə tələb olunur.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Face ID və ya Touch ID ilə tətbiqə daha təhlükəsiz və sürətli giriş etmək üçün istifadə olunur.</string>

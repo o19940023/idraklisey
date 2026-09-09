@@ -473,14 +473,14 @@ class AppTheme {
         space: AppSpacing.lg,
       ),
       textTheme: baseTextTheme.copyWith(
-        displayLarge: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Color(0xFFF1F5F9)),
-        displayMedium: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFFF1F5F9)),
-        titleLarge: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFFF1F5F9)),
-        titleMedium: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFFF1F5F9)),
-        titleSmall: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFF1F5F9)),
-        bodyLarge: const TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: Color(0xFFF1F5F9)),
-        bodyMedium: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: Color(0xFF94A3B8)),
-        labelLarge: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFF1F5F9)),
+        displayLarge: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Color(0xFFFAFBFD)),
+        displayMedium: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFFFAFBFD)),
+        titleLarge: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFFFAFBFD)),
+        titleMedium: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFFFAFBFD)),
+        titleSmall: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFFAFBFD)),
+        bodyLarge: const TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: Color(0xFFFAFBFD)),
+        bodyMedium: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: Color(0xFFB4B9D2)),
+        labelLarge: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFFFAFBFD)),
       ),
     );
   }

@@ -32,7 +32,10 @@ class _SendNotificationDialogState extends State<SendNotificationDialog> {
   String _priority = 'normal'; // 'normal', 'important', 'urgent'
   bool _isSending = false;
 
-  final List<String> _allClasses = ['9A', '9B', '10A', '10B', '11A', '11B', '8A', '8B', '7A', '7B', '6A', '6B', '5A', '5B'];
+  List<String> get _allClasses {
+    final appState = Provider.of<AppState>(context, listen: false);
+    return appState.allDistinctClasses;
+  }
 
   final List<String> _quickTemplates = [
     'Dərsə gecikmə və davamiyyət xəbərdarlığı',

@@ -148,7 +148,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
     });
   }
 
-  void _submitAssignment(AppState appState, AppLocalizations loc) {
+  Future<void> _submitAssignment(AppState appState, AppLocalizations loc) async {
     final title = _titleCtrl.text.trim();
     final subject = _subjectCtrl.text.trim();
     final instructions = _instructionsCtrl.text.trim();
@@ -212,24 +212,30 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
       assignedStudentIds: _targetType == 1 ? _selectedStudentIds.toList() : [],
     );
 
-    appState.createAssignment(newAssignment);
+    final saved = await appState.createAssignment(newAssignment);
+    if (!mounted) return;
     Navigator.pop(context);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.white),
+            Icon(
+              saved ? Icons.check_circle_rounded : Icons.cloud_off_rounded,
+              color: Colors.white,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                loc.sentSuccessfully,
+                saved
+                    ? loc.sentSuccessfully
+                    : 'Tapşırıq yadda saxlanmadı — internet bağlantısını yoxlayıb yenidən cəhd edin.',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ],
         ),
-        backgroundColor: AppColors.success,
+        backgroundColor: saved ? AppColors.success : AppColors.danger,
         behavior: SnackBarBehavior.floating,
       ),
     );

@@ -145,7 +145,8 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
   }
 
   String _getSubtitle(ModuleItem module, AppLocalizations loc) {
-    if (widget.dynamicData != null && widget.dynamicData!.containsKey(module.id)) {
+    if (widget.dynamicData != null &&
+        widget.dynamicData!.containsKey(module.id)) {
       return widget.dynamicData![module.id].toString();
     }
     return module.getLocalizedSubtitle(loc);
@@ -153,36 +154,39 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
+    final loc = AppLocalizations.of(context);
     if (widget.isReorderMode) {
-      // Siyahı Şəklində Sıralama Rejimi
-      return ReorderableListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: _modules.length,
-        onReorder: _onReorderList,
-        proxyDecorator: (child, index, animation) {
-          return AnimatedBuilder(
-            animation: animation,
-            builder: (context, child) {
-              final scale = 1.0 + (animation.value * 0.04);
-              return Transform.scale(
-                scale: scale,
-                child: Material(
-                  elevation: 12,
-                  shadowColor: Colors.black38,
-                  borderRadius: BorderRadius.circular(20),
-                  child: child,
-                ),
-              );
-            },
-            child: child,
-          );
-        },
-        itemBuilder: (context, index) {
-          final module = _modules[index];
-          return _buildReorderListTile(module, index, loc);
-        },
+      // Siyahı Şəklində Sıralama Rejimi - Material wrap needed
+      return Material(
+        color: Colors.transparent,
+        child: ReorderableListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _modules.length,
+          onReorder: _onReorderList,
+          proxyDecorator: (child, index, animation) {
+            return AnimatedBuilder(
+              animation: animation,
+              builder: (context, child) {
+                final scale = 1.0 + (animation.value * 0.04);
+                return Transform.scale(
+                  scale: scale,
+                  child: Material(
+                    elevation: 12,
+                    shadowColor: Colors.black38,
+                    borderRadius: BorderRadius.circular(20),
+                    child: child,
+                  ),
+                );
+              },
+              child: child,
+            );
+          },
+          itemBuilder: (context, index) {
+            final module = _modules[index];
+            return _buildReorderListTile(module, index, loc);
+          },
+        ),
       );
     }
 
@@ -211,7 +215,12 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
     );
   }
 
-  Widget _buildDraggableGridItem(ModuleItem module, double width, double height, AppLocalizations loc) {
+  Widget _buildDraggableGridItem(
+    ModuleItem module,
+    double width,
+    double height,
+    AppLocalizations loc,
+  ) {
     final isHovered = _hoveredTargetId == module.id;
     final isDraggingSelf = _currentlyDraggingId == module.id;
 
@@ -302,13 +311,19 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  _getColorFromHex(module.accentColor).withAlpha(40),
-                                  _getColorFromHex(module.accentColor).withAlpha(15),
+                                  _getColorFromHex(
+                                    module.accentColor,
+                                  ).withAlpha(40),
+                                  _getColorFromHex(
+                                    module.accentColor,
+                                  ).withAlpha(15),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
-                                color: _getColorFromHex(module.accentColor).withAlpha(80),
+                                color: _getColorFromHex(
+                                  module.accentColor,
+                                ).withAlpha(80),
                               ),
                             ),
                             child: Icon(
@@ -388,7 +403,12 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
     );
   }
 
-  Widget _buildModuleTile(ModuleItem module, bool isHovered, bool isDraggingSelf, AppLocalizations loc) {
+  Widget _buildModuleTile(
+    ModuleItem module,
+    bool isHovered,
+    bool isDraggingSelf,
+    AppLocalizations loc,
+  ) {
     final iconData = _getIconFromString(module.icon);
     final accentColor = _getColorFromHex(module.accentColor);
     final subtitleText = _getSubtitle(module, loc);
@@ -396,14 +416,10 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       decoration: BoxDecoration(
-        color: isHovered
-            ? accentColor.withAlpha(15)
-            : AppColors.surface,
+        color: isHovered ? accentColor.withAlpha(15) : AppColors.surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: isHovered
-              ? accentColor
-              : AppColors.cardBorder.withAlpha(70),
+          color: isHovered ? accentColor : AppColors.cardBorder.withAlpha(70),
           width: isHovered ? 2.0 : 1.2,
         ),
         boxShadow: isHovered
@@ -429,9 +445,12 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
             HapticFeedback.mediumImpact();
           },
           borderRadius: BorderRadius.circular(22),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
+          child: Semantics(
+            label: '${module.getLocalizedTitle(loc)}, $subtitleText',
+            button: true,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -512,10 +531,15 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildReorderListTile(ModuleItem module, int index, AppLocalizations loc) {
+  Widget _buildReorderListTile(
+    ModuleItem module,
+    int index,
+    AppLocalizations loc,
+  ) {
     final iconData = _getIconFromString(module.icon);
     final accentColor = _getColorFromHex(module.accentColor);
     final subtitleText = _getSubtitle(module, loc);

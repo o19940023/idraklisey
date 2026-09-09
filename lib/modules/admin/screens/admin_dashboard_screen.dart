@@ -51,7 +51,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         headerTitle = assignedRole.name;
         headerBadge = assignedRole.name.toUpperCase();
       } else {
-        headerTitle = currentUser?.position ?? (loc?.adminDashboard ?? 'Baş İnzibatçı Paneli');
+        headerTitle =
+            currentUser?.position ??
+            (loc?.adminDashboard ?? 'Baş İnzibatçı Paneli');
         headerBadge = (loc?.admin ?? 'İnzibatçı').toUpperCase();
       }
     } else {
@@ -61,7 +63,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         headerBadge = assignedRole.name.toUpperCase();
       } else {
         headerTitle =
-            currentUser?.position ?? currentUser?.role.displayName ?? (loc?.dashboard ?? 'Panel');
+            currentUser?.position ??
+            currentUser?.role.displayName ??
+            (loc?.dashboard ?? 'Panel');
         headerBadge =
             currentUser?.position?.toUpperCase() ??
             currentUser?.role.displayName.toUpperCase() ??
@@ -196,15 +200,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ],
                 ),
                 onPressed: () {
-                  Navigator.pushNamed(context, '/notifications');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen(),
+                    ),
+                  );
                 },
               ),
               // Settings Button
               IconButton(
-                icon: const Icon(
-                  Icons.settings_outlined,
-                  color: Colors.white,
-                ),
+                icon: const Icon(Icons.settings_outlined, color: Colors.white),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -384,7 +390,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        loc?.createEmployee ?? 'Yeni İşçi Hesabı Yarat',
+                                        loc?.createEmployee ??
+                                            'Yeni İşçi Hesabı Yarat',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 15,
@@ -484,7 +491,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              loc?.details ?? 'İcazələr, cədvəl və məktəb idarəetməsi',
+                              loc?.details ??
+                                  'İcazələr, cədvəl və məktəb idarəetməsi',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,

@@ -335,8 +335,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 16),
                   Divider(color: AppColors.cardBorder, height: 1),
                   const SizedBox(height: 16),
-                  _buildInfoRow(loc.version, _packageInfo?.version ?? '1.4.9'),
-                  _buildInfoRow(loc.build, _packageInfo?.buildNumber ?? '41'),
+                  _buildInfoRow(loc.version, _packageInfo?.version ?? '1.5.0'),
+                  _buildInfoRow(loc.build, _packageInfo?.buildNumber ?? '42'),
                   _buildInfoRow(
                     loc.packageName,
                     _packageInfo?.packageName ?? 'az.idrak.liseyi',

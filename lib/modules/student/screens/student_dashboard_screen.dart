@@ -16,6 +16,7 @@ import '../../parent/screens/timetable_matrix_screen.dart';
 import '../../parent/screens/grades_analytics_screen.dart';
 import '../../admin/widgets/reorderable_module_grid.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../shared/screens/notifications_screen.dart';
 
 class StudentDashboardScreen extends StatelessWidget {
   const StudentDashboardScreen({super.key});
@@ -81,7 +82,12 @@ class StudentDashboardScreen extends StatelessWidget {
                     ],
                   ),
                   onPressed: () {
-                    Navigator.pushNamed(context, '/notifications');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen(),
+                      ),
+                    );
                   },
                 ),
                 // Settings

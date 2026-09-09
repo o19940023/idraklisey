@@ -89,7 +89,9 @@ class _TimetableMatrixScreenState extends State<TimetableMatrixScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final currentStudent = appState.student;
-    final className = currentStudent.className.isNotEmpty ? currentStudent.className : '9B';
+    final className = currentStudent.className.isNotEmpty
+        ? currentStudent.className
+        : (appState.allDistinctClasses.isNotEmpty ? appState.allDistinctClasses.first : '');
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);

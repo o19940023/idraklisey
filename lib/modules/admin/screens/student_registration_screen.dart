@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/utils/email_generator.dart';
 import '../../../core/utils/fin_code_formatter.dart';
+import '../../../core/utils/password_hasher.dart';
 import '../../../core/widgets/profile_photo_picker.dart';
 import '../../../data/models/user_model.dart';
 import '../../../providers/app_state.dart';
@@ -540,10 +541,10 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                       _buildText(
                         _studentPassCtrl,
                         'Şagird Şifrəsi *',
-                        'Ən azı 4 simvol',
+                        'Ən azı 6 simvol',
                         icon: Icons.lock_outline_rounded,
                         obscure: true,
-                        validator: (v) => (v ?? '').trim().length < 4 ? 'Ən azı 4 simvol' : null,
+                        validator: (v) => PasswordHasher.validate(v, minLength: 6),
                       ),
                     ] else ...[
                       _buildText(_parentNameCtrl, 'Ad Soyad *', 'Vəli Quliyev', icon: Icons.person_rounded, validator: (v) => (v ?? '').trim().isEmpty ? 'Valideyn adı tələb olunur' : null),
@@ -638,10 +639,10 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                           child: _buildText(
                             _studentPassCtrl,
                             'Şagird Şifrəsi *',
-                            'Ən azı 4 simvol',
+                            'Ən azı 6 simvol',
                             icon: Icons.lock_outline_rounded,
                             obscure: true,
-                            validator: (v) => (v ?? '').trim().length < 4 ? 'Ən azı 4 simvol' : null,
+                            validator: (v) => PasswordHasher.validate(v, minLength: 6),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -649,10 +650,10 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                           child: _buildText(
                             _parentPassCtrl,
                             'Valideyn Şifrəsi *',
-                            'Ən azı 4 simvol',
+                            'Ən azı 6 simvol',
                             icon: Icons.lock_reset_rounded,
                             obscure: true,
-                            validator: (v) => (v ?? '').trim().length < 4 ? 'Ən azı 4 simvol' : null,
+                            validator: (v) => PasswordHasher.validate(v, minLength: 6),
                           ),
                         ),
                       ],
