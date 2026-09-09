@@ -4,6 +4,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
+import '../../../core/utils/haptic_helper.dart';
+import '../../../core/utils/password_hasher.dart';
 import '../../../providers/app_state.dart';
 import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/student_model.dart';
@@ -170,7 +172,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: isDarkMode ? loc.darkModeActive : loc.lightModeActive,
               trailing: Switch.adaptive(
                 value: isDarkMode,
-                onChanged: (val) => appState.toggleTheme(),
+                onChanged: (val) {
+                  HapticHelper.selection();
+                  appState.toggleTheme();
+                },
                 activeColor: AppColors.primaryAccent,
               ),
             ),
@@ -193,14 +198,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ReorderableModuleGrid(
-                      modules: currentModules,
-                      onReorder: (reorderedModules) {
-                        // Update module order in AppState
-                        appState.updateModuleOrder(reorderedModules);
-                        Navigator.pop(context);
-                      },
-                      isReorderMode: true,
+                    builder: (_) => Scaffold(
+                      backgroundColor: AppColors.background,
+                      appBar: AppBar(
+                        title: Text(loc.customizeModules),
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        actions: [
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.goldLight,
+                            ),
+                            icon: const Icon(
+                              Icons.check_circle_rounded,
+                              size: 18,
+                            ),
+                            label: Text(loc.save),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                      ),
+                      body: SafeArea(
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.all(16),
+                          child: ReorderableModuleGrid(
+                            modules: currentModules,
+                            onReorder: (reorderedModules) {
+                              // Update module order in AppState
+                              appState.updateModuleOrder(reorderedModules);
+                            },
+                            isReorderMode: true,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 );
@@ -302,8 +335,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 16),
                   Divider(color: AppColors.cardBorder, height: 1),
                   const SizedBox(height: 16),
-                  _buildInfoRow(loc.version, _packageInfo?.version ?? '1.4.8'),
-                  _buildInfoRow(loc.build, _packageInfo?.buildNumber ?? '40'),
+                  _buildInfoRow(loc.version, _packageInfo?.version ?? '1.4.9'),
+                  _buildInfoRow(loc.build, _packageInfo?.buildNumber ?? '41'),
                   _buildInfoRow(
                     loc.packageName,
                     _packageInfo?.packageName ?? 'az.idrak.liseyi',
@@ -445,7 +478,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         border: Border.all(color: AppColors.cardBorder),
       ),
       child: ListTile(
-        onTap: onTap,
+        onTap: onTap != null
+            ? () {
+                HapticHelper.light();
+                onTap();
+              }
+            : null,
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -531,7 +569,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
                 boxShadow: AppShadows.md,
               ),
               child: Form(
@@ -600,16 +640,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           decoration: BoxDecoration(
                             color: AppColors.danger.withAlpha(20),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.danger.withAlpha(80)),
+                            border: Border.all(
+                              color: AppColors.danger.withAlpha(80),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 20),
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: AppColors.danger,
+                                size: 20,
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   errorMessage!,
-                                  style: const TextStyle(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    color: AppColors.danger,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
@@ -635,13 +685,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           hintText: 'Mövcud şifrənizi daxil edin',
                           prefixIcon: const Icon(Icons.lock_outline, size: 20),
                           suffixIcon: IconButton(
-                            icon: Icon(obscureOld ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
-                            onPressed: () => setModalState(() => obscureOld = !obscureOld),
+                            icon: Icon(
+                              obscureOld
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 20,
+                            ),
+                            onPressed: () =>
+                                setModalState(() => obscureOld = !obscureOld),
                           ),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                         ),
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Cari şifrə tələb olunur' : null,
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Cari şifrə tələb olunur'
+                            : null,
                       ),
                       const SizedBox(height: 14),
 
@@ -662,17 +725,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           hintText: 'Ən azı 4 simvol',
                           prefixIcon: const Icon(Icons.key_rounded, size: 20),
                           suffixIcon: IconButton(
-                            icon: Icon(obscureNew ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
-                            onPressed: () => setModalState(() => obscureNew = !obscureNew),
+                            icon: Icon(
+                              obscureNew
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 20,
+                            ),
+                            onPressed: () =>
+                                setModalState(() => obscureNew = !obscureNew),
                           ),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                         ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Yeni şifrə daxil edin';
-                          if (v.trim().length < 4) return 'Şifrə ən azı 4 simvol olmalıdır';
-                          return null;
-                        },
+                        validator: (v) =>
+                            PasswordHasher.validate(v, minLength: 6),
                       ),
                       const SizedBox(height: 14),
 
@@ -691,17 +762,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         obscureText: obscureConfirm,
                         decoration: InputDecoration(
                           hintText: 'Yeni şifrəni təkrar daxil edin',
-                          prefixIcon: const Icon(Icons.check_circle_outline_rounded, size: 20),
-                          suffixIcon: IconButton(
-                            icon: Icon(obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20),
-                            onPressed: () => setModalState(() => obscureConfirm = !obscureConfirm),
+                          prefixIcon: const Icon(
+                            Icons.check_circle_outline_rounded,
+                            size: 20,
                           ),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureConfirm
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 20,
+                            ),
+                            onPressed: () => setModalState(
+                              () => obscureConfirm = !obscureConfirm,
+                            ),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                         ),
                         validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Şifrə təkrarını daxil edin';
-                          if (v.trim() != newPassCtrl.text.trim()) return 'Şifrələr uyğun gəlmir';
+                          if (v == null || v.trim().isEmpty)
+                            return 'Şifrə təkrarını daxil edin';
+                          if (v.trim() != newPassCtrl.text.trim())
+                            return 'Şifrələr uyğun gəlmir';
                           return null;
                         },
                       ),
@@ -714,7 +802,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryAccent,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                             elevation: 0,
                           ),
                           onPressed: isLoading
@@ -726,25 +816,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     errorMessage = null;
                                   });
 
-                                  final success = await appState.changeCurrentUserPassword(
-                                    oldPassword: oldPassCtrl.text.trim(),
-                                    newPassword: newPassCtrl.text.trim(),
-                                  );
+                                  final error = await appState
+                                      .changeCurrentUserPassword(
+                                        oldPassword: oldPassCtrl.text.trim(),
+                                        newPassword: newPassCtrl.text.trim(),
+                                      );
 
                                   if (context.mounted) {
-                                    if (success) {
+                                    if (error == null) {
+                                      HapticHelper.success();
                                       Navigator.pop(ctx);
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         const SnackBar(
-                                          content: Text('✓ Şifrəniz uğurla dəyişdirildi!'),
+                                          content: Text(
+                                            '✓ Şifrəniz uğurla dəyişdirildi!',
+                                          ),
                                           backgroundColor: AppColors.success,
                                           duration: Duration(seconds: 3),
                                         ),
                                       );
                                     } else {
+                                      HapticHelper.error();
                                       setModalState(() {
                                         isLoading = false;
-                                        errorMessage = 'Cari şifrəniz yanlışdır. Yenidən cəhd edin.';
+                                        errorMessage = error;
                                       });
                                     }
                                   }
@@ -753,7 +850,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : const Text(
                                   'Şifrəni Yenilə',
@@ -790,7 +890,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: AppColors.danger.withAlpha(20),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.logout_rounded, color: AppColors.danger, size: 22),
+              child: const Icon(
+                Icons.logout_rounded,
+                color: AppColors.danger,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 10),
             const Expanded(
@@ -808,18 +912,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Ləğv et', style: TextStyle(color: AppColors.textMuted)),
+            child: Text(
+              'Ləğv et',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.danger,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: () {
               Navigator.pop(ctx);
               appState.logout();
             },
-            child: const Text('Bəli, Çıxış', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Bəli, Çıxış',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
