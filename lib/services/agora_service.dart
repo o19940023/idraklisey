@@ -1,6 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
+
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -9,17 +8,12 @@ import 'agora_token_service.dart';
 
 /// Gerçek Agora RTC Motoru sarmalayıcısı (agora_rtc_engine 6.x).
 ///
-/// - Kanala token ilə qoşulma (AccessToken2, client tərəfdə yaradılır)
+/// - Kanala token ilə qoşulma (AccessToken2, backend tərəfindən yaradılır)
 /// - Səs + video (kamera aç/bağla, ön/arxa kamera, hoparlör)
 /// - Konuşan istifadəçi aşkarlaması (həcm indikasiyası)
 /// - Uzaqdan video vəziyyəti, token yenilənməsi, təmizlənmə
 class AgoraService {
   static const String appId = '045bdb3866464fb6b47009e8044ce57e';
-  static const List<String> _debugUrls = <String>[
-    'http://10.10.15.114:7777/event',
-    'http://10.0.2.2:7777/event',
-  ];
-  static const String _debugSessionId = 'agora-invalid-token';
 
   // --- Callbacks (UI-a bildirir) ---
   Function(List<AudioVolumeInfo> speakers, int totalVolume)?
@@ -90,9 +84,13 @@ class AgoraService {
 
       _engine = createAgoraRtcEngine();
       await _engine!.initialize(
-        const RtcEngineContext(
+        RtcEngineContext(
           appId: appId,
           channelProfile: ChannelProfileType.channelProfileCommunication,
+          // Bütün bölgələrdəki edge serverlər istifadə olunsun — ayrı-ayrı
+          // ISP/lər üçün area yoxlaması kaynaklı qoşulma gecikmələrini aradan
+          // qaldırır (iOS real cihazda müşahidə olunub).
+          areaCode: AreaCode.areaCodeGlob.value(),
         ),
       );
 
@@ -120,18 +118,6 @@ class AgoraService {
           onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
             debugPrint('[Agora] Joined channel: ${connection.channelId}');
             _joined = true;
-            // #region debug-point D:join-success
-            _reportDebug(
-              hypothesisId: 'D',
-              location: 'agora_service.dart:onJoinChannelSuccess',
-              msg: '[DEBUG] Join channel success callback',
-              data: <String, Object?>{
-                'channelId': connection.channelId,
-                'localUid': _localUid,
-                'elapsed': elapsed,
-              },
-            );
-            // #endregion
             // Mobil cihazlarda default qulaqlıq deyil hoparlör olsun
             _engine?.setEnableSpeakerphone(_isSpeakerOn);
             onJoinSuccess?.call();
@@ -206,18 +192,6 @@ class AgoraService {
               },
           onRequestToken: (RtcConnection connection) async {
             debugPrint('[Agora] Token requested — generating fresh');
-            // #region debug-point D:request-token
-            _reportDebug(
-              hypothesisId: 'D',
-              location: 'agora_service.dart:onRequestToken',
-              msg: '[DEBUG] Agora requested token refresh (RENDER)',
-              data: <String, Object?>{
-                'channelId': connection.channelId,
-                'localUid': _localUid,
-                'userId': _userId,
-              },
-            );
-            // #endregion
             try {
               final result = await AgoraTokenService.fetchRtcToken(
                 channelName: _channelId,
@@ -230,20 +204,6 @@ class AgoraService {
           },
           onError: (ErrorCodeType err, String msg) {
             debugPrint('[Agora] Error: $err — $msg');
-            // #region debug-point D:error
-            _reportDebug(
-              hypothesisId: 'D',
-              location: 'agora_service.dart:onError',
-              msg: '[DEBUG] Agora emitted error',
-              data: <String, Object?>{
-                'error': err.name,
-                'message': msg,
-                'channelId': _channelId,
-                'localUid': _localUid,
-                'joined': _joined,
-              },
-            );
-            // #endregion
             onError?.call(err, msg);
           },
         ),
@@ -283,28 +243,6 @@ class AgoraService {
 
       _localUid = result.uid;
       final token = result.token;
-
-      // #region debug-point C:join-params
-      _reportDebug(
-        hypothesisId: 'C',
-        location: 'agora_service.dart:joinChannel',
-        msg: '[DEBUG] Preparing joinChannel (RENDER BACKEND)',
-        data: <String, Object?>{
-          'channelId': channelId,
-          'userId': userId,
-          'computedUid': _localUid,
-          'tokenLength': token.length,
-          'tokenPrefix': token.substring(
-            0,
-            token.length > 12 ? 12 : token.length,
-          ),
-          'enableVideo': enableVideo,
-          'isInitialized': _initialized,
-          'alreadyJoined': _joined,
-          'source': 'render_backend',
-        },
-      );
-      // #endregion
 
       await _engine!.joinChannel(
         token: token,
@@ -445,37 +383,5 @@ class AgoraService {
     _isMicMuted = false;
     _remoteUids.clear();
     _remoteVideoOn.clear();
-  }
-
-  static void _reportDebug({
-    required String hypothesisId,
-    required String location,
-    required String msg,
-    Map<String, Object?>? data,
-  }) {
-    unawaited(() async {
-      final payload = jsonEncode(<String, Object?>{
-        'sessionId': _debugSessionId,
-        'runId': 'post-fix',
-        'hypothesisId': hypothesisId,
-        'location': location,
-        'msg': msg,
-        'data': data ?? const <String, Object?>{},
-        'ts': DateTime.now().millisecondsSinceEpoch,
-      });
-      for (final url in _debugUrls) {
-        final client = HttpClient();
-        try {
-          final request = await client.postUrl(Uri.parse(url));
-          request.headers.contentType = ContentType.json;
-          request.write(payload);
-          await request.close();
-          break;
-        } catch (_) {
-        } finally {
-          client.close(force: true);
-        }
-      }
-    }());
   }
 }

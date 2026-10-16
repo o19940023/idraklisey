@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -9,20 +8,10 @@ import 'package:crypto/crypto.dart';
 /// Agora AccessToken2 (versiya "007") üreticisi — resmi binary spec.
 ///
 /// Token formatı: "007" + base64(packed content + raw 32-byte HMAC-SHA256)
-///
-/// ⚠️ GÜVƏNLİK QEYDİ: Sertifika hazırda client tərəfdədir. İstehsalat üçün
-/// token generasiyasını Cloud Function-a köçürmək tövsiyə olunur. Sertifika
-/// APK-nı təhlil edən hər kəs tərəfindən oxuna bilər — bu, MVP mərhələsi
-/// üçün qəbul edilmiş kompromisdür.
 class AgoraTokenGenerator {
   static const String _appId = '045bdb3866464fb6b47009e8044ce57e';
   static const String _appCertificateHex = '0d55f75c1a5a48968ca941e880231003';
-  static const String _version = '007';
-  static const List<String> _debugUrls = <String>[
-    'http://10.10.15.114:7777/event',
-    'http://10.0.2.2:7777/event',
-  ];
-  static const String _debugSessionId = 'agora-invalid-token';
+  static const String _version = "007";
 
   static const int _privilegeJoinChannel = 1;
   static const int _privilegePublishAudio = 2;
@@ -98,28 +87,6 @@ class AgoraTokenGenerator {
     // --- Compress with zlib DEFLATE (gzip) and base64 ---
     final compressed = gzip.encode(tokenContent.toBytes());
 
-    // #region debug-point A:token-layout
-    _reportDebug(
-      hypothesisId: 'A',
-      location: 'agora_token_generator.dart:generateRtcToken',
-      msg: '[DEBUG] Generated RTC token (FIXED SPEC)',
-      data: <String, Object?>{
-        'channelName': channelName,
-        'uid': uid,
-        'issueTs': issueTs,
-        'expireInSeconds': expireInSeconds,
-        'salt': salt,
-        'certificateByteLength': _certificateBytes.length,
-        'rtcPayloadLength': rtcPayloadBytes.length,
-        'signingInfoLength': signingInfoBytes.length,
-        'signatureLength': signature.length,
-        'tokenContentLength': tokenContent.length,
-        'compressedLength': compressed.length,
-        'tokenPrefix': _version,
-      },
-    );
-    // #endregion
-
     return _version + base64Encode(compressed);
   }
 
@@ -156,37 +123,5 @@ class AgoraTokenGenerator {
       bytes[i ~/ 2] = int.parse(hex.substring(i, i + 2), radix: 16);
     }
     return bytes;
-  }
-
-  static void _reportDebug({
-    required String hypothesisId,
-    required String location,
-    required String msg,
-    Map<String, Object?>? data,
-  }) {
-    unawaited(() async {
-      final payload = jsonEncode(<String, Object?>{
-        'sessionId': _debugSessionId,
-        'runId': 'post-fix',
-        'hypothesisId': hypothesisId,
-        'location': location,
-        'msg': msg,
-        'data': data ?? const <String, Object?>{},
-        'ts': DateTime.now().millisecondsSinceEpoch,
-      });
-      for (final url in _debugUrls) {
-        final client = HttpClient();
-        try {
-          final request = await client.postUrl(Uri.parse(url));
-          request.headers.contentType = ContentType.json;
-          request.write(payload);
-          await request.close();
-          break;
-        } catch (_) {
-        } finally {
-          client.close(force: true);
-        }
-      }
-    }());
   }
 }

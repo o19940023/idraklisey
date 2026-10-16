@@ -23,7 +23,9 @@ class AgoraTokenService {
           'userId': userId,
         }),
       ).timeout(
-        const Duration(seconds: 10),
+        // Render.com free tier soğuk başlatma 10+ saniye sürebilir — kısa
+        // timeout iOS'ta gereksiz "katılamadı" hataları üretiyordu.
+        const Duration(seconds: 15),
         onTimeout: () => throw Exception('Token server cavab vermədi (timeout)'),
       );
 

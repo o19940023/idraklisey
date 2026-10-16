@@ -51,6 +51,13 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
   String _lastConnState = 'DISCONNECTED';
   String _lastConnReason = '';
 
+  /// Join uğursuz oldu (token şəbəkə və ya ICE xətası) — istifadəçiyə
+  /// "yenidən cəhd et" düyməsi göstərilir.
+  bool _joinFailed = false;
+
+  /// Watchdog işə düşəndə avtomatik təkrar cəhd sayı (yalnız 1 dəfə).
+  int _autoRetries = 0;
+
   bool get _isVideoRoom => widget.room.hasVideo;
 
   late AnimationController _pulseController;
@@ -82,7 +89,10 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
   Future<void> _initializeAgoraAndJoin() async {
     _invalidTokenCount = 0;
     _joinWatchdog?.cancel();
-    setState(() => _isJoiningVoiceChannel = true);
+    setState(() {
+      _isJoiningVoiceChannel = true;
+      _joinFailed = false;
+    });
 
     try {
       // Step 1: Initialize Agora (görüntülü otaqdursa video da açılır)
@@ -145,6 +155,7 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
       };
       _agoraService.onJoinSuccess = () {
         _joinWatchdog?.cancel();
+        _autoRetries = 0;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) setState(() => _isConnected = true);
         });
@@ -156,6 +167,7 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
         _lastConnReason = reason.name;
         if (state == ConnectionStateType.connectionStateConnected) {
           _joinWatchdog?.cancel();
+          _autoRetries = 0;
           if (mounted && !_isConnected) {
             setState(() => _isConnected = true);
           }
@@ -237,7 +249,7 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
 
       // Join çağırışı qəbul olundu, amma connection callback gəlməyə bilər
       // (iOS real cihazda müşahidə olunur) — 20 saniyə içində bağlanmasa
-      // istifadəçiyə görünən teşhis göstər.
+      // avtomatik bir dəfə təkrar cəhd edilir; sonra görünən teşhis.
       _joinWatchdog?.cancel();
       _joinWatchdog = Timer(const Duration(seconds: 20), () {
         if (!mounted || _isConnected) return;
@@ -245,6 +257,15 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
           '⚠️ [DIAG] Agora join watchdog: still not connected. '
           'state=$_lastConnState reason=$_lastConnReason',
         );
+        if (_autoRetries < 1) {
+          // Şəbəkə/ICE ilk qoşulmada takıla bilər — təmiz motorla bir dəfə
+          // avtomatik yenidən cəhd et (istifadəçiyə toxunulmadan).
+          _autoRetries++;
+          debugPrint('♻️ [Agora] Auto-retry join ($_autoRetries/1)');
+          unawaited(_rejoinWithFreshEngine());
+          return;
+        }
+        if (mounted) setState(() => _joinFailed = true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -266,6 +287,7 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
     } catch (e) {
       debugPrint('⚠️ Agora setup failed: $e');
       if (mounted) {
+        setState(() => _joinFailed = true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Otağa qoşula bilmədiniz: ${e.toString()}'),
@@ -279,6 +301,26 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
         setState(() => _isJoiningVoiceChannel = false);
       }
     }
+  }
+
+  /// Motoru tam söküb təzə token ilə yenidən qoşulur (watchdog və ya
+  /// istifadəçinin "yenidən cəhd et" toxunması ilə).
+  Future<void> _rejoinWithFreshEngine() async {
+    try {
+      await _agoraService.dispose();
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() {
+      _isAgoraInitialized = false;
+      _isConnected = false;
+    });
+    await _initializeAgoraAndJoin();
+  }
+
+  /// İstifadəçi pill-ə toxunaraq əl ilə retry edir.
+  Future<void> _manualRetryJoin() async {
+    _autoRetries = 0;
+    await _rejoinWithFreshEngine();
   }
 
   /// Agora rəqəmsal uid-inə uyğun iştirakçının userId-sini tapır
@@ -1378,41 +1420,85 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                       right: 0,
                       bottom: 8,
                       child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF111214).withAlpha(230),
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(
-                              color: Colors.white.withAlpha(25),
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 13,
-                                height: 13,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFF23A55A),
+                        child: _joinFailed
+                            ? GestureDetector(
+                                onTap: _manualRetryJoin,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 7,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF111214).withAlpha(235),
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(
+                                      color: AppColors.danger.withAlpha(90),
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.wifi_off_rounded,
+                                        color: AppColors.danger,
+                                        size: 14,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Bağlantı alınmadı — toxunub yenidən cəhd edin',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      SizedBox(width: 6),
+                                      Icon(
+                                        Icons.refresh_rounded,
+                                        color: AppColors.danger,
+                                        size: 14,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF111214).withAlpha(230),
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                    color: Colors.white.withAlpha(25),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const SizedBox(
+                                      width: 13,
+                                      height: 13,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFF23A55A),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _autoRetries > 0
+                                          ? 'Yenidən qoşulur...'
+                                          : 'Agora kanalına qoşulur...',
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Agora kanalına qoşulur...',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       ),
                     ),
                 ],
