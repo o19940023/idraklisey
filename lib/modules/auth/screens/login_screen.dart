@@ -5,6 +5,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/widgets/idrak_logo.dart';
+import '../../../core/widgets/motion.dart';
 import '../../../providers/app_state.dart';
 import '../../../services/auth_storage_service.dart';
 
@@ -245,35 +246,43 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   // Logo & Brand Header
                   const SizedBox(height: 12),
-                  const IdrakLogo(size: 84, showText: true, isLightText: false),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryAccent.withAlpha(15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AppColors.primaryAccent.withAlpha(40),
-                      ),
-                    ),
-                    child: const Text(
-                      'BEYNƏLXALQ TƏHSİL PORTALI',
-                      style: TextStyle(
-                        color: AppColors.primaryAccent,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
+                  FadeIn(
+                    child: Column(
+                      children: [
+                        const IdrakLogo(size: 84, showText: true, isLightText: false),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryAccent.withAlpha(15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: AppColors.primaryAccent.withAlpha(40),
+                            ),
+                          ),
+                          child: const Text(
+                            'BEYNƏLXALQ TƏHSİL PORTALI',
+                            style: TextStyle(
+                              color: AppColors.primaryAccent,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
                   const SizedBox(height: 32),
 
                   // Login Form Card
-                  Container(
+                  FadeIn(
+                    delay: const Duration(milliseconds: 130),
+                    child: Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
@@ -462,7 +471,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 24),
 
                         // Login Action Button (Gradient Modern Button)
-                        Container(
+                        PressableScale(
+                          pressedScale: 0.98,
+                          enabled: !_isLoading,
+                          child: Container(
                           width: double.infinity,
                           height: 50,
                           decoration: BoxDecoration(
@@ -509,14 +521,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                           ),
                         ),
+                        ),
                       ],
+                    ),
                     ),
                   ),
 
                   const SizedBox(height: 24),
 
                   // Security Badge
-                  Container(
+                  FadeIn(
+                    delay: const Duration(milliseconds: 280),
+                    child: Container(
                     padding: const EdgeInsets.symmetric(
                       vertical: 10,
                       horizontal: 14,
@@ -544,6 +560,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ],
+                    ),
                     ),
                   ),
                 ],

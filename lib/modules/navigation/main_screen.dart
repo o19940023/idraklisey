@@ -55,6 +55,58 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
+/// Plays a quick fade-and-rise whenever the selected tab changes, while
+/// keeping the [IndexedStack] (and therefore every tab's state) alive.
+class _TabTransition extends StatefulWidget {
+  final int index;
+  final List<Widget> screens;
+
+  const _TabTransition({required this.index, required this.screens});
+
+  @override
+  State<_TabTransition> createState() => _TabTransitionState();
+}
+
+class _TabTransitionState extends State<_TabTransition>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+    value: 1, // fully visible on first build
+  );
+  late final CurvedAnimation _curve = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeOutCubic,
+  );
+
+  @override
+  void didUpdateWidget(_TabTransition oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.index != widget.index) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.35, end: 1).animate(_curve),
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.012), end: Offset.zero)
+            .animate(_curve),
+        child: IndexedStack(index: widget.index, children: widget.screens),
+      ),
+    );
+  }
+}
+
 class _MainScreenState extends State<MainScreen> {
   bool _isDragHoveredOnDock = false;
 
@@ -546,7 +598,16 @@ class _MainScreenState extends State<MainScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const CircularProgressIndicator(color: Color(0xFF6C5CE7)),
+              const IdrakLogo(size: 72, showText: false, isLightText: true),
+              const SizedBox(height: 24),
+              const SizedBox(
+                width: 26,
+                height: 26,
+                child: CircularProgressIndicator(
+                  color: Color(0xFF6C5CE7),
+                  strokeWidth: 2.4,
+                ),
+              ),
               const SizedBox(height: 20),
               Text(
                 loc.loading,
@@ -622,7 +683,7 @@ class _MainScreenState extends State<MainScreen> {
         ),
         body: Stack(
           children: [
-            IndexedStack(index: activeTabIndex, children: screens),
+            _TabTransition(index: activeTabIndex, screens: screens),
             // 🆕 Yeni versiya banner-i — tətbiq işləməyə davam edir,
             // amma banner mağazadan yenilənənə qədər hər açılışda göstərilir.
             if (updateService.updateAvailable)

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 import 'app_spacing.dart';
 import 'app_radius.dart';
+import '../widgets/motion.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
@@ -14,6 +15,14 @@ class AppTheme {
       brightness: Brightness.light,
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.background,
+      splashFactory: InkSparkle.splashFactory,
+      highlightColor: AppColors.primaryAccent.withAlpha(20),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeThroughPageTransitionsBuilder(),
+          TargetPlatform.iOS: FadeThroughPageTransitionsBuilder(),
+        },
+      ),
       colorScheme: ColorScheme.light(
         primary: AppColors.primary,
         onPrimary: AppColors.textOnPrimary,
@@ -260,6 +269,14 @@ class AppTheme {
       brightness: Brightness.dark,
       primaryColor: AppColors.primaryLight,
       scaffoldBackgroundColor: AppColors.darkBackground,
+      splashFactory: InkSparkle.splashFactory,
+      highlightColor: AppColors.primaryAccent.withAlpha(30),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeThroughPageTransitionsBuilder(),
+          TargetPlatform.iOS: FadeThroughPageTransitionsBuilder(),
+        },
+      ),
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primaryLight,
         onPrimary: Colors.white,

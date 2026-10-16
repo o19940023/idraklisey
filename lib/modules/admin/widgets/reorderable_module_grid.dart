@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
+import '../../../core/widgets/motion.dart';
 import '../../../data/models/user_preferences_model.dart';
 import '../../../l10n/app_localizations.dart';
 
@@ -208,7 +209,16 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
           itemCount: _modules.length,
           itemBuilder: (context, index) {
             final module = _modules[index];
-            return _buildDraggableGridItem(module, itemWidth, itemHeight, loc);
+            // Paneldəki kartlar bir-birinin ardınca yumşaq "giriş" edir.
+            // Key sayəsində sürükləyib yerini dəyişəndə animasiya təkrar
+            // oynamır — yalnız ilk açılışda.
+            return FadeIn(
+              key: ValueKey('entrance_${module.id}'),
+              delay: staggerDelay(index),
+              duration: const Duration(milliseconds: 380),
+              offset: const Offset(0, 0.04),
+              child: _buildDraggableGridItem(module, itemWidth, itemHeight, loc),
+            );
           },
         );
       },
@@ -413,8 +423,10 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
     final accentColor = _getColorFromHex(module.accentColor);
     final subtitleText = _getSubtitle(module, loc);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
+    return PressableScale(
+      pressedScale: 0.96,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
       decoration: BoxDecoration(
         color: isHovered ? accentColor.withAlpha(15) : AppColors.surface,
         borderRadius: BorderRadius.circular(22),
@@ -530,6 +542,7 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
             ),
           ),
         ),
+      ),
       ),
     ),
   );

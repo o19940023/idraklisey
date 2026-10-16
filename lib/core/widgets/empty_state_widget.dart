@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import 'motion.dart';
 
 /// Modern empty state component with icon, message, and action.
+///
+/// Plays a gentle fade-and-rise entrance whenever it appears.
 class EmptyStateWidget extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -23,50 +26,53 @@ class EmptyStateWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: EdgeInsets.all(AppSpacing.xxxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withAlpha(15),
-                shape: BoxShape.circle,
+      child: FadeIn(
+        duration: const Duration(milliseconds: 480),
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.xxxl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withAlpha(15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 56,
+                  color: AppColors.primary.withAlpha(128),
+                ),
               ),
-              child: Icon(
-                icon,
-                size: 56,
-                color: AppColors.primary.withAlpha(128),
-              ),
-            ),
-            
-            SizedBox(height: AppSpacing.xxl),
-            
-            Text(
-              title,
-              style: AppTypography.h2(context),
-              textAlign: TextAlign.center,
-            ),
-            
-            SizedBox(height: AppSpacing.sm),
-            
-            Text(
-              message,
-              style: AppTypography.body2(context),
-              textAlign: TextAlign.center,
-            ),
-            
-            if (actionLabel != null && onAction != null) ...[
+
               SizedBox(height: AppSpacing.xxl),
-              FilledButton.icon(
-                onPressed: onAction,
-                icon: const Icon(Icons.add_rounded),
-                label: Text(actionLabel!),
+
+              Text(
+                title,
+                style: AppTypography.h2(context),
+                textAlign: TextAlign.center,
               ),
+
+              SizedBox(height: AppSpacing.sm),
+
+              Text(
+                message,
+                style: AppTypography.body2(context),
+                textAlign: TextAlign.center,
+              ),
+
+              if (actionLabel != null && onAction != null) ...[
+                SizedBox(height: AppSpacing.xxl),
+                FilledButton.icon(
+                  onPressed: onAction,
+                  icon: const Icon(Icons.add_rounded),
+                  label: Text(actionLabel!),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

@@ -3,6 +3,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_shadows.dart';
+import 'motion.dart';
 
 /// Modern 2026-style card component with consistent styling.
 ///
@@ -47,12 +48,15 @@ class ModernCard extends StatelessWidget {
     if (onTap != null) {
       return Container(
         margin: margin ?? EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: (borderRadius ?? AppRadius.cardRadius) as BorderRadius?,
-            child: cardContent,
+        child: PressableScale(
+          pressedScale: 0.985,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: (borderRadius ?? AppRadius.cardRadius) as BorderRadius?,
+              child: cardContent,
+            ),
           ),
         ),
       );

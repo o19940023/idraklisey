@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_radius.dart';
+import 'motion.dart';
 
 /// Modern primary button component (2026 style).
 class PrimaryButton extends StatelessWidget {
@@ -56,7 +57,16 @@ class PrimaryButton extends StatelessWidget {
       child: buttonChild,
     );
 
-    return fullWidth ? SizedBox(width: double.infinity, child: button) : button;
+    // Press feedback stays subtle and never intercepts the button's own taps.
+    final pressable = PressableScale(
+      pressedScale: 0.97,
+      enabled: !isLoading && onPressed != null,
+      child: button,
+    );
+
+    return fullWidth
+        ? SizedBox(width: double.infinity, child: pressable)
+        : pressable;
   }
 }
 
