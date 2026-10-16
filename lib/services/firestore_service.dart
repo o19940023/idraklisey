@@ -1406,9 +1406,12 @@ class FirestoreService {
 
   Future<List<AppNotification>> fetchNotifications() async {
     try {
+      // Son 120 bildiriş — bütün tarixçəni hər cihaza çəkmək həm
+      // trafik, həm yaddaş baxımından qeyri-məhduddur.
       final snap = await db
           .collection('notifications')
           .orderBy('createdAt', descending: true)
+          .limit(120)
           .get();
       return snap.docs.map((d) => AppNotification.fromJson(d.data())).toList();
     } catch (e) {
@@ -1423,6 +1426,7 @@ class FirestoreService {
     return db
         .collection('notifications')
         .orderBy('createdAt', descending: true)
+        .limit(120)
         .snapshots()
         .map(
           (snap) =>

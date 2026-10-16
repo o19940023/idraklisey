@@ -1073,9 +1073,15 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
                                   ),
                                   onPressed: () {
                                     Navigator.pop(ctx);
+                                    // Baxılan şagird ön-seçili gəlsin —
+                                    // əks halda not başqa şagirdə gedirdi.
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(builder: (_) => const QuickGradingScreen()),
+                                      MaterialPageRoute(
+                                        builder: (_) => QuickGradingScreen(
+                                          preSelectedStudent: student,
+                                        ),
+                                      ),
                                     );
                                   },
                                   icon: const Icon(Icons.grade_rounded, size: 18, color: Colors.white),

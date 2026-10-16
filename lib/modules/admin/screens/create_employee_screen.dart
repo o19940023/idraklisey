@@ -116,7 +116,7 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
         );
       },
     );
-    if (picked != null) setState(() => onPicked(picked));
+    if (mounted && picked != null) setState(() => onPicked(picked));
   }
 
   Future<void> _nextOrSubmit() async {
@@ -164,7 +164,7 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
               canManageInventory: _permInventory,
             )
           : null,
-      assignedRoleId: _isTeacher ? null : _selectedRoleId,
+      assignedRoleId: _selectedRoleId,
     );
     setState(() => _saving = false);
 

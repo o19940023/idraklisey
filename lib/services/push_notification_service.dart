@@ -39,6 +39,18 @@ class PushNotificationService {
   AppUser? _lastUser;
   Set<String> _extraClassTopics = {};
 
+  /// Bildirişə toxunulanda açılacaq mesaj (splash/MainScreen tərəfindən
+  /// istehlak olunur).
+  RemoteMessage? _pendingOpen;
+
+  /// Cold-start də daxil olmaqlaq toxunulmuş bildiriş (bir dəfə istehlak
+  /// üçün). MainScreen ilk frame-də yoxlayır.
+  RemoteMessage? consumePendingOpen() {
+    final msg = _pendingOpen;
+    _pendingOpen = null;
+    return msg;
+  }
+
   /// Tətbiq arxa planda / bağlı ikən gələn mesajlar üçün — top-level olmalıdır.
   @pragma('vm:entry-point')
   static Future<void> firebaseMessagingBackgroundHandler(
@@ -99,10 +111,43 @@ class PushNotificationService {
 
     FirebaseMessaging.onMessage.listen(_onForegroundMessage);
 
+    // Bildirişə toxunma — arxa planda açıq olan tətbiq.
+    FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpened);
+
+    // Cold-start: bildirişə toxunaraq açılan tətbiq.
+    unawaited(() async {
+      final initial = await FirebaseMessaging.instance.getInitialMessage();
+      if (initial != null) {
+        _pendingOpen = initial;
+      }
+    }());
+
+    // Token yeniləndikdə — istifadəçi hələ girməyibsə saxla, girəndə
+    // onUserLoggedIn özü saxlayacaq. Listener bir dəfə bağlanır və
+    // həmişə AKTİV istifadəçini yazır (ilk istifadəçini yox).
+    if (!_tokenListenerBound) {
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+        _fcmToken = newToken;
+        final user = _lastUser;
+        if (user != null) _saveDeviceDoc(user);
+      });
+      _tokenListenerBound = true;
+    }
+
+    // iOS: APNS tokenı getToken-dən əvvəl gələ bilmir (16.x-də stream
+    // yoxdur) — _resolveToken daxilində getAPNSToken ilə gözlənilir.
     debugPrint('[Push] initialized');
   }
 
+  void _onMessageOpened(RemoteMessage message) {
+    _pendingOpen = message;
+  }
+
   Future<void> _onForegroundMessage(RemoteMessage message) async {
+    // iOS-da sistem özü banner göstərir (setForegroundNotificationPresentation
+    // alert:true) — yerli bildiriş göstərsək eyni bildiriş iki dəfə çıxır.
+    if (defaultTargetPlatform == TargetPlatform.iOS) return;
+
     final notification = message.notification;
     if (notification == null) return;
 
@@ -122,6 +167,30 @@ class PushNotificationService {
         iOS: const DarwinNotificationDetails(),
       ),
     );
+  }
+
+  /// FCM tokenini alır. iOS-da icazə verildikdən dərhal sonra APNS token
+  /// hələ hazır olmaya bilər və getToken() null qaytarır — əvvəlcə APNS
+  /// tokenını gözləyir, sonra da qısa retry edirik ki, ilk girişdə
+  /// qeydiyyat qaçmasın.
+  Future<String?> _resolveToken(FirebaseMessaging messaging) async {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      for (var i = 0; i < 12; i++) {
+        try {
+          final apns = await messaging.getAPNSToken();
+          if (apns != null && apns.isNotEmpty) break;
+        } catch (_) {}
+        await Future<void>.delayed(const Duration(milliseconds: 600));
+      }
+    }
+    var token = await messaging.getToken();
+    for (var i = 0;
+        (token == null || token.isEmpty) && i < 6;
+        i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+      token = await messaging.getToken();
+    }
+    return (token == null || token.isEmpty) ? null : token;
   }
 
   /// Uğurlu giriş sonrası çağrılır — icazə istəyir, tokeni alır,
@@ -147,20 +216,22 @@ class PushNotificationService {
         return;
       }
 
-      _fcmToken = await messaging.getToken();
+      _fcmToken = await _resolveToken(messaging);
       debugPrint('[Push] FCM Token: $_fcmToken');
 
-      if (!_tokenListenerBound) {
-        messaging.onTokenRefresh.listen((newToken) {
-          _fcmToken = newToken;
-          _saveDeviceDoc(user);
-        });
-        _tokenListenerBound = true;
-      }
-
       final desiredTopics = _topicsFor(user);
-      await _syncTopicSubscriptions(desiredTopics);
-      await _saveDeviceDoc(user);
+
+      if (_fcmToken != null) {
+        await _syncTopicSubscriptions(desiredTopics);
+        await _saveDeviceDoc(user);
+      } else {
+        // iOS-da APNS hələ gəlməyib — topic abunəliklərini yadda saxla,
+        // onAPNSTokenReceived gələndə onUserLoggedIn yenidən işləyəcək.
+        debugPrint('[Push] token not ready yet (iOS?) — deferring');
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList(_topicsPrefKey, desiredTopics.toList());
+        return;
+      }
 
       debugPrint('[Push] subscribed topics: $desiredTopics');
     } catch (e) {
@@ -221,7 +292,9 @@ class PushNotificationService {
   Future<void> updateClassTopics(Set<String> classNames) async {
     final user = _lastUser;
     if (user == null || classNames.isEmpty) return;
-    if (user.role != UserRole.parent) return;
+    final hasChildren =
+        user.linkedStudentId != null || user.linkedStudentIds.isNotEmpty;
+    if (user.role != UserRole.parent && !hasChildren) return;
     if (Set<String>.of(classNames).difference(_extraClassTopics).isEmpty &&
         _activeTopics.isNotEmpty) {
       return; // dəyişiklik yoxdur
@@ -273,15 +346,23 @@ class PushNotificationService {
     final token = _fcmToken;
     if (token == null || token.isEmpty) return;
     try {
-      await FirebaseFirestore.instance.collection('devices').doc(user.id).set({
-        'token': token,
-        'userId': user.id,
-        'fullName': user.fullName,
-        'role': user.role.name,
-        'assignedRoleId': user.assignedRoleId,
-        'updatedAt': DateTime.now().toIso8601String(),
-        'platform': defaultTargetPlatform.name,
-      });
+      // Sənəd anahtarı istifadəçi+token olduğundan bir istifadəçinin ikinci
+      // cihazı birincinin tokenini üzərinə yazmır.
+      final deviceKey = token.length >= 10
+          ? token.substring(token.length - 10)
+          : token;
+      await FirebaseFirestore.instance
+          .collection('devices')
+          .doc('${user.id}_$deviceKey')
+          .set({
+            'token': token,
+            'userId': user.id,
+            'fullName': user.fullName,
+            'role': user.role.name,
+            'assignedRoleId': user.assignedRoleId,
+            'updatedAt': DateTime.now().toIso8601String(),
+            'platform': defaultTargetPlatform.name,
+          });
       debugPrint('[Push] device token saved to Firestore');
     } catch (e) {
       debugPrint('[Push] saveDeviceDoc error: $e');

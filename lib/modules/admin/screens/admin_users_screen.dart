@@ -998,7 +998,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   void _showEditPermissionsDialog(BuildContext context, AppState appState, AppUser user) {
     bool pCaf = user.teacherPermissions?.canManageCafeteria ?? false;
     bool pMed = user.teacherPermissions?.canManageMedical ?? false;
-    bool pInv = user.teacherPermissions?.canManageInventory ?? true;
+    // Köhnə hesablarda teacherPermissions null ola bilər — defolt AÇIQ
+    // olmasın (dialogu açmaq özü icazə verirdi).
+    bool pInv = user.teacherPermissions?.canManageInventory ?? false;
 
     showDialog(
       context: context,

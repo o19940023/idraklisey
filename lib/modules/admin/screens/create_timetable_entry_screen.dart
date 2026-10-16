@@ -77,7 +77,11 @@ class _CreateTimetableEntryScreenState extends State<CreateTimetableEntryScreen>
       case DateTime.friday:
         return 'Cümə';
       default:
-        return 'Bazar ertəsi';
+        // Şənbə/bazar — həftə içi cədvələ yazıla bilməz; növbəti
+        // həftənin pazartesisinə yönəldilir (köhnə kod sessizcə bu
+        // həftənin pazartesinə yazırdı).
+        final monday = date.add(Duration(days: DateTime.monday - date.weekday + 7));
+        return _getDayNameFromDate(monday);
     }
   }
 

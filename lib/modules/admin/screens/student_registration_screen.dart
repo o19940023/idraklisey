@@ -125,7 +125,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
         );
       },
     );
-    if (picked != null) setState(() => _birthDate = picked);
+    if (mounted && picked != null) setState(() => _birthDate = picked);
   }
 
   Future<void> _pickParentBirthDate() async {
@@ -144,7 +144,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
         );
       },
     );
-    if (picked != null) setState(() => _parentBirthDate = picked);
+    if (mounted && picked != null) setState(() => _parentBirthDate = picked);
   }
 
   Future<void> _nextOrSubmit() async {

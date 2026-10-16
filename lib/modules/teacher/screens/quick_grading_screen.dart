@@ -8,7 +8,6 @@ import '../../../providers/app_state.dart';
 import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/student_model.dart';
 import '../../../data/models/grade_model.dart';
-import '../../../data/mock_data.dart';
 import '../../../l10n/app_localizations.dart';
 
 class QuickGradingScreen extends StatefulWidget {
@@ -85,7 +84,9 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
     final appState = Provider.of<AppState>(context);
     final isIbSystem = _selectedAssessmentSystem == 1;
 
-    final allStudents = appState.students.isNotEmpty ? appState.students : [MockData.currentStudent];
+    // Demo məlumat axını QADAĞDIR: siyahı boşdursa saxta şagirdə not
+    // yazılmasın — boş vəziyyət göstərilir.
+    final allStudents = appState.students;
 
     // Class filtering
     final distinctClasses = allStudents.map((s) => s.className).toSet().toList()..sort();

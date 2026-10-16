@@ -890,6 +890,24 @@ class _ClassManagementScreenState extends State<ClassManagementScreen> {
               onPressed: () {
                 if (targetCtrl.text.trim().isNotEmpty) {
                   final toClass = targetCtrl.text.trim();
+                  // Hədəf sinif artıq mövcuddursa üzərinə yazma —
+                  // əks halda onun siyahısı və dərs cədvəli itir.
+                  final exists = appState.allDistinctClasses.any(
+                    (c) =>
+                        c.toLowerCase() == toClass.toLowerCase() &&
+                        c.toLowerCase() != fromClass.toLowerCase(),
+                  );
+                  if (exists) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '"$toClass" sinfi artıq mövcuddur — fərqli ad seçin.',
+                        ),
+                        backgroundColor: AppColors.danger,
+                      ),
+                    );
+                    return;
+                  }
                   appState.promoteClass(fromClass, toClass);
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(

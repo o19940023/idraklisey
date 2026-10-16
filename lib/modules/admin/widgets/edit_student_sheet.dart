@@ -125,7 +125,7 @@ class _EditStudentFormState extends State<_EditStudentForm> {
         child: child!,
       ),
     );
-    if (picked != null) setState(() => onPicked(picked));
+    if (mounted && picked != null) setState(() => onPicked(picked));
   }
 
   Future<void> _save() async {

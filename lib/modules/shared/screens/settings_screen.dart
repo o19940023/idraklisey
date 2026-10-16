@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../../l10n/app_localizations.dart';
@@ -245,12 +246,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.notifications_active_rounded,
               title: loc.pushNotifications,
               subtitle: loc.pushNotificationsDesc,
-              trailing: Switch.adaptive(
-                value: true, // TODO: Add notification settings to AppState
-                onChanged: (val) {
-                  // TODO: Implement notification toggle
-                },
-                activeColor: AppColors.success,
+              // Bildiriş açarı telefonun sistem tənzimləmələrində idarə
+              // olunur — toxunan istifadəçi birbaşa oraya yönəldilir.
+              onTap: openAppSettings,
+              trailing: Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textMuted,
               ),
             ),
 

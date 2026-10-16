@@ -496,22 +496,37 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                         ),
                         onPressed: _capturedPages.isEmpty || _isSubmitting
                             ? null
-                            : () {
+                            : () async {
                                 setState(() => _isSubmitting = true);
-                                appState.submitHomework(
+                                final ok = await appState.submitHomework(
                                   assignmentId: widget.assignment.id,
                                   studentId: currentStudent.id,
                                   studentName: currentStudent.fullName,
                                   images: _capturedPages,
                                   note: _noteController.text.trim(),
                                 );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(loc.successfullySaved),
-                                    backgroundColor: AppColors.success,
-                                  ),
-                                );
-                                Navigator.pop(context);
+                                if (!mounted) return;
+                                if (ok) {
+                                  setState(() => _isSubmitting = false);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(loc.successfullySaved),
+                                      backgroundColor: AppColors.success,
+                                    ),
+                                  );
+                                  Navigator.pop(context);
+                                } else {
+                                  setState(() => _isSubmitting = false);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Teslim kaydedilemedi — internet bağlantını yoxlayıb yenidən cəhd edin.',
+                                      ),
+                                      backgroundColor: AppColors.danger,
+                                      duration: Duration(seconds: 4),
+                                    ),
+                                  );
+                                }
                               },
                         icon: _isSubmitting
                             ? const SizedBox(

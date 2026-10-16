@@ -41,6 +41,7 @@ class _QrInventoryTicketScreenState extends State<QrInventoryTicketScreen> {
     );
 
     if (code == null || code.isEmpty) return;
+    if (!mounted) return;
 
     final item = appState.findInventoryItemByQr(code);
 
@@ -51,7 +52,7 @@ class _QrInventoryTicketScreenState extends State<QrInventoryTicketScreen> {
       _problemDescCtrl.clear();
     });
 
-    if (mounted) {
+    {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -101,6 +102,7 @@ class _QrInventoryTicketScreenState extends State<QrInventoryTicketScreen> {
 
     final saved = await appState.addTicket(newTicket);
 
+    if (!mounted) return;
     _problemTitleCtrl.clear();
     _problemDescCtrl.clear();
     setState(() {
@@ -108,7 +110,6 @@ class _QrInventoryTicketScreenState extends State<QrInventoryTicketScreen> {
       _scannedItem = null;
     });
 
-    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

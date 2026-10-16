@@ -55,6 +55,12 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
   /// "yenidən cəhd et" düyməsi göstərilir.
   bool _joinFailed = false;
 
+  /// Host-un məcburi susdurmasının son bilinən vəziyyəti.
+  bool _lastKnownForcedMute = false;
+
+  /// Son listener çağırışında iştirakçı siyahısında idimm? (qovulma aşkarı)
+  bool _wasInParticipants = false;
+
   /// Watchdog işə düşəndə avtomatik təkrar cəhd sayı (yalnız 1 dəfə).
   int _autoRetries = 0;
 
@@ -344,6 +350,9 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
 
   Future<void> _registerMeetPresence(AppState appState) async {
     for (var attempt = 0; attempt < 5; attempt++) {
+      // İstifadəçi otağı tərk edibsə retry dayandır — əks halda dispose
+      // sonrası "hayalet" iştirakçı kimi geri əlavə olunur.
+      if (!mounted) return;
       try {
         await appState
             .joinMeetRoom(widget.room.id)
@@ -389,14 +398,40 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
     final participant = room.participants
         .where((item) => item.userId == userId)
         .firstOrNull;
-    if (participant == null || participant.isMutedByHost == _isLocalMuted) {
+
+    // Host tərəfindən qovulmuşam? (iştirakçı siyahısından silindimsə)
+    final nowInRoom = participant != null;
+    if (_isConnected && _wasInParticipants && !nowInRoom) {
+      _wasInParticipants = nowInRoom;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Host sizi otaqdan çıxartdı.'),
+            backgroundColor: AppColors.danger,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        Navigator.of(context).maybePop();
+      });
       return;
     }
-    if (mounted) {
-      setState(() {
-        _isLocalMuted = participant.isMutedByHost;
-        _agoraService.muteLocalAudio(_isLocalMuted);
-      });
+    _wasInParticipants = nowInRoom;
+
+    if (participant == null) return;
+
+    // YALNIZ host-un məcburi susdurma bayrağı dəyişəndə reaksiya ver.
+    // İstifadəçinin ÖZ susdurması ilə sinxronlaşdırmaq yanlışdır —
+    // əks halda hər hansı bir notifyListeners öz mikrofonunu geri açırdı.
+    final forcedMute = participant.isMutedByHost;
+    if (forcedMute == _lastKnownForcedMute) return;
+    _lastKnownForcedMute = forcedMute;
+
+    if (forcedMute && mounted) {
+      setState(() => _isLocalMuted = true);
+      unawaited(_agoraService.muteLocalAudio(true));
+      // Host susdurmamanı AÇANDA mikrofonu avtomatik açmırıq —
+      // istifadəçi özü açır (öz istəyi ilə bağlayıbsa açıq qalmasın).
     }
   }
 
@@ -645,16 +680,15 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
                   ),
                   onTap: () async {
                     Navigator.pop(ctx);
-                    await appState.setParticipantMuteByHost(
+                    await appState.removeMeetParticipant(
                       widget.room.id,
                       participant.userId,
-                      true,
                     );
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            '${participant.fullName} otaqdan uzaqlaşdırıldı',
+                            '${participant.fullName} otaqdan çıxarıldı',
                           ),
                           backgroundColor: AppColors.danger,
                         ),

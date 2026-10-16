@@ -7,10 +7,12 @@ import '../../core/widgets/idrak_logo.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/widgets/animated_button.dart';
 import '../../core/utils/haptic_helper.dart';
+import '../../data/models/user_model.dart';
 import '../../data/models/user_preferences_model.dart';
 import '../../providers/app_state.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/app_update_service.dart';
+import '../../services/push_notification_service.dart';
 import '../auth/screens/login_screen.dart';
 import '../shared/screens/notifications_screen.dart';
 import '../shared/widgets/app_update_banner.dart';
@@ -109,6 +111,77 @@ class _TabTransitionState extends State<_TabTransition>
 
 class _MainScreenState extends State<MainScreen> {
   bool _isDragHoveredOnDock = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Bildirişə toxunaraq açılan tətbiq (cold-start / arxa plan) —
+    // ilk kadrdan sonra bildirişlər səhifəsinə yönləndir.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final opened = PushNotificationService.instance.consumePendingOpen();
+      if (opened != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+        );
+      }
+    });
+  }
+
+  /// Üst bardakı profil avatarı — fotoşəkil yoxdursa baş hərflər.
+  Widget _buildHeaderAvatar(AppUser user) {
+    final photo = user.photoUrl;
+    final hasPhoto = photo != null && photo.trim().isNotEmpty;
+    final initials = _initialsOf(user.fullName);
+
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: AppColors.accentGradient,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primaryAccent.withAlpha(70),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(2),
+        child: CircleAvatar(
+          radius: 17,
+          backgroundColor: hasPhoto ? Colors.white : AppColors.primaryAccent,
+          backgroundImage: hasPhoto ? NetworkImage(photo) : null,
+          child: hasPhoto
+              ? null
+              : Text(
+                  initials,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  String _initialsOf(String fullName) {
+    final parts =
+        fullName.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return 'İ';
+    if (parts.length == 1) {
+      return parts.first.substring(0, parts.first.length > 2 ? 2 : 1).toUpperCase();
+    }
+    return (parts.first[0] + parts.last[0]).toUpperCase();
+  }
 
   IconData _getIconFromString(String iconName) {
     final iconMap = {
@@ -679,7 +752,13 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ],
           ),
-          actions: const [],
+          actions: [
+            // Profil fotoşəfi hər zaman üst barda görünür (bütün rollar).
+            Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: Center(child: _buildHeaderAvatar(currentUser)),
+            ),
+          ],
         ),
         body: Stack(
           children: [

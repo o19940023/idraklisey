@@ -34,9 +34,10 @@ class _TeacherTimetableViewScreenState extends State<TeacherTimetableViewScreen>
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     
-    // Find Monday of the current week
+    // Find Monday of the current week — həmişə geriyə pazartesiyə qayıt
+    // (şənbə/bazar günü "0 gün çıx" köhnə hesab səhv günləri göstərirdi).
     final daysFromMonday = now.weekday - 1; // Mon=1 -> 0, etc.
-    _selectedWeekMonday = today.subtract(Duration(days: daysFromMonday < 5 ? daysFromMonday : 0));
+    _selectedWeekMonday = today.subtract(Duration(days: daysFromMonday));
 
     // Default select today if weekday is Monday-Friday (1..5), else Monday (0)
     if (now.weekday >= 1 && now.weekday <= 5) {
@@ -510,14 +511,20 @@ class _TeacherTimetableViewScreenState extends State<TeacherTimetableViewScreen>
     final isToday = selectedDate.isAtSameMomentAs(today);
     final isFuture = selectedDate.isAfter(today);
 
-    // Dərsin sinfini tap
-    String targetClass = appState.allDistinctClasses.isNotEmpty ? appState.allDistinctClasses.first : '';
-    for (final cls in appState.allDistinctClasses) {
+    // Dərsin sinfini tap — müəllimin öz siniflərində axtarış (bütün məktəb
+    // deyil) və ilk eşləşmədə dayan (köhnə kod son eşləşəni götürürdü).
+    final teacherClasses = appState.currentTeacherClasses;
+    final searchClasses = teacherClasses.isNotEmpty
+        ? teacherClasses
+        : appState.allDistinctClasses;
+    String targetClass = searchClasses.isNotEmpty ? searchClasses.first : '';
+    outer:
+    for (final cls in searchClasses) {
       final timetable = appState.getClassTimetable(cls);
       for (final day in timetable) {
         if (day.lessons.any((l) => l.time == slot.time && l.subject == slot.subject)) {
           targetClass = cls;
-          break;
+          break outer;
         }
       }
     }

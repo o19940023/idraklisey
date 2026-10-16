@@ -33,7 +33,11 @@ void main() async {
   final appState = AppState();
   await appState.loadThemeMode();
   await appState.loadLocale();
-  appState.initFirebaseData();
+  // Bulud istifadəçilərinin giriş üçün siyahının sinxronlaşmasını gözlə
+  // (təzə başlanmış app-da əks halda yalnız yerli admin mövcuddur).
+  // ensureDataReady() — paralel ikinci sinxronizasiyanı (data yarışı)
+  // önləyən paylaşılan future qaytarır.
+  unawaited(appState.ensureDataReady());
 
   // Push bildirişləri (tətbiq bağlı ikən də gəlməsi üçün) — arxa planda
   unawaited(PushNotificationService.instance.initialize());

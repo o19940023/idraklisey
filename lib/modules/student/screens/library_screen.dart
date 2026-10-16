@@ -415,7 +415,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             vertical: 6,
                           ),
                         ),
-                        onPressed: () {
+                        onPressed: (!book.isBorrowedByMe && book.availableCopies <= 0)
+                            ? null
+                            : () {
                           appState.toggleBorrowBook(book.id);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -436,7 +438,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           color: Colors.white,
                         ),
                         label: Text(
-                          book.isBorrowedByMe ? loc.bookBorrowed : loc.borrowBook,
+                          book.isBorrowedByMe
+                              ? loc.bookBorrowed
+                              : (book.availableCopies <= 0
+                                    ? 'Nüsxə yoxdur'
+                                    : loc.borrowBook),
                           style: const TextStyle(
                             fontSize: 11,
                             color: Colors.white,

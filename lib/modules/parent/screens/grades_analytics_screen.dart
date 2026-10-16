@@ -25,8 +25,11 @@ class _GradesAnalyticsScreenState extends State<GradesAnalyticsScreen> {
     final appState = Provider.of<AppState>(context);
     final currentStudent = appState.student;
 
+    // Yalnız bu şagirdə aid notlar. studentId-si olmayan (köhnə/kütləvi)
+    // qeydlər əvvəl bütün şagirdlərə göstərilirdi — artıq yalnız
+    // müəllim/admin görünüşündə görünür.
     final studentGrades = (appState.currentRole == UserRole.student || appState.currentRole == UserRole.parent)
-        ? appState.grades.where((g) => g.studentId == null || g.studentId == currentStudent.id).toList()
+        ? appState.grades.where((g) => g.studentId == currentStudent.id).toList()
         : appState.grades;
 
     final filteredGrades = _selectedFilter == null

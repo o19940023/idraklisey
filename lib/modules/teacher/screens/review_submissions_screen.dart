@@ -891,8 +891,22 @@ class _ReviewSubmissionsScreenState extends State<ReviewSubmissionsScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: () {
-                final score = double.tryParse(scoreCtrl.text.replaceAll(',', '.')) ?? 85.0;
-                final cleanScore = score.clamp(0.0, 100.0);
+                // Yanlış giriş sessizcə 85 yazmasın — xəta göstər.
+                final parsed = double.tryParse(
+                  scoreCtrl.text.replaceAll(',', '.'),
+                );
+                if (parsed == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Bal düzgün deyil — məsələn 95 və ya 87.5 yazın.',
+                      ),
+                      backgroundColor: AppColors.danger,
+                    ),
+                  );
+                  return;
+                }
+                final cleanScore = parsed.clamp(0.0, 100.0);
 
                 appState.gradeHomework(
                   assignmentId: assignment.id,

@@ -510,14 +510,12 @@ class AppState extends ChangeNotifier {
 
   /// Səlahiyyət yoxlaması.
   /// assignedRoleId olan istifadəçi YALNIZ rolunun icazə verdiyi
-  /// səlahiyyətlərə çatır. Rol təyin olunmayan istifadəçilər
-  /// öz rollarının standart modullarına giriş əldə edirlər.
+  /// səlahiyyətlərə çatır (UserRole.admin olan işçilər də daxil —
+  /// IT/Helpdesk kimi rollar məhz belə yaradılır). Rol təyin olunmayan
+  /// istifadəçilər öz rollarının standart modullarına giriş əldə edirlər.
   bool hasPermission(String permissionId) {
     final user = _currentUser;
     if (user == null) return false;
-
-    // Admin hər zaman tam səlahiyyətə malikdir
-    if (user.role == UserRole.admin) return true;
 
     // Şagird/Valideyn paneli yalnız öz modullarını istifadə edir —
     // işçi alətlərinə (helpdesk, inventar, istifadəçi idarəetməsi) heç vaxt giriş yoxdur.
@@ -561,44 +559,56 @@ class AppState extends ChangeNotifier {
     }
 
     final roleId = user.assignedRoleId;
-    if (roleId == null || roleId.isEmpty) {
+    final hasAssignedRole = roleId != null && roleId.isNotEmpty;
+
+    // Yalnız rol təyin olunMAYAN admin tam səlahiyyətlidir. Xüsusi rolla
+    // yaradılmış işçilər (IT, Helpdesk, Kitabxanaçı...) UserRole.admin
+    // olsalar belə yalnız rollarının icazə etdiyi modulları görür.
+    if (user.role == UserRole.admin && !hasAssignedRole) return true;
+
+    if (hasAssignedRole) {
+      final role = getRoleById(roleId);
+      // Rol hələ yüklənməyibsə güvənli şəkildə bağla (fail-closed).
+      // loadRoles() bitince notifyListeners UI-nı yeniləyir.
+      if (role == null) return false;
+
+      // Teacher navigation ID mapping to Permission IDs
       if (user.role == UserRole.teacher) {
-        if (permissionId == 'teacher_medical') return false;
+        if (permissionId == 'teacher_students') {
+          return role.permissionIds.contains('view_students');
+        }
+        if (permissionId == 'teacher_timetable') {
+          return role.permissionIds.contains('view_timetable');
+        }
+        if (permissionId == 'teacher_grading') {
+          return role.permissionIds.contains('view_grades');
+        }
+        if (permissionId == 'teacher_inventory') {
+          return role.permissionIds.contains('view_inventory');
+        }
+        if (permissionId == 'teacher_medical') {
+          return role.permissionIds.contains('manage_medical') ||
+              role.permissionIds.contains('view_medical');
+        }
+        if (permissionId == 'teacher_library') {
+          return role.permissionIds.contains('view_library');
+        }
+        if (permissionId == 'teacher_notifications') {
+          return role.permissionIds.contains('view_settings');
+        }
+        if (permissionId == 'teacher_meet') {
+          return role.permissionIds.contains('view_meet');
+        }
       }
-      return true;
-    }
-    final role = getRoleById(roleId);
-    if (role == null) return true;
 
-    // Teacher navigation ID mapping to Permission IDs
+      return role.permissionIds.contains(permissionId);
+    }
+
+    // Rol təyin olunmayan istifadəçilər — standart modullar.
     if (user.role == UserRole.teacher) {
-      if (permissionId == 'teacher_students') {
-        return role.permissionIds.contains('view_students');
-      }
-      if (permissionId == 'teacher_timetable') {
-        return role.permissionIds.contains('view_timetable');
-      }
-      if (permissionId == 'teacher_grading') {
-        return role.permissionIds.contains('view_grades');
-      }
-      if (permissionId == 'teacher_inventory') {
-        return role.permissionIds.contains('view_inventory');
-      }
-      if (permissionId == 'teacher_medical') {
-        return false;
-      }
-      if (permissionId == 'teacher_library') {
-        return role.permissionIds.contains('view_library');
-      }
-      if (permissionId == 'teacher_notifications') {
-        return role.permissionIds.contains('view_settings');
-      }
-      if (permissionId == 'teacher_meet') {
-        return role.permissionIds.contains('view_meet');
-      }
+      if (permissionId == 'teacher_medical') return false;
     }
-
-    return role.permissionIds.contains(permissionId);
+    return true;
   }
 
   // Per-student medical cards map: studentId -> StudentMedicalCard
@@ -630,10 +640,18 @@ class AppState extends ChangeNotifier {
   List<StudentProfile> get children {
     final user = _currentUser;
     if (user == null || user.role != UserRole.parent) return const [];
+    return childrenOf(user);
+  }
+
+  /// İstənilən istifadəçinin övladları — valideynlər və eyni zamanda
+  /// övladı olan işçilər (müəllim/admin) üçün ortaq məntiq.
+  List<StudentProfile> childrenOf(AppUser user) {
     final ids = <String>{
-      if (user.linkedStudentId != null) user.linkedStudentId!,
+      if (user.linkedStudentId != null && user.linkedStudentId!.isNotEmpty)
+        user.linkedStudentId!,
       ...user.linkedStudentIds,
     };
+    if (ids.isEmpty) return const [];
     return _students.where((s) => ids.contains(s.id)).toList();
   }
 
@@ -956,8 +974,10 @@ class AppState extends ChangeNotifier {
 
     // Səlahiyyət qapısı üçün rollar mütləq yüklənməlidir —
     // manual loginda auto-login yolu işləmir, buradan yükləyirik.
+    // (login sync-dır; ensureDataReady artıq rolları gözləyir, bu
+    // yalnız təhlükəsiz ehtiyat yolu kimi arxa planda qalır.)
     if (_roles.isEmpty) {
-      loadRoles();
+      unawaited(loadRoles());
     }
 
     // 🆕 İstifadəçi seçimlərini yüklə (modul sıralaması üçün)
@@ -1031,8 +1051,12 @@ class AppState extends ChangeNotifier {
         return true;
       } else {
         debugPrint('[AppState] ⚠️ Auto-login failed: $error');
-        // Clear invalid credentials
-        await _authStorage.clearAll();
+        // Parolları yalnız bulud siyahısı TAM yüklənəndən sonra etibarsız
+        // say. Sinxron yarımçıq olsa (yavaş şəbəkə) saxlanmış parolu
+        // silmək — istifadəçini birdəfəlik çıxarırdı.
+        if (_isInitialDataLoaded) {
+          await _authStorage.clearAll();
+        }
         return false;
       }
     } catch (e) {
@@ -1047,6 +1071,10 @@ class AppState extends ChangeNotifier {
     unawaited(PushNotificationService.instance.onUserLoggedOut());
     _currentUser = null;
     _currentTabIndex = 0;
+    // Keçmiş istifadəçinin panel düzülüşü/övlad seçimi növbəti hesaba
+    // keçməsin (aynı rollu fərqli istifadəçi üçün vacibdir).
+    _userPreferences = null;
+    _activeChildId = null;
     await _authStorage.clearAll();
     notifyListeners();
   }
@@ -1985,7 +2013,16 @@ class AppState extends ChangeNotifier {
 
     final role = isTeacher ? UserRole.teacher : UserRole.admin;
     final codePrefix = isTeacher ? 'IDR-TCH' : 'IDR-STF';
-    final codeNum = 100 + _users.where((u) => u.role == role).length + 1;
+
+    // İşçi İdrak kodu da toqquşmasız — silinmiş işçinin kodu üstünə
+    // yazılmasın (köhnə üsul sayğacla hesablanırdı).
+    final usedIdrakCodes = _users
+        .map((u) => u.idrakCode.toUpperCase())
+        .toSet();
+    var codeNum = 100 + _users.where((u) => u.role == role).length + 1;
+    while (usedIdrakCodes.contains('$codePrefix-$codeNum'.toUpperCase())) {
+      codeNum++;
+    }
     final idrakCode = '$codePrefix-$codeNum';
 
     final newEmployee = AppUser(
@@ -2063,10 +2100,30 @@ class AppState extends ChangeNotifier {
     String? studentPhotoUrl,
   }) {
     final studentName = '$firstName $lastName'.trim();
-    final stdIndex = _students.length + 1;
-    final stdId = 'std-${100 + stdIndex}';
-    final studentIdrakCode = 'IDR-2025-0${490 + stdIndex}';
-    final barcodeData = '994019${283740 + stdIndex}';
+
+    // Mövcud ID/kod/barkodlarla toqquşmayan nömrə tap. Köhnə üsul
+    // (siyahı uzunluğu + 1) silinmiş şagird və ya paralel qeydiyyat
+    // halında mövcud şagirdin üzərinə yazırdı.
+    final usedStdIds = _students.map((s) => s.id).toSet();
+    final usedStudentNumbers =
+        _students.map((s) => s.studentNumber.toUpperCase()).toSet();
+    final usedBarcodes = _students.map((s) => s.barcodeData).toSet();
+
+    var stdIndex = _students.length + 1;
+    String stdId;
+    String studentIdrakCode;
+    String barcodeData;
+    while (true) {
+      stdId = 'std-${100 + stdIndex}';
+      studentIdrakCode = 'IDR-2025-0${490 + stdIndex}';
+      barcodeData = '994019${283740 + stdIndex}';
+      final clash =
+          usedStdIds.contains(stdId) ||
+          usedStudentNumbers.contains(studentIdrakCode.toUpperCase()) ||
+          usedBarcodes.contains(barcodeData);
+      if (!clash) break;
+      stdIndex++;
+    }
 
     final existingEmails = _collectEmails();
     // Şagird mailindəki il FIN-dən hesablanır (məktəbə başlama ili)
@@ -2464,7 +2521,10 @@ class AppState extends ChangeNotifier {
         date: DateTime.now(),
       ),
     );
-    final targetStdId = studentId ?? targetGrade.studentId ?? student.id;
+    // GPA həmişə NOTUN SAHİBİNƏ görə yenidən hesablansın —
+    // çağıran tərəfdən göndərilən "cari şagird" yanlış hesaba
+    // səhvən tətiq olunmasın.
+    final targetStdId = targetGrade.studentId ?? studentId ?? student.id;
 
     _grades.removeWhere((g) => g.id == gradeId);
     _firestoreService.deleteGrade(gradeId);
@@ -2612,8 +2672,13 @@ class AppState extends ChangeNotifier {
     return _users
         .where((u) {
           if (!u.isActive) return false;
-          if (u.role == UserRole.admin) return true;
+          // Yalnız rol təyin olunMAYAN super admin hər icazəyə malikdir;
+          // xüsusi rollu işçi (IT, Helpdesk...) yalnız rolunun icazəsi ilə.
           final roleId = u.assignedRoleId;
+          if (u.role == UserRole.admin &&
+              (roleId == null || roleId.isEmpty)) {
+            return true;
+          }
           if (roleId == null || roleId.isEmpty) return false;
           final role = getRoleById(roleId);
           return role?.permissionIds.contains(permissionId) ?? false;
@@ -2810,43 +2875,50 @@ class AppState extends ChangeNotifier {
     return saved;
   }
 
-  void submitHomework({
+  /// Tapşırığı təhvil verir. Yerli vəziyyət dərhal, bulud yazısı
+  /// gözlənilir — false qayıdırsa (oflayn) istifadəçiyə xəta göstərilir.
+  Future<bool> submitHomework({
     required String assignmentId,
     required String studentId,
     required String studentName,
     required List<String> images,
     required String note,
-  }) {
+  }) async {
     final index = _assignments.indexWhere((a) => a.id == assignmentId);
-    if (index != -1) {
-      final old = _assignments[index];
-      final newSubmissions = Map<String, AssignmentSubmission>.from(
-        old.submissions,
-      );
-      newSubmissions[studentId] = AssignmentSubmission(
-        studentId: studentId,
-        studentName: studentName,
-        submittedAt: DateTime.now(),
-        scannedImages: images,
-        studentNote: note,
-      );
+    if (index == -1) return false;
+    final old = _assignments[index];
+    final newSubmissions = Map<String, AssignmentSubmission>.from(
+      old.submissions,
+    );
+    newSubmissions[studentId] = AssignmentSubmission(
+      studentId: studentId,
+      studentName: studentName,
+      submittedAt: DateTime.now(),
+      scannedImages: images,
+      studentNote: note,
+    );
 
-      final updated = HomeworkAssignment(
-        id: old.id,
-        subject: old.subject,
-        title: old.title,
-        teacherName: old.teacherName,
-        instructions: old.instructions,
-        assignedDate: old.assignedDate,
-        dueDate: old.dueDate,
-        attachmentDocUrl: old.attachmentDocUrl,
-        assignedClass: old.assignedClass,
-        assignedStudentIds: old.assignedStudentIds,
-        submissions: newSubmissions,
-      );
-      _assignments[index] = updated;
-      _firestoreService.saveAssignment(updated);
-      notifyListeners();
+    final updated = HomeworkAssignment(
+      id: old.id,
+      subject: old.subject,
+      title: old.title,
+      teacherName: old.teacherName,
+      instructions: old.instructions,
+      assignedDate: old.assignedDate,
+      dueDate: old.dueDate,
+      attachmentDocUrl: old.attachmentDocUrl,
+      assignedClass: old.assignedClass,
+      assignedStudentIds: old.assignedStudentIds,
+      submissions: newSubmissions,
+    );
+    _assignments[index] = updated;
+    notifyListeners();
+    try {
+      await _firestoreService.saveAssignment(updated);
+      return true;
+    } catch (e) {
+      debugPrint('⚠️ submitHomework cloud sync failed (local kept): $e');
+      return false;
     }
   }
 
@@ -3202,6 +3274,29 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Host tərəfindən iştirakçını otaqdan HƏQİQİTƏN çıxarır.
+  /// (Yalnız susdurma yox — iştirakçı siyahısından tam silinir və
+  /// qovulan tərəfdə otaq avtomatik bağlanır.)
+  Future<void> removeMeetParticipant(
+    String roomId,
+    String targetUserId,
+  ) async {
+    final index = _meetRooms.indexWhere((r) => r.id == roomId);
+    if (index == -1) return;
+
+    final updatedParticipants = await _firestoreService.leaveMeetParticipant(
+      roomId,
+      targetUserId,
+    );
+    final currentIndex = _meetRooms.indexWhere((r) => r.id == roomId);
+    if (currentIndex != -1) {
+      _meetRooms[currentIndex] = _meetRooms[currentIndex].copyWith(
+        participants: updatedParticipants,
+      );
+      notifyListeners();
+    }
+  }
+
   Future<void> muteAllInRoom(String roomId, bool mute) async {
     final index = _meetRooms.indexWhere((r) => r.id == roomId);
     if (index == -1) return;
@@ -3258,6 +3353,8 @@ class AppState extends ChangeNotifier {
     if (index != -1) {
       final old = _books[index];
       final newBorrowed = !old.isBorrowedByMe;
+      // Nüsxə qalmayıbsa götürmək olmaz — sayı -1-ə düşməsin.
+      if (newBorrowed && old.availableCopies <= 0) return;
       final updated = BookItem(
         id: old.id,
         title: old.title,
@@ -3611,12 +3708,16 @@ class AppState extends ChangeNotifier {
     final userId = user.id;
     final userRole = user.role;
 
-    if (userRole == UserRole.admin) {
+    if (userRole == UserRole.admin &&
+        (user.assignedRoleId == null || user.assignedRoleId!.isEmpty)) {
+      // Rol təyin olunmamış SUPER admin — hər şeyi görür.
       return _notifications;
     }
 
     // İşçi rolü kimlikləri (assignedRole id + adı) — helpdesk/IT/psixoloq
-    // kimi rolların bildirişlərə hədəflənməsi üçün.
+    // kimi rolların bildirişlərə hədəflənməsi üçün. Rol təyin olunmuş
+    // admin-rollu işçi (IT, Helpdesk...) yalnız ümumi elanları və öz
+    // roluna/şəxsinə hədərlənən bildirişləri görür.
     String? assignedRoleId;
     String assignedRoleName = '';
     if (user.assignedRoleId != null && user.assignedRoleId!.isNotEmpty) {
@@ -3636,7 +3737,41 @@ class AppState extends ChangeNotifier {
         return true;
       }
 
-      // 2. Teacher / işçi rollar (müəllim, helpdesk, IT, psixoloq...)
+      // 2. Rol təyin olunmuş işçi (admin-rollu IT/Helpdesk və s.)
+      if (userRole == UserRole.admin && assignedRoleId != null) {
+        // Adminin ümumi elanları hamıya çatır
+        if (n.targetRoles.isEmpty && n.senderRole == 'admin') return true;
+        // Rol bazlı hədəfləmə: 'role-helpdesk' və ya rol adı ilə
+        if (n.targetRoles.contains(assignedRoleId) ||
+            (assignedRoleName.isNotEmpty &&
+                n.targetRoles.any(
+                  (r) => r.toLowerCase() == assignedRoleName,
+                ))) {
+          return true;
+        }
+        return false;
+      }
+
+      // 2b. İşçi eyni zamanda valideyndirsə (övladıyla bağlı elanlar)
+      if ((userRole == UserRole.admin || userRole == UserRole.teacher) &&
+          user.linkedStudentIds.isNotEmpty) {
+        final kids = childrenOf(user);
+        if (kids.isNotEmpty) {
+          final childIds = kids.map((c) => c.id).toSet();
+          final childClasses = kids.map((c) => c.className).toSet();
+          if (n.targetStudentId != null &&
+              childIds.contains(n.targetStudentId)) {
+            return true;
+          }
+          if (n.targetRoles.contains('parent') &&
+              n.targetClasses.isNotEmpty &&
+              n.targetClasses.any((c) => childClasses.contains(c))) {
+            return true;
+          }
+        }
+      }
+
+      // 3. Teacher / işçi rollar (müəllim, helpdesk, IT, psixoloq...)
       if (userRole == UserRole.teacher) {
         // Adminin ümumi elanları hamıya çatır
         if (n.targetRoles.isEmpty && n.senderRole == 'admin') return true;
@@ -3706,11 +3841,14 @@ class AppState extends ChangeNotifier {
 
   /// Valideynin uşaqlarının sinif adları — class_<sinif> push topic-ləri üçün.
   Set<String> _childClassesFor(AppUser user) {
-    if (user.role != UserRole.parent) return {};
+    // Valideynlər və eyni zamanda övladı olan işçilər (müəllim/admin)
+    // övlad siniflərinin elanlarına abunə olurlar.
     final ids = <String>{
-      if (user.linkedStudentId != null) user.linkedStudentId!,
+      if (user.linkedStudentId != null && user.linkedStudentId!.isNotEmpty)
+        user.linkedStudentId!,
       ...user.linkedStudentIds,
     };
+    if (ids.isEmpty) return {};
     return _students
         .where((s) => ids.contains(s.id) && s.className.trim().isNotEmpty)
         .map((s) => s.className.trim())

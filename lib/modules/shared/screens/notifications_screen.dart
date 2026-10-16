@@ -270,6 +270,39 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ),
                         child: const Icon(Icons.delete_rounded, color: Colors.white),
                       ),
+                      // Bu silmə ŞƏXSİ deyil — bildiriş bütün qəbuledənlərdən
+                      // silinir. Təsadüfi sürüşdərmə üçün təsdiq al.
+                      confirmDismiss: (_) async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (dlgCtx) => AlertDialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            title: const Text('Bildirişi sil?'),
+                            content: const Text(
+                              'Bu bildiriş bütün istifadəçilərdən silinəcək.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dlgCtx, false),
+                                child: const Text('Ləğv et'),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.danger,
+                                ),
+                                onPressed: () => Navigator.pop(dlgCtx, true),
+                                child: const Text(
+                                  'Sil',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                        return confirmed ?? false;
+                      },
                       onDismissed: (_) {
                         appState.deleteNotification(notif.id);
                         ScaffoldMessenger.of(context).showSnackBar(

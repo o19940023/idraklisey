@@ -118,7 +118,7 @@ class _EditEmployeeFormState extends State<_EditEmployeeForm> {
         child: child!,
       ),
     );
-    if (picked != null) setState(() => onPicked(picked));
+    if (mounted && picked != null) setState(() => onPicked(picked));
   }
 
   Future<void> _save() async {
@@ -151,7 +151,7 @@ class _EditEmployeeFormState extends State<_EditEmployeeForm> {
       roomNumber: _isTeacher ? _room.text.trim() : null,
       assignedClasses: _isTeacher ? _assignedClasses.toList() : const [],
       password: _pass.text.trim(),
-      assignedRoleId: _isTeacher ? null : _selectedRoleId,
+      assignedRoleId: _selectedRoleId,
     ));
     setState(() => _saving = false);
     if (!mounted) return;
