@@ -47,6 +47,9 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
   final Map<int, bool> _remoteVideoOn = {};
   DateTime _lastAgoraErrorTime = DateTime.fromMillisecondsSinceEpoch(0);
   int _invalidTokenCount = 0;
+  Timer? _joinWatchdog;
+  String _lastConnState = 'DISCONNECTED';
+  String _lastConnReason = '';
 
   bool get _isVideoRoom => widget.room.hasVideo;
 
@@ -78,6 +81,7 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
   /// 🎥 Initialize Agora RTC Engine and join channel
   Future<void> _initializeAgoraAndJoin() async {
     _invalidTokenCount = 0;
+    _joinWatchdog?.cancel();
     setState(() => _isJoiningVoiceChannel = true);
 
     try {
@@ -140,9 +144,22 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
         });
       };
       _agoraService.onJoinSuccess = () {
+        _joinWatchdog?.cancel();
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) setState(() => _isConnected = true);
         });
+      };
+
+      // Connection state tracking — iOS join takılmasını görünür etmək üçün
+      _agoraService.onConnectionStateChanged = (state, reason) {
+        _lastConnState = state.name;
+        _lastConnReason = reason.name;
+        if (state == ConnectionStateType.connectionStateConnected) {
+          _joinWatchdog?.cancel();
+          if (mounted && !_isConnected) {
+            setState(() => _isConnected = true);
+          }
+        }
       };
 
       // Step 4: Setup error handler (throttled — spam'ı önlə)
@@ -217,6 +234,30 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
       if (!joined) {
         throw Exception('Failed to join voice channel');
       }
+
+      // Join çağırışı qəbul olundu, amma connection callback gəlməyə bilər
+      // (iOS real cihazda müşahidə olunur) — 20 saniyə içində bağlanmasa
+      // istifadəçiyə görünən teşhis göstər.
+      _joinWatchdog?.cancel();
+      _joinWatchdog = Timer(const Duration(seconds: 20), () {
+        if (!mounted || _isConnected) return;
+        debugPrint(
+          '⚠️ [DIAG] Agora join watchdog: still not connected. '
+          'state=$_lastConnState reason=$_lastConnReason',
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Aqroraya bağlana bilmədi (vəziyyət: $_lastConnState'
+              '${_lastConnReason.isNotEmpty ? ' / $_lastConnReason' : ''}). '
+              'Wi-Fi şəbəkəsi Aqroranın trafikini (UDP) blokla ya bilər — '
+              'mobil internetlə yenidən cəhd edin.',
+            ),
+            backgroundColor: AppColors.danger,
+            duration: const Duration(seconds: 8),
+          ),
+        );
+      });
 
       debugPrint(
         '✓ [DIAG] Successfully joined Agora channel: ${widget.room.id} '
@@ -320,6 +361,7 @@ class _VoiceRoomScreenState extends State<VoiceRoomScreen>
   @override
   void dispose() {
     _durationTimer.cancel();
+    _joinWatchdog?.cancel();
     _pulseController.dispose();
     _appState.removeListener(_syncForcedMuteState);
     _appState.leaveMeetRoom(widget.room.id);

@@ -32,6 +32,10 @@ class AgoraService {
   Function(int uid, bool videoOn)? onRemoteVideoStateChanged;
   Function()? onJoinSuccess;
 
+  /// Bağlantı vəziyyəti dəyişdikdə (iOS'da join takılması teşhisi üçün)
+  Function(ConnectionStateType state, ConnectionChangedReasonType reason)?
+  onConnectionStateChanged;
+
   RtcEngine? _engine;
   bool _initialized = false;
   bool _joined = false;
@@ -132,6 +136,15 @@ class AgoraService {
             _engine?.setEnableSpeakerphone(_isSpeakerOn);
             onJoinSuccess?.call();
           },
+          onConnectionStateChanged:
+              (
+                RtcConnection connection,
+                ConnectionStateType state,
+                ConnectionChangedReasonType reason,
+              ) {
+                debugPrint('[Agora] Connection state: ${state.name} (${reason.name})');
+                onConnectionStateChanged?.call(state, reason);
+              },
           onLeaveChannel: (RtcConnection connection, RtcStats stats) {
             debugPrint('[Agora] Left channel');
             _joined = false;
