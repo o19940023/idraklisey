@@ -27,6 +27,41 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
   bool _showBack = false;
   bool _isNfcActive = false;
 
+  /// Fotoşəkil yoxdursa/yüklənmədisə baş hərflərlə zərif yığım.
+  Widget _buildInitialsFallback(String fullName) {
+    final parts = fullName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    final initials = parts.isEmpty
+        ? 'İ'
+        : (parts.length == 1
+              ? parts.first.substring(0, parts.first.length > 2 ? 2 : 1)
+              : '${parts.first[0]}${parts.last[0]}')
+              .toUpperCase();
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF3D2F6B), Color(0xFF1E293B)],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 26,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -812,14 +847,31 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              Image.network(
-                                student.photoUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: const Color(0xFF1E293B),
-                                  child: const Icon(Icons.person, color: Colors.white54, size: 38),
-                                ),
-                              ),
+                              if (student.photoUrl.trim().isNotEmpty)
+                                Image.network(
+                                  student.photoUrl,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, progress) =>
+                                      progress == null
+                                      ? child
+                                      : Container(
+                                          color: const Color(0xFF1E293B),
+                                          child: const Center(
+                                            child: SizedBox(
+                                              width: 18,
+                                              height: 18,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Color(0xFF6C5CE7),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                  errorBuilder: (_, __, ___) =>
+                                      _buildInitialsFallback(student.fullName),
+                                )
+                              else
+                                _buildInitialsFallback(student.fullName),
                               Positioned(
                                 bottom: 0,
                                 left: 0,

@@ -21,6 +21,73 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
   String _selectedClass = 'Hamısı';
 
+  /// Şagird kartı/detay başlığı üçün vahid avatar — fotoşəkil yoxdursa
+  /// və ya yüklənmədisə baş hərflərlə gradyan yığım (boş person ikonu yox).
+  Widget _studentAvatar(StudentProfile student, double size) {
+    final hasPhoto = student.photoUrl.trim().isNotEmpty;
+    final parts = student.fullName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    final initials = parts.isEmpty
+        ? 'Ş'
+        : (parts.length == 1
+              ? parts.first.substring(0, parts.first.length > 2 ? 2 : 1)
+              : '${parts.first[0]}${parts.last[0]}')
+              .toUpperCase();
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * 0.25),
+        border: Border.all(
+          color: AppColors.primaryAccent.withAlpha(40),
+          width: 1.5,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.25),
+        child: Container(
+          width: size,
+          height: size,
+          color: AppColors.primaryAccent.withAlpha(12),
+          child: hasPhoto
+              ? Image.network(
+                  student.photoUrl,
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _initialsBox(initials, size),
+                )
+              : _initialsBox(initials, size),
+        ),
+      ),
+    );
+  }
+
+  Widget _initialsBox(String initials, double size) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF564BC7), Color(0xFF2E304F)],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: size * 0.32,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _searchCtrl.dispose();
@@ -332,27 +399,7 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
             child: Row(
               children: [
                 // Photo with rounded square
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.primaryAccent.withAlpha(30), width: 1.5),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(13),
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      color: AppColors.primaryAccent.withAlpha(12),
-                      child: Image.network(
-                        student.photoUrl,
-                        width: 56,
-                        height: 56,
-                        fit: BoxFit.cover,
-                        errorBuilder: (ctx, err, stack) => Icon(Icons.person_rounded, color: AppColors.primaryAccent, size: 28),
-                      ),
-                    ),
-                  ),
-                ),
+                _studentAvatar(student, 56),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -472,27 +519,7 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
                         Expanded(
                           child: Row(
                             children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: AppColors.primaryAccent.withAlpha(40)),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(13),
-                                  child: Container(
-                                    width: 50,
-                                    height: 50,
-                                    color: AppColors.primaryAccent.withAlpha(12),
-                                    child: Image.network(
-                                      student.photoUrl,
-                                      width: 50,
-                                      height: 50,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (c, err, stack) => const Icon(Icons.person, color: AppColors.primaryAccent),
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              _studentAvatar(student, 50),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(

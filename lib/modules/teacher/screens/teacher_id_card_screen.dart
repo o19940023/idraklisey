@@ -25,6 +25,41 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
   bool _showBack = false;
   bool _isNfcActive = false;
 
+  /// Fotoşəkil yoxdursa/yüklənmədisə baş hərflərlə zərif yığım.
+  Widget _buildInitialsFallback(String fullName) {
+    final parts = fullName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    final initials = parts.isEmpty
+        ? 'İ'
+        : (parts.length == 1
+              ? parts.first.substring(0, parts.first.length > 2 ? 2 : 1)
+              : '${parts.first[0]}${parts.last[0]}')
+              .toUpperCase();
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF5C4A1E), Color(0xFF1E293B)],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            color: Color(0xFFFFDF79),
+            fontSize: 26,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -927,18 +962,33 @@ class _TeacherIdCardScreenState extends State<TeacherIdCardScreen>
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              Image.network(
-                                user?.photoUrl ?? '',
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => Container(
-                                  color: const Color(0xFF1E293B),
-                                  child: const Icon(
-                                    Icons.person_outline_rounded,
-                                    color: Color(0xFFFFDF79),
-                                    size: 38,
-                                  ),
-                                ),
-                              ),
+                              if ((user?.photoUrl ?? '').trim().isNotEmpty)
+                                Image.network(
+                                  user?.photoUrl ?? '',
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, progress) =>
+                                      progress == null
+                                      ? child
+                                      : Container(
+                                          color: const Color(0xFF1E293B),
+                                          child: const Center(
+                                            child: SizedBox(
+                                              width: 18,
+                                              height: 18,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Color(0xFFFFDF79),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                  errorBuilder: (_, _, _) =>
+                                      _buildInitialsFallback(
+                                        user?.fullName ?? '',
+                                      ),
+                                )
+                              else
+                                _buildInitialsFallback(user?.fullName ?? ''),
                               Positioned(
                                 bottom: 0,
                                 left: 0,
