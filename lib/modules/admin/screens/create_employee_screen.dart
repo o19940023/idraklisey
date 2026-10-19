@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_shadows.dart';
 import '../../../core/utils/email_generator.dart';
 import '../../../core/utils/fin_code_formatter.dart';
 import '../../../core/utils/password_hasher.dart';
@@ -14,9 +12,11 @@ import '../../../providers/app_state.dart';
 import '../../../core/utils/navigation_utils.dart';
 import '../widgets/credentials_result_dialog.dart';
 
-/// Detallı işçi yaradılması — 4 səhifəli addım-addım forma:
-/// 1) Kimlik  2) Əlaqə  3) İş və vəzifə  4) Hesab.
-/// Yalnız cari səhifənin sahələri validasiya olunur.
+/// Detallı işçi və müəllim yaradılması — Müasir 4 addımlı İR (HR) Sehrbazı:
+/// 1) Şəxsi Kimlik & Foto
+/// 2) Əlaqə & Bank
+/// 3) Vəzifə, Rol & Tədris İcazələri
+/// 4) Hesab & Giriş Şifrəsi
 class CreateEmployeeScreen extends StatefulWidget {
   const CreateEmployeeScreen({super.key});
 
@@ -43,7 +43,7 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
   static const _citizenships = ['Azərbaycan', 'Türkiyə', 'Rusiya', 'Gürcüstan', 'Ukrayna', 'İran', 'Digər'];
   static const _educationLevels = ['Orta təhsil', 'Orta ixtisas', 'Bakalavr', 'Magistr', 'PhD / Doktorantura'];
 
-  static const _stepTitles = ['Kimlik', 'Əlaqə', 'İş və Vəzifə', 'Hesab'];
+  static const _stepTitles = ['Şəxsi Kimlik', 'Əlaqə & Bank', 'Vəzifə & Rol', 'Hesab & Giriş'];
 
   int _step = 0;
   String _gender = 'Kişi';
@@ -110,7 +110,11 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(primary: AppColors.primaryAccent),
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF2563EB),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF0F172A),
+            ),
           ),
           child: child!,
         );
@@ -196,16 +200,33 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
     final dateFormat = DateFormat('dd.MM.yyyy');
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: const Color(0xFF0F172A),
         surfaceTintColor: Colors.transparent,
-        title: Text(
-          'Yeni İşçi (${_step + 1}/4): ${_stepTitles[_step]}',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+        elevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Yeni Əməkdaş Qeydiyyatı',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 17, letterSpacing: -0.3),
+            ),
+            Text(
+              'Addım ${_step + 1} / 4: ${_stepTitles[_step]}',
+              style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 11.5, fontWeight: FontWeight.w500),
+            ),
+          ],
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+          icon: Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(25),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 15),
+          ),
           onPressed: () {
             if (_step > 0) {
               setState(() => _step--);
@@ -214,408 +235,799 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
             }
           },
         ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(6),
-          child: LinearProgressIndicator(
-            value: (_step + 1) / _stepTitles.length,
-            minHeight: 6,
-            backgroundColor: Colors.white.withAlpha(30),
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryAccent),
-          ),
-        ),
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        child: Column(
           children: [
-            // ── Addım göstəricisi ──
-            Row(
-              children: [
-                for (var i = 0; i < _stepTitles.length; i++) ...[
-                  if (i > 0)
-                    Expanded(child: Container(height: 3, color: i <= _step ? AppColors.primaryAccent : AppColors.cardBorder)),
-                  Container(
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                      color: i <= _step ? AppColors.primaryAccent : AppColors.surface,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: i <= _step ? AppColors.primaryAccent : AppColors.cardBorder),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${i + 1}',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w900,
-                          color: i <= _step ? Colors.white : AppColors.textMuted,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _stepTitles[_step],
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.textSecondary),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // ════ ADDIM 1: KİMLİK ════
-            if (_step == 0) ...[
-              _buildSection(
-                icon: Icons.badge_rounded,
-                title: 'Şəxsi Məlumatlar',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(child: _buildText(_firstNameCtrl, 'Ad *', 'Ayşə', icon: Icons.person_rounded, validator: (v) => (v ?? '').trim().isEmpty ? 'Ad tələb olunur' : null)),
-                        const SizedBox(width: 10),
-                        Expanded(child: _buildText(_lastNameCtrl, 'Soyad *', 'Məmmədova', icon: Icons.person_outline_rounded, validator: (v) => (v ?? '').trim().isEmpty ? 'Soyad tələb olunur' : null)),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    _buildText(_fatherNameCtrl, 'Ata adı', 'Eldar', icon: Icons.person_pin_rounded),
-                    const SizedBox(height: 14),
-                    Text('Cins', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        _buildGenderChip('Kişi', Icons.man_rounded),
-                        const SizedBox(width: 8),
-                        _buildGenderChip('Qadın', Icons.woman_rounded),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Text('Doğum Tarixi', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                    const SizedBox(height: 6),
-                    _buildDateField(
-                      date: _birthDate,
-                      hint: 'Seçilməyib',
-                      icon: Icons.cake_rounded,
-                      onTap: () => _pickDate(_birthDate, 30, 75, (d) => _birthDate = d),
-                    ),
-                    const SizedBox(height: 14),
-                    _buildText(
-                      _finCtrl,
-                      'FIN Kod *',
-                      'məs: 6XX7UVH',
-                      icon: Icons.pin_rounded,
-                      keyboard: TextInputType.text,
-                      inputFormatters: finCodeInputFormatters(),
-                      validator: (v) {
-                        final val = (v ?? '').trim().toUpperCase();
-                        final err = validateFinCode(val);
-                        if (err != null) return err;
-                        if (appState.users.any((u) => (u.finCode ?? '').toUpperCase() == val)) return 'Bu FIN kod artıq qeydiyyatdadır';
-                        return null;
+            // ── Interactive Stepper Ribbon ──
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+              decoration: const BoxDecoration(
+                color: Color(0xFF0F172A),
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
+              ),
+              child: Row(
+                children: List.generate(_stepTitles.length, (index) {
+                  final isDone = index < _step;
+                  final isCurrent = index == _step;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        if (index < _step) {
+                          setState(() => _step = index);
+                        }
                       },
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
-                      value: _citizenship,
-                      decoration: _inputDeco(icon: Icons.flag_rounded).copyWith(labelText: 'Vətəndaşlıq'),
-                      items: [
-                        for (final c in _citizenships) DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13))),
-                      ],
-                      onChanged: (v) => setState(() => _citizenship = v!),
-                    ),
-                    const SizedBox(height: 14),
-                    _buildText(
-                      _idCardCtrl,
-                      'ŞV Seriyası',
-                      'AA1234567',
-                      icon: Icons.badge_rounded,
-                      keyboard: TextInputType.text,
-                      inputFormatters: [LengthLimitingTextInputFormatter(12)],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              _buildSection(
-                icon: Icons.photo_camera_front_rounded,
-                title: 'Profil Şəkli',
-                child: Center(
-                  child: ProfilePhotoPicker(
-                    initialPhotoUrl: _photoUrl,
-                    onPhotoUploaded: (url) => setState(() => _photoUrl = url),
-                    folder: 'idrak/profiles/teachers',
-                  ),
-                ),
-              ),
-            ],
-
-            // ════ ADDIM 2: ƏLAQƏ ════
-            if (_step == 1) ...[
-              _buildSection(
-                icon: Icons.contact_mail_rounded,
-                title: 'Əlaqə Məlumatları',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildText(_phoneCtrl, 'Telefon', '+994 50 000-00-00', icon: Icons.phone_rounded, keyboard: TextInputType.phone),
-                    const SizedBox(height: 14),
-                    _buildText(_addressCtrl, 'Yaşadığı Ünvan', 'Bakı, Nərimanov ray., ...', icon: Icons.home_rounded, maxLines: 2),
-                    const SizedBox(height: 14),
-                    Text('Avtomatik E-poçt (@idrak.edu.az)', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                    const SizedBox(height: 6),
-                    _buildEmailPreview(emailPreview),
-                    const SizedBox(height: 6),
-                    Text(
-                      'İstifadəçi e-poçt VEYA FIN kod ilə giriş edə biləcək.',
-                      style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            // ════ ADDIM 3: İŞ VƏ VƏZİFƏ ════
-            if (_step == 2) ...[
-              _buildSection(
-                icon: Icons.work_rounded,
-                title: 'Vəzifə və Rol',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        _buildTypeChip(true, 'Müəllim', Icons.psychology_rounded),
-                        const SizedBox(width: 8),
-                        _buildTypeChip(false, 'Digər İşçi', Icons.badge_rounded),
-                      ],
-                    ),
-                    if (_isTeacher) ...[
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(child: _buildText(_subjectCtrl, 'Fənn *', 'Riyaziyyat', icon: Icons.menu_book_rounded, validator: (v) => (v ?? '').trim().isEmpty ? 'Fənn tələb olunur' : null)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _buildText(_roomCtrl, 'Otaq', 'Otaq 201', icon: Icons.meeting_room_rounded)),
-                        ],
-                      ),
-                      if (classes.isNotEmpty) ...[
-                        const SizedBox(height: 14),
-                        Text('Təyin Olunan Siniflər', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                      child: Container(
+                        margin: EdgeInsets.only(right: index < _stepTitles.length - 1 ? 6 : 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            for (final cls in classes)
-                              FilterChip(
-                                label: Text(cls, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                                selected: _assignedClasses.contains(cls),
-                                onSelected: (v) => setState(() => v ? _assignedClasses.add(cls) : _assignedClasses.remove(cls)),
-                                selectedColor: AppColors.primaryAccent.withAlpha(30),
-                                checkmarkColor: AppColors.primaryAccent,
-                                backgroundColor: AppColors.background,
-                                side: BorderSide(
-                                  color: _assignedClasses.contains(cls) ? AppColors.primaryAccent : AppColors.cardBorder,
+                            Row(
+                              children: [
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: isDone
+                                        ? const Color(0xFF10B981)
+                                        : (isCurrent ? const Color(0xFF38BDF8) : Colors.white.withAlpha(20)),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: isDone
+                                        ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
+                                        : Text(
+                                            '${index + 1}',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w900,
+                                              color: isCurrent ? const Color(0xFF0F172A) : Colors.white70,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Expanded(
+                                  child: Text(
+                                    _stepTitles[index],
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w600,
+                                      color: isCurrent ? Colors.white : Colors.white60,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(3),
+                              child: LinearProgressIndicator(
+                                value: isDone ? 1.0 : (isCurrent ? 1.0 : 0.0),
+                                minHeight: 4,
+                                backgroundColor: Colors.white.withAlpha(20),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  isDone ? const Color(0xFF10B981) : const Color(0xFF38BDF8),
                                 ),
                               ),
+                            ),
                           ],
                         ),
-                      ],
-                      const SizedBox(height: 14),
-                      Text('Müəllimə Verilən Yetkilər', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                      _buildPermSwitch('Yeməkxana Menyu İdarəsi', _permCafeteria, (v) => setState(() => _permCafeteria = v), AppColors.gold),
-                      _buildPermSwitch('Tibbi Qeydlər İdarəsi', _permMedical, (v) => setState(() => _permMedical = v), AppColors.danger),
-                      _buildPermSwitch('İnventar & QR Ticketlər', _permInventory, (v) => setState(() => _permInventory = v), AppColors.primaryAccent),
-                    ] else ...[
-                      const SizedBox(height: 14),
-                      DropdownButtonFormField<String>(
-                        value: _selectedRoleId,
-                        decoration: _inputDeco(icon: Icons.admin_panel_settings_rounded).copyWith(labelText: 'Rol *'),
-                        items: [
-                          for (final r in appState.roles)
-                            DropdownMenuItem(value: r.id, child: Text('${r.name} (${r.permissionIds.length} səlahiyyət)', style: const TextStyle(fontSize: 13))),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+
+            // ── Form Body Scrollable Area ──
+            Expanded(
+              child: ListView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                children: [
+                  // ════════════ ADDIM 1: ŞƏXSİ KİMLİK ════════════
+                  if (_step == 0) ...[
+                    // Photo Upload Card
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(5),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
                         ],
-                        onChanged: (v) => setState(() => _selectedRoleId = v),
-                        validator: (v) => v == null ? 'Rol seçilməlidir' : null,
                       ),
-                      if (_selectedRoleId != null) ...[
-                        const SizedBox(height: 10),
-                        Text(
-                          appState.getRoleById(_selectedRoleId)?.description ?? '',
-                          style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
-                        ),
-                      ],
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              _buildSection(
-                icon: Icons.payments_rounded,
-                title: 'İş Müqaviləsi və Əmək Haqqı',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildText(_positionCtrl, 'Vəzifə adı', 'Məs: İT üzrə mütəxəssis', icon: Icons.work_history_rounded),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
-                      value: _educationLevel,
-                      decoration: _inputDeco(icon: Icons.school_rounded).copyWith(labelText: 'Təhsil Dərəcəsi'),
-                      items: [
-                        for (final e in _educationLevels) DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 13))),
-                      ],
-                      onChanged: (v) => setState(() => _educationLevel = v!),
-                    ),
-                    const SizedBox(height: 14),
-                    _buildText(
-                      _bankCtrl,
-                      'Bank Adı',
-                      'Məs: Kapital Bank',
-                      icon: Icons.account_balance_rounded,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildText(
-                      _salaryCtrl,
-                      'Əmək haqqı (AZN, gross)',
-                      'Məs: 1500',
-                      icon: Icons.payments_rounded,
-                      keyboard: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-                    ),
-                    const SizedBox(height: 14),
-                    Text('İşə Qəbul Tarixi', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                    const SizedBox(height: 6),
-                    _buildDateField(
-                      date: _hireDate,
-                      hint: 'Seçilməyib',
-                      icon: Icons.event_available_rounded,
-                      onTap: () => _pickDate(_hireDate, 1, 50, (d) => _hireDate = d),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Müqavilə Başlanğıc', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                              const SizedBox(height: 6),
-                              _buildDateField(
-                                date: _contractStart,
-                                hint: 'Seçilməyib',
-                                icon: Icons.start_rounded,
-                                onTap: () => _pickDate(_contractStart, 1, 50, (d) => _contractStart = d),
-                              ),
-                            ],
+                      child: Row(
+                        children: [
+                          ProfilePhotoPicker(
+                            initialPhotoUrl: _photoUrl,
+                            onPhotoUploaded: (url) => setState(() => _photoUrl = url),
+                            folder: 'idrak/profiles/teachers',
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Müqavilə Bitmə', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                              const SizedBox(height: 6),
-                              _buildDateField(
-                                date: _contractEnd,
-                                hint: 'Müddətsiz',
-                                icon: Icons.event_busy_rounded,
-                                onTap: () => _pickDate(_contractEnd, 1, 50, (d) => _contractEnd = d),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            // ════ ADDIM 4: HESAB ════
-            if (_step == 3) ...[
-              _buildSection(
-                icon: Icons.key_rounded,
-                title: 'Hesab Məlumatları',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildEmailPreview(emailPreview),
-                    const SizedBox(height: 6),
-                    Text(
-                      'İstifadəçi e-poçt VEYA FIN kod ilə giriş edə biləcək.',
-                      style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
-                    ),
-                    const SizedBox(height: 14),
-                    _buildText(
-                      _passCtrl,
-                      'Şifrə *',
-                      'Ən azı 6 simvol',
-                      icon: Icons.lock_outline_rounded,
-                      obscure: true,
-                      validator: (v) => PasswordHasher.validate(v, minLength: 6),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              _buildSummaryCard(dateFormat),
-            ],
-
-            const SizedBox(height: 22),
-            Row(
-              children: [
-                if (_step > 0)
-                  Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: OutlinedButton.icon(
-                        onPressed: () => setState(() => _step--),
-                        icon: const Icon(Icons.arrow_back_rounded, size: 19),
-                        label: const Text('Geri'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textSecondary,
-                          side: BorderSide(color: AppColors.cardBorder),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                      ),
-                    ),
-                  ),
-                if (_step > 0) const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: SizedBox(
-                    height: 52,
-                    child: ElevatedButton.icon(
-                      onPressed: _saving ? null : _nextOrSubmit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryAccent,
-                        disabledBackgroundColor: AppColors.primaryAccent.withAlpha(100),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 0,
-                      ),
-                      icon: _saving
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2))
-                          : Icon(
-                              _step == _stepTitles.length - 1 ? Icons.person_add_rounded : Icons.arrow_forward_rounded,
-                              color: Colors.white,
-                              size: 20,
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Əməkdaşın Profil Şəkli',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                SizedBox(height: 3),
+                                Text(
+                                  'Məktəb portalı, rəqəmsal vəsiqə və rəsmi siyahılarda əks olunacaq fotoşəkil.',
+                                  style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), height: 1.3),
+                                ),
+                              ],
                             ),
-                      label: Text(
-                        _saving
-                            ? 'Yaradılır...'
-                            : (_step == _stepTitles.length - 1 ? 'İşçini Yarat' : 'İrəli'),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14.5),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Personal Information Card
+                    _buildFormCard(
+                      title: 'Şəxsi Məlumatlar',
+                      icon: Icons.badge_rounded,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildModernInput(
+                                  controller: _firstNameCtrl,
+                                  label: 'Ad *',
+                                  hint: 'Ayşə',
+                                  icon: Icons.person_rounded,
+                                  validator: (v) => (v ?? '').trim().isEmpty ? 'Ad tələb olunur' : null,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildModernInput(
+                                  controller: _lastNameCtrl,
+                                  label: 'Soyad *',
+                                  hint: 'Məmmədova',
+                                  icon: Icons.person_outline_rounded,
+                                  validator: (v) => (v ?? '').trim().isEmpty ? 'Soyad tələb olunur' : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildModernInput(
+                            controller: _fatherNameCtrl,
+                            label: 'Ata adı',
+                            hint: 'Eldar',
+                            icon: Icons.person_pin_rounded,
+                          ),
+                          const SizedBox(height: 14),
+
+                          // Gender Selection Pills
+                          const Text(
+                            'Cinsi',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildGenderChoice(
+                                  title: 'Kişi',
+                                  icon: Icons.face_rounded,
+                                  selected: _gender == 'Kişi',
+                                  onTap: () => setState(() => _gender = 'Kişi'),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildGenderChoice(
+                                  title: 'Qadın',
+                                  icon: Icons.face_3_rounded,
+                                  selected: _gender == 'Qadın',
+                                  onTap: () => setState(() => _gender = 'Qadın'),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // Birth Date Field
+                          const Text(
+                            'Doğum Tarixi *',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 6),
+                          _buildDateField(
+                            date: _birthDate,
+                            hint: 'Tarixi seçin',
+                            icon: Icons.cake_rounded,
+                            onTap: () => _pickDate(_birthDate, 30, 75, (d) => _birthDate = d),
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // FIN Code Field with formatters
+                          _buildModernInput(
+                            controller: _finCtrl,
+                            label: 'FIN Kod *',
+                            hint: 'Məs: 6XX7UVH',
+                            icon: Icons.fingerprint_rounded,
+                            keyboard: TextInputType.text,
+                            inputFormatters: finCodeInputFormatters(),
+                            validator: (v) {
+                              final val = (v ?? '').trim().toUpperCase();
+                              final err = validateFinCode(val);
+                              if (err != null) return err;
+                              if (appState.users.any((u) => (u.finCode ?? '').toUpperCase() == val)) {
+                                return 'Bu FIN kod artıq qeydiyyatdadır';
+                              }
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // Citizenship & ID Card Serial
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  initialValue: _citizenship,
+                                  decoration: _inputDeco(icon: Icons.flag_rounded).copyWith(labelText: 'Vətəndaşlıq'),
+                                  items: _citizenships.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)))).toList(),
+                                  onChanged: (v) => setState(() => _citizenship = v!),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildModernInput(
+                                  controller: _idCardCtrl,
+                                  label: 'ŞV Seriyası',
+                                  hint: 'AA1234567',
+                                  icon: Icons.badge_outlined,
+                                  inputFormatters: [LengthLimitingTextInputFormatter(12)],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // ════════════ ADDIM 2: ƏLAQƏ & BANK ════════════
+                  if (_step == 1) ...[
+                    _buildFormCard(
+                      title: 'Əlaqə & Bank Məlumatları',
+                      icon: Icons.contact_mail_rounded,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildModernInput(
+                            controller: _phoneCtrl,
+                            label: 'Telefon Nömrəsi *',
+                            hint: '+994 50 123-45-67',
+                            icon: Icons.phone_rounded,
+                            keyboard: TextInputType.phone,
+                          ),
+                          const SizedBox(height: 14),
+                          _buildModernInput(
+                            controller: _addressCtrl,
+                            label: 'Yaşayış Ünvanı',
+                            hint: 'Bakı şəh., Nərimanov ray., ...',
+                            icon: Icons.home_rounded,
+                            maxLines: 2,
+                          ),
+                          const SizedBox(height: 14),
+                          _buildModernInput(
+                            controller: _bankCtrl,
+                            label: 'Maaş Kartının Bankı',
+                            hint: 'Məs: Kapital Bank / Paşa Bank',
+                            icon: Icons.account_balance_rounded,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Sistemdə yaradılacaq rəsmi e-poçt:',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 6),
+                          _buildEmailBox(
+                            email: emailPreview ?? '',
+                            placeholder: 'ad.soyad@idrak.edu.az (Ad daxil edildikdə yaranır)',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // ════════════ ADDIM 3: VƏZİFƏ & ROL ════════════
+                  if (_step == 2) ...[
+                    // Role Type Selector (Teacher vs Other Staff)
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _isTeacher = true),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: _isTeacher ? const Color(0xFF0F172A) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '👨‍🏫 Müəllim (Pedaqoji)',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: _isTeacher ? Colors.white : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _isTeacher = false),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: !_isTeacher ? const Color(0xFF2563EB) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '💼 İnzibati / Digər İşçi',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: !_isTeacher ? Colors.white : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    if (_isTeacher) ...[
+                      // Teacher specific fields
+                      _buildFormCard(
+                        title: 'Tədris Sahəsi & Otaq',
+                        icon: Icons.menu_book_rounded,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildModernInput(
+                                    controller: _subjectCtrl,
+                                    label: 'Tədris Fənni *',
+                                    hint: 'Riyaziyyat',
+                                    icon: Icons.school_rounded,
+                                    validator: (v) => (v ?? '').trim().isEmpty ? 'Fənn tələb olunur' : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _buildModernInput(
+                                    controller: _roomCtrl,
+                                    label: 'Dərs Otağı',
+                                    hint: 'Otaq 204',
+                                    icon: Icons.meeting_room_rounded,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Class Multi-select
+                            if (classes.isNotEmpty) ...[
+                              const Text(
+                                'Tədris Edəcəyi Siniflər (Çoxlu seçim):',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: classes.map((cls) {
+                                  final isAssigned = _assignedClasses.contains(cls);
+                                  return GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        if (isAssigned) {
+                                          _assignedClasses.remove(cls);
+                                        } else {
+                                          _assignedClasses.add(cls);
+                                        }
+                                      });
+                                    },
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 180),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                      decoration: BoxDecoration(
+                                        color: isAssigned ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: isAssigned ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1)),
+                                      ),
+                                      child: Text(
+                                        cls,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: isAssigned ? FontWeight.w900 : FontWeight.w600,
+                                          color: isAssigned ? Colors.white : const Color(0xFF334155),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 14),
+                            ],
+
+                            // Additional Teacher Permissions
+                            const Text(
+                              'Pedaqoji Əlavə İcazələr:',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                            ),
+                            const SizedBox(height: 6),
+                            _buildPermToggle('Yeməkxana Menyu İdarəsi', _permCafeteria, (v) => setState(() => _permCafeteria = v)),
+                            _buildPermToggle('Tibbi Qeydlər İdarəsi', _permMedical, (v) => setState(() => _permMedical = v)),
+                            _buildPermToggle('İnventar & QR Biletlər', _permInventory, (v) => setState(() => _permInventory = v)),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      // Non-teacher role fields
+                      _buildFormCard(
+                        title: 'İnzibati Rol Seçimi *',
+                        icon: Icons.admin_panel_settings_rounded,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            DropdownButtonFormField<String>(
+                              initialValue: _selectedRoleId,
+                              decoration: _inputDeco(icon: Icons.admin_panel_settings_rounded).copyWith(labelText: 'Təyin edilən Rol *'),
+                              items: appState.roles.map((r) {
+                                return DropdownMenuItem(
+                                  value: r.id,
+                                  child: Text('${r.name} (${r.permissionIds.length} səlahiyyət)', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                                );
+                              }).toList(),
+                              onChanged: (v) => setState(() => _selectedRoleId = v),
+                              validator: (v) => v == null ? 'Rol seçilməlidir' : null,
+                            ),
+                            if (_selectedRoleId != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                appState.getRoleById(_selectedRoleId)?.description ?? '',
+                                style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontStyle: FontStyle.italic),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 14),
+
+                    // Employment & Contract Card
+                    _buildFormCard(
+                      title: 'Müqavilə & Əmək Haqqı',
+                      icon: Icons.payments_rounded,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildModernInput(
+                            controller: _positionCtrl,
+                            label: 'Rəsmi Vəzifə Adı',
+                            hint: 'Məs: Baş Müəllim / İT Mütəxəssis',
+                            icon: Icons.work_history_rounded,
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  initialValue: _educationLevel,
+                                  decoration: _inputDeco(icon: Icons.school_rounded).copyWith(labelText: 'Təhsil Səviyyəsi'),
+                                  items: _educationLevels.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)))).toList(),
+                                  onChanged: (v) => setState(() => _educationLevel = v!),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildModernInput(
+                                  controller: _salaryCtrl,
+                                  label: 'Əmək Haqqı (AZN)',
+                                  hint: '1500',
+                                  icon: Icons.attach_money_rounded,
+                                  keyboard: const TextInputType.numberWithOptions(decimal: true),
+                                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          const Text(
+                            'İşə Qəbul Tarixi',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 6),
+                          _buildDateField(
+                            date: _hireDate,
+                            hint: 'Tarixi seçin',
+                            icon: Icons.event_available_rounded,
+                            onTap: () => _pickDate(_hireDate, 1, 50, (d) => _hireDate = d),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Müqavilə Başlanğıc', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
+                                    const SizedBox(height: 5),
+                                    _buildDateField(
+                                      date: _contractStart,
+                                      hint: 'Seçilməyib',
+                                      icon: Icons.play_arrow_rounded,
+                                      onTap: () => _pickDate(_contractStart, 1, 50, (d) => _contractStart = d),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Müqavilə Bitmə', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
+                                    const SizedBox(height: 5),
+                                    _buildDateField(
+                                      date: _contractEnd,
+                                      hint: 'Müddətsiz',
+                                      icon: Icons.event_busy_rounded,
+                                      onTap: () => _pickDate(_contractEnd, 1, 50, (d) => _contractEnd = d),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // ════════════ ADDIM 4: HESAB & ŞİFRƏ ════════════
+                  if (_step == 3) ...[
+                    _buildFormCard(
+                      title: 'Giriş Hesabı & Təhlükəsizlik',
+                      icon: Icons.key_rounded,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildEmailBox(
+                            email: emailPreview ?? '',
+                            placeholder: 'ad.soyad@idrak.edu.az',
+                          ),
+                          const SizedBox(height: 14),
+                          _buildModernInput(
+                            controller: _passCtrl,
+                            label: 'İlkin Giriş Şifrəsi *',
+                            hint: '123456',
+                            icon: Icons.lock_outline_rounded,
+                            obscure: true,
+                            validator: (v) => PasswordHasher.validate(v, minLength: 6),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+                    _buildSummaryCard(dateFormat),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomSheet: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(10),
+              blurRadius: 10,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Row(
+            children: [
+              if (_step > 0) ...[
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: () => setState(() => _step--),
+                      icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                      label: const Text('Geri', style: TextStyle(fontWeight: FontWeight.w700)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF475569),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                     ),
                   ),
                 ),
+                const SizedBox(width: 10),
               ],
+              Expanded(
+                flex: 2,
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: _saving ? null : _nextOrSubmit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    icon: _saving
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Icon(
+                            _step == _stepTitles.length - 1 ? Icons.person_add_rounded : Icons.arrow_forward_rounded,
+                            size: 18,
+                          ),
+                    label: Text(
+                      _saving ? 'Yaradılır...' : (_step == _stepTitles.length - 1 ? 'Əməkdaşı Yarat' : 'Növbəti Addım'),
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormCard({required String title, required IconData icon, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(5),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A).withAlpha(10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: const Color(0xFF0F172A)),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernInput({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    bool obscure = false,
+    int maxLines = 1,
+    TextInputType keyboard = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      maxLines: maxLines,
+      keyboardType: keyboard,
+      inputFormatters: inputFormatters,
+      validator: validator,
+      style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+      decoration: _inputDeco(icon: icon).copyWith(
+        labelText: label,
+        hintText: hint,
+        hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
+      ),
+    );
+  }
+
+  Widget _buildGenderChoice({required String title, required IconData icon, required bool selected, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1),
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: selected ? const Color(0xFF2563EB) : const Color(0xFF64748B)),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+                color: selected ? const Color(0xFF1E40AF) : const Color(0xFF475569),
+              ),
             ),
           ],
         ),
@@ -623,26 +1035,43 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
     );
   }
 
-  Widget _buildEmailPreview(String? emailPreview) {
+  Widget _buildPermToggle(String title, bool value, ValueChanged<bool> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+          Switch.adaptive(
+            value: value,
+            activeTrackColor: const Color(0xFF2563EB),
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmailBox({required String email, required String placeholder}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.primaryAccent.withAlpha(8),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primaryAccent.withAlpha(40)),
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.alternate_email_rounded, size: 17, color: AppColors.primaryAccent),
+          const Icon(Icons.alternate_email_rounded, size: 16, color: Color(0xFF2563EB)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              (emailPreview ?? '').isNotEmpty ? emailPreview! : 'ad.soyad@idrak.edu.az (ad daxil edildikdə yaranır)',
+              email.isNotEmpty ? email : placeholder,
               style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                color: (emailPreview ?? '').isNotEmpty ? AppColors.textPrimary : AppColors.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: email.isNotEmpty ? const Color(0xFF1E40AF) : const Color(0xFF94A3B8),
               ),
             ),
           ),
@@ -657,14 +1086,14 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
       borderRadius: BorderRadius.circular(14),
       child: InputDecorator(
         decoration: _inputDeco(icon: icon).copyWith(
-          suffixIcon: const Icon(Icons.calendar_month_rounded, color: AppColors.primaryAccent, size: 20),
+          suffixIcon: const Icon(Icons.calendar_month_rounded, color: Color(0xFF2563EB), size: 18),
         ),
         child: Text(
           date != null ? DateFormat('dd.MM.yyyy').format(date) : hint,
           style: TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w600,
-            color: date != null ? AppColors.textPrimary : AppColors.textMuted,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: date != null ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
           ),
         ),
       ),
@@ -680,18 +1109,18 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
       if (_birthDate != null) MapEntry('Doğum tarixi', dateFormat.format(_birthDate!)),
       MapEntry('FIN', _finCtrl.text),
       if (_phoneCtrl.text.trim().isNotEmpty) MapEntry('Telefon', _phoneCtrl.text.trim()),
-      MapEntry('Vəzifə', _isTeacher ? 'Müəllim${_subjectCtrl.text.trim().isNotEmpty ? ' — ${_subjectCtrl.text.trim()}' : ''}' : 'Digər işçi'),
+      MapEntry('Təyinat', _isTeacher ? 'Müəllim${_subjectCtrl.text.trim().isNotEmpty ? " (${_subjectCtrl.text.trim()})" : ""}' : 'İnzibati Heyət'),
       if (_positionCtrl.text.trim().isNotEmpty) MapEntry('Vəzifə adı', _positionCtrl.text.trim()),
       if (salary != null) MapEntry('Əmək haqqı', '${_salaryCtrl.text.trim()} AZN'),
       if (_hireDate != null) MapEntry('İşə qəbul', dateFormat.format(_hireDate!)),
     ];
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.cardBorder),
-        boxShadow: AppShadows.sm,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -699,189 +1128,47 @@ class _CreateEmployeeScreenState extends State<CreateEmployeeScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(color: AppColors.gold.withAlpha(15), borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.fact_check_rounded, size: 17, color: AppColors.goldDark),
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.fact_check_rounded, size: 16, color: Color(0xFF10B981)),
               ),
-              const SizedBox(width: 10),
-              Text('Yekun Yoxlama', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppColors.textPrimary, letterSpacing: -0.3)),
+              const SizedBox(width: 8),
+              const Text(
+                'Əməkdaş Məlumatlarının Yekun İcmalı',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+              ),
             ],
           ),
           const SizedBox(height: 12),
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const SizedBox(height: 8),
-            Row(
-              children: [
-                SizedBox(
-                  width: 110,
-                  child: Text(rows[i].key, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
-                ),
-                Expanded(
-                  child: Text(
-                    rows[i].value,
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                  ),
-                ),
-              ],
+          for (final row in rows)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3.5),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(row.key, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                  Text(row.value.isNotEmpty ? row.value : '-', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                ],
+              ),
             ),
-          ],
         ],
       ),
     );
   }
 
-  Widget _buildSection({required IconData icon, required String title, required Widget child}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.cardBorder),
-        boxShadow: AppShadows.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryAccent.withAlpha(12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, size: 17, color: AppColors.primaryAccent),
-              ),
-              const SizedBox(width: 10),
-              Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppColors.textPrimary, letterSpacing: -0.3)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          child,
-        ],
-      ),
-    );
-  }
-
-  InputDecoration _inputDeco({required IconData icon, String? labelText}) {
+  InputDecoration _inputDeco({required IconData icon}) {
     return InputDecoration(
-      labelText: labelText,
-      labelStyle: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+      prefixIcon: Icon(icon, color: const Color(0xFF64748B), size: 18),
       filled: true,
-      fillColor: AppColors.background,
-      prefixIcon: Icon(icon, color: AppColors.primaryAccent, size: 20),
-      contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.cardBorder)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.cardBorder)),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.primaryAccent, width: 1.5),
-      ),
-      errorStyle: const TextStyle(fontSize: 10.5),
-    );
-  }
-
-  Widget _buildText(
-    TextEditingController controller,
-    String label,
-    String hint, {
-    required IconData icon,
-    TextInputType? keyboard,
-    List<TextInputFormatter>? inputFormatters,
-    String? Function(String?)? validator,
-    bool obscure = false,
-    int maxLines = 1,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboard,
-      inputFormatters: inputFormatters,
-      validator: validator,
-      obscureText: obscure,
-      maxLines: obscure ? 1 : maxLines,
-      onChanged: (_) => setState(() {}),
-      decoration: _inputDeco(icon: icon, labelText: label).copyWith(hintText: hint, hintStyle: TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
-      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-    );
-  }
-
-  Widget _buildGenderChip(String value, IconData icon) {
-    final selected = _gender == value;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _gender = value),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 11),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primaryAccent.withAlpha(15) : AppColors.background,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: selected ? AppColors.primaryAccent : AppColors.cardBorder, width: selected ? 1.5 : 1),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 18, color: selected ? AppColors.primaryAccent : AppColors.textMuted),
-              const SizedBox(width: 6),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: selected ? AppColors.primaryAccent : AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeChip(bool isTeacher, String label, IconData icon) {
-    final selected = _isTeacher == isTeacher;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _isTeacher = isTeacher),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 11),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primaryAccent.withAlpha(15) : AppColors.background,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: selected ? AppColors.primaryAccent : AppColors.cardBorder, width: selected ? 1.5 : 1),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 18, color: selected ? AppColors.primaryAccent : AppColors.textMuted),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: selected ? AppColors.primaryAccent : AppColors.textSecondary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPermSwitch(String label, bool value, ValueChanged<bool> onChanged, Color color) {
-    return SwitchListTile(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      title: Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
-      value: value,
-      activeThumbColor: color,
-      onChanged: onChanged,
+      fillColor: const Color(0xFFF8FAFC),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.6)),
+      labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
     );
   }
 }
