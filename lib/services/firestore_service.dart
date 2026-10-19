@@ -1522,21 +1522,13 @@ class FirestoreService {
       final roles = snapshot.docs
           .map((doc) => Role.fromJson(doc.data()))
           .toList();
-      // Sistem (default) rolları kod ilə sinxronlaşdır — icazə yeniləmələri
-      // tətbiq yenilənəndə mövcud qeydlərə də tətbiq olunsun. Xüsusi
-      // (isDefault olmayan) rollara toxunulmur.
+      // Əgər bazada heç olmayan yeni sistem rolu varsa əlavə et,
+      // lakin istifadəçinin dəyişdirdiyi icazələri ƏSLA əzmə!
       final defaults = DefaultRoles.createAll();
-      for (var i = 0; i < roles.length; i++) {
-        if (!roles[i].isDefault) continue;
-        for (final def in defaults) {
-          if (def.id != roles[i].id) continue;
-          final old = roles[i].permissionIds.toSet();
-          final neu = def.permissionIds.toSet();
-          if (old.length != neu.length || !old.containsAll(neu)) {
-            roles[i] = roles[i].copyWith(permissionIds: def.permissionIds);
-            await saveRole(roles[i]);
-          }
-          break;
+      for (final def in defaults) {
+        if (!roles.any((r) => r.id == def.id)) {
+          roles.add(def);
+          await saveRole(def);
         }
       }
       return roles;

@@ -449,11 +449,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 Divider(color: AppColors.cardBorder, height: 1),
                 const SizedBox(height: 8),
 
-                // Footer: Status toggle & Credentials view
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Footer: Status toggle & Credentials view (Responsive & Overflow-safe)
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           user.isActive ? Icons.check_circle_rounded : Icons.cancel_rounded,
@@ -472,10 +476,16 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       ],
                     ),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'Şifrə: ${user.password}',
-                          style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppColors.textMuted),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 110),
+                          child: Text(
+                            user.password.length > 12 ? 'Şifrə: ••••••' : 'Şifrə: ${user.password}',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppColors.textMuted),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         GestureDetector(

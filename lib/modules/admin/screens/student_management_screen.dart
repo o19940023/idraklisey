@@ -302,18 +302,69 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.cardBorder),
-                    image: DecorationImage(
-                      image: NetworkImage(student.photoUrl),
-                      fit: BoxFit.cover,
-                      onError: (_, __) {},
-                    ),
-                  ),
+                Builder(
+                  builder: (context) {
+                    final photo = student.photoUrl.trim();
+                    final hasPhoto = photo.isNotEmpty;
+                    final initials = student.fullName
+                        .trim()
+                        .split(RegExp(r'\s+'))
+                        .where((p) => p.isNotEmpty)
+                        .map((p) => p[0].toUpperCase())
+                        .take(2)
+                        .join();
+
+                    return Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF0284C7), Color(0xFF0EA5E9)],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.cardBorder),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0EA5E9).withAlpha(35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: hasPhoto
+                            ? Image.network(
+                                photo,
+                                width: 52,
+                                height: 52,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Center(
+                                  child: Text(
+                                    initials.isNotEmpty ? initials : 'ŞG',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : Center(
+                                child: Text(
+                                  initials.isNotEmpty ? initials : 'ŞG',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(width: 12),
                 Expanded(

@@ -752,24 +752,15 @@ class _MainScreenState extends State<MainScreen> {
                   letterSpacing: 1.0,
                 ),
               ),
-              // Rol adının solunda profil fotoşəfi (istifadəçinin istəyi).
-              Row(
-                children: [
-                  _buildHeaderAvatar(currentUser, radius: 9),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      _headerRoleLabel(currentUser),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.primaryAccent,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
+              Text(
+                currentUser.fullName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.primaryAccent,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),

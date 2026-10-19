@@ -3795,15 +3795,39 @@ class AppState extends ChangeNotifier {
         return false;
       }
 
-      // 3. Student filtering — yalnız: adminin göndərdikləri,
+      // Köməkçi: Bildiriş helpdesk/IT/inventar və ya işçi daxili müraciətidirmi?
+      final titleLower = n.title.toLowerCase();
+      final msgLower = n.message.toLowerCase();
+      final isStaffTicketNotice = titleLower.contains('müraciət') ||
+          titleLower.contains('helpdesk') ||
+          titleLower.contains('inventar') ||
+          titleLower.contains('ticket') ||
+          titleLower.contains('avadanlıq') ||
+          msgLower.contains('müraciət') ||
+          msgLower.contains('inventar') ||
+          msgLower.contains('helpdesk');
+
+      // 3. Student filtering — yalnız: adminin ümumi məktəb elanları,
       //    birbaşa özünə hədəflənənlər, yaxud sinif elanları
       if (userRole == UserRole.student) {
+        // Helpdesk / IT daxili müraciətləri şagirdə qətiyyən göstərilmir
+        // (yalnız şagirdin özü birbaşa hədəf seçilibsə istisna)
+        if (isStaffTicketNotice &&
+            n.targetStudentId != userId &&
+            n.targetStudentId != student.id &&
+            !n.targetUserIds.contains(userId)) {
+          return false;
+        }
+
         if (n.targetStudentId != null &&
             n.targetStudentId != userId &&
             n.targetStudentId != student.id) {
           return false;
         }
-        if (n.targetRoles.isEmpty) return n.senderRole == 'admin';
+        if (n.targetRoles.isEmpty) {
+          // Yalnız ümumi rəsmi elanlar keçir
+          return n.senderRole == 'admin' && !isStaffTicketNotice;
+        }
         if (!n.targetRoles.contains('student')) return false;
         final sClass = user.className ?? student.className;
         if (n.targetClasses.isNotEmpty && !n.targetClasses.contains(sClass)) {
@@ -3812,12 +3836,22 @@ class AppState extends ChangeNotifier {
         return true;
       }
 
-      // 4. Parent filtering — yalnız: adminin göndərdikləri,
+      // 4. Parent filtering — yalnız: adminin rəsmi məktəb elanları,
       //    öz uşağına hədəflənənlər, yaxud sinif elanları
       if (userRole == UserRole.parent) {
         final kids = children;
         final childIds = kids.map((c) => c.id).toSet();
         final childClasses = kids.map((c) => c.className).toSet();
+
+        // Helpdesk / IT daxili işçi bildirişləri valideynə sızmamalıdır
+        // (yalnız valideynin öz müraciəti/cavabı deyilsə)
+        if (isStaffTicketNotice &&
+            n.targetParentId != userId &&
+            (n.targetStudentId == null || !childIds.contains(n.targetStudentId)) &&
+            !n.targetUserIds.contains(userId) &&
+            n.senderId != userId) {
+          return false;
+        }
 
         if (n.targetStudentId != null &&
             !childIds.contains(n.targetStudentId)) {
@@ -3826,7 +3860,9 @@ class AppState extends ChangeNotifier {
         if (n.targetParentId != null && n.targetParentId != userId) {
           return false;
         }
-        if (n.targetRoles.isEmpty) return n.senderRole == 'admin';
+        if (n.targetRoles.isEmpty) {
+          return n.senderRole == 'admin' && !isStaffTicketNotice;
+        }
         if (!n.targetRoles.contains('parent')) return false;
         if (n.targetClasses.isNotEmpty &&
             !n.targetClasses.any((c) => childClasses.contains(c))) {

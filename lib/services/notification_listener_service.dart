@@ -116,11 +116,36 @@ class NotificationListenerService {
       if (notif.targetRoles.contains(userRole)) return true;
     }
     
-    // 5. Hamıya (target yoxdursa)
+    // Köməkçi: Helpdesk / IT daxili ticket müraciətidirmi?
+    final titleLower = notif.title.toLowerCase();
+    final msgLower = notif.message.toLowerCase();
+    final isStaffTicketNotice = titleLower.contains('müraciət') ||
+        titleLower.contains('helpdesk') ||
+        titleLower.contains('inventar') ||
+        titleLower.contains('ticket') ||
+        titleLower.contains('avadanlıq') ||
+        msgLower.contains('müraciət') ||
+        msgLower.contains('inventar') ||
+        msgLower.contains('helpdesk');
+
+    // Şagird və ya valideyn üçün: əgər daxili helpdesk/ticket müraciətidirsa və
+    // birbaşa bu şəxsə ünvanlanmayıbsa, əsla bildiriş çıxarma!
+    if ((user.role == UserRole.student || user.role == UserRole.parent) && isStaffTicketNotice) {
+      if (!notif.targetUserIds.contains(userId) &&
+          notif.targetStudentId != userId &&
+          notif.targetParentId != userId) {
+        return false;
+      }
+    }
+
+    // 5. Hamıya (target yoxdursa və daxili işçi bileti deyilsə)
     if (notif.targetUserIds.isEmpty &&
         notif.targetStudentId == null &&
         notif.targetClasses.isEmpty &&
         notif.targetRoles.isEmpty) {
+      if ((user.role == UserRole.student || user.role == UserRole.parent) && isStaffTicketNotice) {
+        return false;
+      }
       return true;
     }
     

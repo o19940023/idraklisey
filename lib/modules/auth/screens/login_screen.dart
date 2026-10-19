@@ -233,23 +233,83 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      backgroundColor: AppColors.primaryDark,
+      body: Stack(
+        children: [
+          // ── Dekorativ işıq qatları: kral mavisi + qızıl radial glowlar ──
+          Positioned(
+            top: -140,
+            left: -120,
+            child: Container(
+              width: 460,
+              height: 460,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF2563EB).withAlpha(120),
+                    const Color(0xFF2563EB).withAlpha(0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -160,
+            right: -140,
+            child: Container(
+              width: 520,
+              height: 520,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFF5B301).withAlpha(60),
+                    const Color(0xFFF5B301).withAlpha(0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 120,
+            right: -80,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF38BDF8).withAlpha(70),
+                    const Color(0xFF38BDF8).withAlpha(0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Zərif diaqonal şüa
+          Positioned.fill(
+            child: CustomPaint(painter: _LightBeamPainter()),
+          ),
+
+          // ── Məzmun ──
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Logo & Brand Header
                   const SizedBox(height: 12),
                   FadeIn(
                     child: Column(
                       children: [
-                        const IdrakLogo(size: 84, showText: true, isLightText: false),
+                        const IdrakLogo(size: 84, showText: true, isLightText: true),
                         const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -257,16 +317,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryAccent.withAlpha(15),
+                            color: Colors.white.withAlpha(18),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: AppColors.primaryAccent.withAlpha(40),
+                              color: const Color(0xFFF5B301).withAlpha(90),
                             ),
                           ),
                           child: const Text(
                             'BEYNƏLXALQ TƏHSİL PORTALI',
                             style: TextStyle(
-                              color: AppColors.primaryAccent,
+                              color: Color(0xFFF5B301),
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1.2,
@@ -279,16 +339,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 32),
 
-                  // Login Form Card
+                  // Login Form Card — qaranlıq üzərində incə "shatter" ağ kart
                   FadeIn(
                     delay: const Duration(milliseconds: 130),
                     child: Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.cardBorder),
-                      boxShadow: AppShadows.md,
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: Colors.white.withAlpha(120),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2563EB).withAlpha(60),
+                          blurRadius: 40,
+                          offset: const Offset(0, 18),
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withAlpha(120),
+                          blurRadius: 24,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,7 +603,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Security Badge
+                  // Security Badge — tünd şüşə + qızıl qalxan
                   FadeIn(
                     delay: const Duration(milliseconds: 280),
                     child: Container(
@@ -538,16 +612,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       horizontal: 14,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.cardBorder),
+                      color: Colors.white.withAlpha(15),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: Colors.white.withAlpha(40)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
-                          Icons.shield_outlined,
-                          color: AppColors.primaryAccent,
+                          Icons.verified_user_rounded,
+                          color: Color(0xFFF5B301),
                           size: 15,
                         ),
                         const SizedBox(width: 6),
@@ -569,6 +643,34 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+      ),
     );
   }
+}
+
+class _LightBeamPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withAlpha(14),
+          Colors.white.withAlpha(0),
+        ],
+      ).createShader(Offset.zero & size)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
+
+    final path = Path()
+      ..moveTo(size.width * 0.85, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width * 0.35, size.height)
+      ..lineTo(size.width * 0.15, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
