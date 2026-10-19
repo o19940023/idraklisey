@@ -382,12 +382,16 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                           ],
                           Text(
                             'İdrak Kodu: ${user.idrakCode}${user.finCode != null ? ' • FIN: ${user.finCode}' : ''}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
                           ),
                           if (user.role == UserRole.teacher && user.subject != null) ...[
                             const SizedBox(height: 3),
                             Text(
                               'Fənn: ${user.subject} (${user.roomNumber ?? "Otaq təyin olunmayıb"})',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 11.5, color: AppColors.primaryAccent, fontWeight: FontWeight.w600),
                             ),
                           ],
@@ -395,6 +399,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                             const SizedBox(height: 3),
                             Text(
                               'Əlaqəli Şagird ID: ${user.linkedStudentId}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 11.5, color: AppColors.goldDark, fontWeight: FontWeight.w700),
                             ),
                           ],
@@ -420,10 +426,15 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Müəllimə Verilmiş Admin Yetkiləri:',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                            Expanded(
+                              child: Text(
+                                'Müəllimə Verilmiş Admin Yetkiləri:',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             GestureDetector(
                               onTap: () => _showEditPermissionsDialog(context, appState, user),
                               child: const Text('Dəyiş', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primaryAccent)),
