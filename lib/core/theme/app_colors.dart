@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
 
-/// App color palette — Modern 2026 Material 3 Design System.
+/// App color palette — İdrak Liseyi identity (brand: mavi + sarı).
 ///
-/// Brand colors:
-/// - Primary: #1A1B2E (Deep Onyx / Midnight Navy)
-/// - Accent: #6C5CE7 (Vibrant Purple / Indigo)
-/// - Background: #F7F7FB (Ultra Clean M3 Light) / #0E0F19 (Sleek Dark)
-/// - Surface: #FFFFFF / #161827
+/// Deep navy base (mirrors the digital ID card), royal-blue accent,
+/// gold reserved for prestige moments, and a blue→azure duotone as the
+/// signature gradient.
 class AppColors {
-  // Primary Onyx / Midnight Brand Colors
-  static const Color primary = Color(0xFF1A1B2E);
-  static const Color primaryDark = Color(0xFF111220);
-  static const Color primaryLight = Color(0xFF2E304F);
-  static const Color primaryAccent = Color(0xFF6C5CE7); // Modern Purple/Indigo
+  // Primary Deep Navy Brand Colors (logo: blue & gold)
+  static const Color primary = Color(0xFF0B1B33);
+  static const Color primaryDark = Color(0xFF060F1F);
+  static const Color primaryLight = Color(0xFF24406B);
+  static const Color primaryAccent = Color(0xFF2563EB); // Royal blue
 
-  // Gold / Amber Luxury Accents
-  static const Color gold = Color(0xFFF59E0B);
-  static const Color goldLight = Color(0xFFFBBF24);
-  static const Color goldDark = Color(0xFFD97706);
+  // Signature duotone partner of the blue accent (azure)
+  static const Color azure = Color(0xFF38BDF8);
 
-  // Status Colors (Soft, refined M3 variants)
+  // Gold / Amber Luxury Accents (logo yellow)
+  static const Color gold = Color(0xFFF5B301);
+  static const Color goldLight = Color(0xFFFCC201);
+  static const Color goldDark = Color(0xFFB8860B);
+
+  // Status Colors (Soft, refined variants)
   static const Color success = Color(0xFF10B981);
   static const Color successLight = Color(0xFFD1FAE5);
   static const Color warning = Color(0xFFF59E0B);
@@ -29,19 +30,19 @@ class AppColors {
   static const Color info = Color(0xFF3B82F6);
   static const Color infoLight = Color(0xFFDBEAFE);
 
-  // Dark palette (OLED Pure Black #000000 & WCAG AA Compliance)
+  // Dark palette (OLED Pure Black & WCAG AA Compliance)
   static const Color darkBackground = Color(0xFF000000); // Pure OLED Black
   static const Color darkSurface = Color(0xFF0F1118); // Elevated OLED Surface
   static const Color darkCard = Color(0xFF161924); // Card Container
   static const Color darkBorder = Color(0xFF262B3D); // High Contrast Border
 
   // Light palette
-  static const Color _lightBackground = Color(0xFFF7F7FB);
+  static const Color _lightBackground = Color(0xFFF2F3FA);
   static const Color _lightSurface = Color(0xFFFFFFFF);
-  static const Color _lightCardBorder = Color(0xFFE8E8F0);
-  static const Color _lightTextPrimary = Color(0xFF1A1B2E);
-  static const Color _lightTextSecondary = Color(0xFF6B6E8A);
-  static const Color _lightTextMuted = Color(0xFF9EA2BD);
+  static const Color _lightCardBorder = Color(0xFFE6E7F2);
+  static const Color _lightTextPrimary = Color(0xFF12152A);
+  static const Color _lightTextSecondary = Color(0xFF676A87);
+  static const Color _lightTextMuted = Color(0xFF9A9EB9);
 
   // WCAG AA compliant text contrast (>4.5:1 ratio on OLED Black & Surfaces)
   static const Color _darkTextPrimary = Color(0xFFFAFBFD); // 19.8:1 contrast
@@ -85,19 +86,27 @@ class AppColors {
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1A1B2E), Color(0xFF2E304F)],
+    colors: [Color(0xFF0B1B33), Color(0xFF24406B)],
   );
 
+  /// Signature duotone: royal blue → azure.
   static const LinearGradient accentGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF6C5CE7), Color(0xFF8070F6)],
+    colors: [Color(0xFF2563EB), Color(0xFF38BDF8)],
+  );
+
+  /// Deep hero gradient for headers (navy → royal blue).
+  static const LinearGradient heroGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF081326), Color(0xFF123B7A), Color(0xFF2563EB)],
   );
 
   static const LinearGradient goldGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
+    colors: [Color(0xFFB8860B), Color(0xFFF5B301)],
   );
 
   static LinearGradient get cardGradient => LinearGradient(
@@ -105,4 +114,7 @@ class AppColors {
         end: Alignment.bottomRight,
         colors: [surface, background],
       );
+
+  /// Soft duotone tint of any accent (for icon badges, chips).
+  static List<Color> duoTint(Color c) => [c.withAlpha(38), azure.withAlpha(20)];
 }

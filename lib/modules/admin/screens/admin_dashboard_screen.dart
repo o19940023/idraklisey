@@ -894,25 +894,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     IconData icon,
     Color color,
   ) {
+    // Yeni stat dili: rəng tintli üzey + sol rəng zolağı + böyük rəqəm.
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.surface, color.withAlpha(18)],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withAlpha(45)),
         boxShadow: AppShadows.sm,
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            width: 4,
+            height: 34,
             decoration: BoxDecoration(
-              color: color.withAlpha(15),
-              borderRadius: BorderRadius.circular(10),
+              color: color,
+              borderRadius: BorderRadius.circular(2),
             ),
-            child: Icon(icon, color: color, size: 18),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -921,21 +926,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                    letterSpacing: -0.5,
+                    height: 1.05,
                   ),
                 ),
+                const SizedBox(height: 1),
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 10.5,
                     color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: color.withAlpha(16),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 17),
           ),
         ],
       ),

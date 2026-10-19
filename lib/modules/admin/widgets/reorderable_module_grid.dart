@@ -426,127 +426,152 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
     return PressableScale(
       pressedScale: 0.96,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-      decoration: BoxDecoration(
-        color: isHovered ? accentColor.withAlpha(15) : AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: isHovered ? accentColor : AppColors.cardBorder.withAlpha(70),
-          width: isHovered ? 2.0 : 1.2,
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          // Kartın özünə modulun rəngində çox yüngul tint ver —
+          // hər kart fərqli "canlı" görünür, ağ kart dənizindən fərqlənir.
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.surface,
+              accentColor.withAlpha(isHovered ? 30 : 14),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isHovered ? accentColor : AppColors.cardBorder.withAlpha(70),
+            width: isHovered ? 2.0 : 1.2,
+          ),
+          boxShadow: isHovered
+              ? [
+                  BoxShadow(
+                    color: accentColor.withAlpha(50),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : AppShadows.sm,
         ),
-        boxShadow: isHovered
-            ? [
-                BoxShadow(
-                  color: accentColor.withAlpha(40),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : AppShadows.sm,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            if (widget.onModuleTap != null) {
-              widget.onModuleTap!(module.id, context);
-            }
-          },
-          onLongPress: () {
-            HapticFeedback.mediumImpact();
-          },
-          borderRadius: BorderRadius.circular(22),
-          child: Semantics(
-            label: '${module.getLocalizedTitle(loc)}, $subtitleText',
-            button: true,
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Squircle Gradient Icon Badge
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            accentColor.withAlpha(35),
-                            accentColor.withAlpha(15),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              if (widget.onModuleTap != null) {
+                widget.onModuleTap!(module.id, context);
+              }
+            },
+            onLongPress: () {
+              HapticFeedback.mediumImpact();
+            },
+            borderRadius: BorderRadius.circular(24),
+            child: Semantics(
+              label: '${module.getLocalizedTitle(loc)}, $subtitleText',
+              button: true,
+              child: Stack(
+                children: [
+                  // Sağ altda böyük "qorxu-ikon" filigranı — dərinlik hissi
+                  Positioned(
+                    right: -14,
+                    bottom: -14,
+                    child: Icon(
+                      iconData,
+                      size: 92,
+                      color: accentColor.withAlpha(16),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Duotone ikon nişanı — modul rəngindən tündoya
+                            Container(
+                              width: 46,
+                              height: 46,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: AppColors.duoTint(accentColor),
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: accentColor.withAlpha(60),
+                                  width: 1.2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: accentColor.withAlpha(30),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                iconData,
+                                color: accentColor,
+                                size: 23,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: accentColor.withAlpha(14),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.arrow_outward_rounded,
+                                size: 14,
+                                color: accentColor.withAlpha(180),
+                              ),
+                            ),
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: accentColor.withAlpha(45),
-                          width: 1.2,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              module.getLocalizedTitle(loc),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.textPrimary,
+                                letterSpacing: -0.4,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitleText,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: accentColor.withAlpha(25),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(iconData, color: accentColor, size: 22),
+                      ],
                     ),
-                    Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardBorder.withAlpha(40),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.arrow_outward_rounded,
-                        size: 13,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      module.getLocalizedTitle(loc),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitleText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-      ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildReorderListTile(
     ModuleItem module,

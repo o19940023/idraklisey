@@ -83,7 +83,7 @@ class _ReviewSubmissionsScreenState extends State<ReviewSubmissionsScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF1A1B2E), Color(0xFF2D1B69), Color(0xFF6C5CE7)],
+                    colors: [Color(0xFF1A1B2E), Color(0xFF132C5E), Color(0xFF2563EB)],
                   ),
                 ),
                 child: Stack(
@@ -317,7 +317,7 @@ class _ReviewSubmissionsScreenState extends State<ReviewSubmissionsScreen> {
     } else if (s.contains('azərbaycan') || s.contains('ədəbiyyat')) {
       return const Color(0xFF1D4ED8);
     } else if (s.contains('informatika') || s.contains('rəqəmsal')) {
-      return const Color(0xFF4F46E5);
+      return const Color(0xFF1D4ED8);
     }
     return const Color(0xFF1E3A8A);
   }

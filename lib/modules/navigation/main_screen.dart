@@ -685,7 +685,7 @@ class _MainScreenState extends State<MainScreen> {
                 width: 26,
                 height: 26,
                 child: CircularProgressIndicator(
-                  color: Color(0xFF6C5CE7),
+                  color: Color(0xFF2563EB),
                   strokeWidth: 2.4,
                 ),
               ),
@@ -728,8 +728,12 @@ class _MainScreenState extends State<MainScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          toolbarHeight: 56,
-          backgroundColor: isDark ? AppColors.darkSurface : AppColors.primary,
+          toolbarHeight: 60,
+          backgroundColor: Colors.transparent,
+          flexibleSpace: Container(
+            // İmza hero qradienti — obsidian → indigo (ID kartı kimliyi)
+            decoration: const BoxDecoration(gradient: AppColors.heroGradient),
+          ),
           elevation: 0,
           leading: const Padding(
             padding: EdgeInsets.only(left: 12),

@@ -120,7 +120,7 @@ class LessonSlot {
     } else if (s.contains('azərbaycan') || s.contains('ədəbiyyat')) {
       return const Color(0xFF1D4ED8); // Deep Blue
     } else if (s.contains('informatika') || s.contains('rəqəmsal')) {
-      return const Color(0xFF4F46E5); // Indigo
+      return const Color(0xFF1D4ED8); // Indigo
     } else if (s.contains('coğrafiya')) {
       return const Color(0xFF65A30D); // Lime
     } else if (s.contains('idman') || s.contains('bədən')) {

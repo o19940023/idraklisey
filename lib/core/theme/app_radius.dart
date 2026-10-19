@@ -16,15 +16,15 @@ class AppRadius {
   static const double full = 9999.0; // Pill shape
 
   // Common radius presets
-  static const BorderRadius cardRadius = BorderRadius.all(Radius.circular(lg));
-  static const BorderRadius buttonRadius = BorderRadius.all(Radius.circular(md));
-  static const BorderRadius dialogRadius = BorderRadius.all(Radius.circular(xl));
-  static const BorderRadius bottomSheetRadius = BorderRadius.vertical(top: Radius.circular(xxl));
-  static const BorderRadius chipRadius = BorderRadius.all(Radius.circular(sm));
+  static const BorderRadius cardRadius = BorderRadius.all(Radius.circular(xl));
+  static const BorderRadius buttonRadius = BorderRadius.all(Radius.circular(14));
+  static const BorderRadius dialogRadius = BorderRadius.all(Radius.circular(xxl));
+  static const BorderRadius bottomSheetRadius = BorderRadius.vertical(top: Radius.circular(28));
+  static const BorderRadius chipRadius = BorderRadius.all(Radius.circular(10));
   static const BorderRadius pillRadius = BorderRadius.all(Radius.circular(full));
 
   // Component-specific
   static const double avatar = full; // Always circular
-  static const double badge = sm;
-  static const double inputField = md;
+  static const double badge = 10;
+  static const double inputField = 14;
 }

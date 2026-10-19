@@ -71,7 +71,7 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF564BC7), Color(0xFF2E304F)],
+          colors: [Color(0xFF1E40AF), Color(0xFF2E304F)],
         ),
       ),
       child: Center(
@@ -151,7 +151,7 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF1A1B2E), Color(0xFF2D1B69), Color(0xFF6C5CE7)],
+                    colors: [Color(0xFF1A1B2E), Color(0xFF132C5E), Color(0xFF2563EB)],
                   ),
                 ),
                 child: SafeArea(

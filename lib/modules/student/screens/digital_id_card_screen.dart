@@ -45,7 +45,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF3D2F6B), Color(0xFF1E293B)],
+          colors: [Color(0xFF12325E), Color(0xFF1E293B)],
         ),
       ),
       child: Center(
@@ -290,7 +290,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
               height: 240,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF6C5CE7).withAlpha(45),
+                color: const Color(0xFF2563EB).withAlpha(45),
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
@@ -345,14 +345,14 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                               decoration: BoxDecoration(
                                 gradient: !_showBack
                                     ? const LinearGradient(
-                                        colors: [Color(0xFF6C5CE7), Color(0xFF4834D4)],
+                                        colors: [Color(0xFF2563EB), Color(0xFF4834D4)],
                                       )
                                     : null,
                                 borderRadius: BorderRadius.circular(25),
                                 boxShadow: !_showBack
                                     ? [
                                         BoxShadow(
-                                          color: const Color(0xFF6C5CE7).withAlpha(80),
+                                          color: const Color(0xFF2563EB).withAlpha(80),
                                           blurRadius: 12,
                                           offset: const Offset(0, 3),
                                         ),
@@ -389,14 +389,14 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                               decoration: BoxDecoration(
                                 gradient: _showBack
                                     ? const LinearGradient(
-                                        colors: [Color(0xFF6C5CE7), Color(0xFF4834D4)],
+                                        colors: [Color(0xFF2563EB), Color(0xFF4834D4)],
                                       )
                                     : null,
                                 borderRadius: BorderRadius.circular(25),
                                 boxShadow: _showBack
                                     ? [
                                         BoxShadow(
-                                          color: const Color(0xFF6C5CE7).withAlpha(80),
+                                          color: const Color(0xFF2563EB).withAlpha(80),
                                           blurRadius: 12,
                                           offset: const Offset(0, 3),
                                         ),
@@ -499,14 +499,14 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                Color(0xFF1E1B4B),
+                                Color(0xFF123B7A),
                                 Color(0xFF13172E),
                               ],
                             ),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
                               color: _isNfcActive
-                                  ? const Color(0xFF6C5CE7)
+                                  ? const Color(0xFF2563EB)
                                   : Colors.white.withAlpha(15),
                               width: _isNfcActive ? 2 : 1,
                             ),
@@ -525,13 +525,13 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
                                   color: _isNfcActive
-                                      ? const Color(0xFF6C5CE7)
-                                      : const Color(0xFF6C5CE7).withAlpha(30),
+                                      ? const Color(0xFF2563EB)
+                                      : const Color(0xFF2563EB).withAlpha(30),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
                                   Icons.nfc_rounded,
-                                  color: _isNfcActive ? Colors.white : const Color(0xFFA29BFE),
+                                  color: _isNfcActive ? Colors.white : const Color(0xFFF5B301),
                                   size: 22,
                                 ),
                               ),
@@ -693,10 +693,10 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
           ],
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF6C5CE7).withAlpha(140), width: 1.8),
+        border: Border.all(color: const Color(0xFF2563EB).withAlpha(140), width: 1.8),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6C5CE7).withAlpha(60),
+            color: const Color(0xFF2563EB).withAlpha(60),
             blurRadius: 28,
             offset: const Offset(0, 10),
           ),
@@ -760,7 +760,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                               Text(
                                 'BEYNƏLXALQ TƏHSİL MƏKTƏBİ',
                                 style: TextStyle(
-                                  color: Color(0xFFA29BFE),
+                                  color: Color(0xFFF5B301),
                                   fontSize: 7.5,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 0.9,
@@ -792,12 +792,12 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF6C5CE7), Color(0xFF00CEC9)],
+                            colors: [Color(0xFF2563EB), Color(0xFF38BDF8)],
                           ),
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF6C5CE7).withAlpha(80),
+                              color: const Color(0xFF2563EB).withAlpha(80),
                               blurRadius: 8,
                             ),
                           ],
@@ -833,10 +833,10 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                         height: 92,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFA29BFE), width: 1.8),
+                          border: Border.all(color: const Color(0xFFF5B301), width: 1.8),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF6C5CE7).withAlpha(50),
+                              color: const Color(0xFF2563EB).withAlpha(50),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -862,7 +862,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                                               height: 18,
                                               child: CircularProgressIndicator(
                                                 strokeWidth: 2,
-                                                color: Color(0xFF6C5CE7),
+                                                color: Color(0xFF2563EB),
                                               ),
                                             ),
                                           ),
@@ -943,7 +943,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                           const Text(
                             'TƏSDİQLƏNMİŞ ELEKTRON VƏSİQƏ',
                             style: TextStyle(
-                              color: Color(0xFFA29BFE),
+                              color: Color(0xFFF5B301),
                               fontSize: 8,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.8,
@@ -1013,10 +1013,10 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
           ],
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF6C5CE7).withAlpha(140), width: 1.8),
+        border: Border.all(color: const Color(0xFF2563EB).withAlpha(140), width: 1.8),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6C5CE7).withAlpha(60),
+            color: const Color(0xFF2563EB).withAlpha(60),
             blurRadius: 28,
             offset: const Offset(0, 10),
           ),
@@ -1080,12 +1080,12 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                         children: [
                           Row(
                             children: const [
-                              Icon(Icons.shield_outlined, color: Color(0xFFA29BFE), size: 16),
+                              Icon(Icons.shield_outlined, color: Color(0xFFF5B301), size: 16),
                               SizedBox(width: 6),
                               Text(
                                 'TƏCİLİ ƏLAQƏ VƏ TİBBİ MƏLUMAT',
                                 style: TextStyle(
-                                  color: Color(0xFFA29BFE),
+                                  color: Color(0xFFF5B301),
                                   fontWeight: FontWeight.w900,
                                   fontSize: 10.5,
                                   letterSpacing: 1.0,
@@ -1171,7 +1171,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                                 Text(
                                   student.id,
                                   style: const TextStyle(
-                                    color: Color(0xFFA29BFE),
+                                    color: Color(0xFFF5B301),
                                     fontSize: 9.5,
                                     fontFamily: 'monospace',
                                     fontWeight: FontWeight.bold,
@@ -1214,7 +1214,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
         Text(
           label,
           style: TextStyle(
-            color: const Color(0xFFA29BFE).withAlpha(180),
+            color: const Color(0xFFF5B301).withAlpha(180),
             fontSize: 7.5,
             fontWeight: FontWeight.w900,
             letterSpacing: 0.6,
@@ -1256,7 +1256,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
             style: TextStyle(
               color: isAlert
                   ? const Color(0xFFFF7675)
-                  : (isHighlight ? const Color(0xFFA29BFE) : Colors.white),
+                  : (isHighlight ? const Color(0xFFF5B301) : Colors.white),
               fontSize: 11,
               fontWeight: FontWeight.bold,
             ),

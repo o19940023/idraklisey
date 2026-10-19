@@ -78,7 +78,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
     final initials = _initialsOf(student.fullName);
     return CircleAvatar(
       radius: radius,
-      backgroundColor: const Color(0xFF564BC7),
+      backgroundColor: const Color(0xFF1E40AF),
       foregroundColor: Colors.white,
       backgroundImage: hasPhoto ? NetworkImage(student.photoUrl) : null,
       onBackgroundImageError: hasPhoto ? (_, __) {} : null,
@@ -163,7 +163,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF1A1B2E), Color(0xFF4F46E5), Color(0xFF6C5CE7)],
+                    colors: [Color(0xFF1A1B2E), Color(0xFF1D4ED8), Color(0xFF2563EB)],
                   ),
                 ),
                 child: Stack(

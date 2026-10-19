@@ -107,22 +107,9 @@ class StudentDashboardScreen extends StatelessWidget {
               ],
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: isDark
-                          ? [
-                              const Color(0xFF0F172A),
-                              const Color(0xFF1E1B4B),
-                              const Color(0xFF1E293B),
-                            ]
-                          : [
-                              const Color(0xFF1A1B2E),
-                              const Color(0xFF282566),
-                              const Color(0xFF16182E),
-                            ],
-                    ),
+                  // İmza hero qradienti — dərin lacivərt → kral mavisi
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.heroGradient,
                   ),
                   padding: const EdgeInsets.only(
                     left: 20,
@@ -137,17 +124,18 @@ class StudentDashboardScreen extends StatelessWidget {
                         padding: const EdgeInsets.all(2.5),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
+                          // Marka halqası: kral mavisi → qızılı (logo kimliyi)
                           gradient: const LinearGradient(
                             colors: [
-                              Color(0xFFA29BFE),
-                              Color(0xFF6C5CE7),
-                              Color(0xFF00CEC9),
+                              Color(0xFF2563EB),
+                              Color(0xFF38BDF8),
+                              Color(0xFFF5B301),
                             ],
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF6C5CE7).withAlpha(80),
-                              blurRadius: 14,
+                              color: const Color(0xFF2563EB).withAlpha(90),
+                              blurRadius: 16,
                               spreadRadius: 1,
                             ),
                           ],
@@ -175,19 +163,19 @@ class StudentDashboardScreen extends StatelessWidget {
                                   ),
                                   decoration: BoxDecoration(
                                     color: const Color(
-                                      0xFF6C5CE7,
+                                      0xFF2563EB,
                                     ).withAlpha(35),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: const Color(
-                                        0xFFA29BFE,
+                                        0xFFF5B301,
                                       ).withAlpha(40),
                                     ),
                                   ),
                                   child: Text(
                                     loc.studentPortal,
                                     style: const TextStyle(
-                                      color: Color(0xFFA29BFE),
+                                      color: Color(0xFFF5B301),
                                       fontSize: 9,
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: 0.9,
@@ -270,19 +258,19 @@ class StudentDashboardScreen extends StatelessWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            Color(0xFF1E1B4B),
+                            Color(0xFF123B7A),
                             Color(0xFF13172E),
                             Color(0xFF0F172A),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(22),
                         border: Border.all(
-                          color: const Color(0xFF6C5CE7).withAlpha(90),
+                          color: const Color(0xFF2563EB).withAlpha(90),
                           width: 1.4,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF6C5CE7).withAlpha(50),
+                            color: const Color(0xFF2563EB).withAlpha(50),
                             blurRadius: 20,
                             offset: const Offset(0, 6),
                           ),
@@ -310,7 +298,7 @@ class StudentDashboardScreen extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
                                       colors: [
-                                        Color(0xFF6C5CE7),
+                                        Color(0xFF2563EB),
                                         Color(0xFF4834D4),
                                       ],
                                     ),
@@ -318,7 +306,7 @@ class StudentDashboardScreen extends StatelessWidget {
                                     boxShadow: [
                                       BoxShadow(
                                         color: const Color(
-                                          0xFF6C5CE7,
+                                          0xFF2563EB,
                                         ).withAlpha(90),
                                         blurRadius: 10,
                                         offset: const Offset(0, 3),

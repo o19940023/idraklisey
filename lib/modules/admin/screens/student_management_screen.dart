@@ -98,7 +98,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF6C5CE7)],
+                    colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF2563EB)],
                   ),
                 ),
                 child: Stack(
@@ -495,7 +495,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [Color(0xFF1A1B2E), Color(0xFF4437CA), Color(0xFF6C5CE7)],
+                          colors: [Color(0xFF1A1B2E), Color(0xFF1E3A8A), Color(0xFF2563EB)],
                         ),
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: AppShadows.md,

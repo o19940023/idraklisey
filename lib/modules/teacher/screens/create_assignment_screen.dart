@@ -307,7 +307,7 @@ class _CreateAssignmentScreenState extends State<CreateAssignmentScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF1A1B2E), Color(0xFF312E81), Color(0xFF6C5CE7)],
+                    colors: [Color(0xFF1A1B2E), Color(0xFF1E3A8A), Color(0xFF2563EB)],
                   ),
                 ),
                 child: Stack(

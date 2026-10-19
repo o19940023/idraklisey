@@ -136,7 +136,7 @@ class _TeacherTimetableViewScreenState extends State<TeacherTimetableViewScreen>
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF1A1B2E), Color(0xFF2D1B69), Color(0xFF7C3AED)],
+                    colors: [Color(0xFF1A1B2E), Color(0xFF132C5E), Color(0xFF7C3AED)],
                   ),
                 ),
                 child: Stack(

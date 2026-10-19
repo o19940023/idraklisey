@@ -557,15 +557,15 @@ class TeacherDashboardScreen extends StatelessWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            Color(0xFF4F46E5),
-                            Color(0xFF6C5CE7),
+                            Color(0xFF1D4ED8),
+                            Color(0xFF2563EB),
                             Color(0xFF8B5CF6),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF6C5CE7).withAlpha(45),
+                            color: const Color(0xFF2563EB).withAlpha(45),
                             blurRadius: 18,
                             offset: const Offset(0, 5),
                           ),
