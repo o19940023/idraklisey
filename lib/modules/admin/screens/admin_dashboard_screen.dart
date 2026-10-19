@@ -55,8 +55,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       } else {
         headerTitle =
             currentUser?.position ??
-            (loc?.adminDashboard ?? 'Baş İnzibatçı Paneli');
-        headerBadge = (loc?.admin ?? 'İnzibatçı').toUpperCase();
+            loc.adminDashboard;
+        headerBadge = loc.admin.toUpperCase();
       }
     } else {
       final assignedRole = appState.getRoleById(currentUser?.assignedRoleId);
@@ -67,11 +67,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         headerTitle =
             currentUser?.position ??
             currentUser?.role.displayName ??
-            (loc?.dashboard ?? 'Panel');
+            loc.dashboard;
         headerBadge =
             currentUser?.position?.toUpperCase() ??
             currentUser?.role.displayName.toUpperCase() ??
-            (loc?.dashboard.toUpperCase() ?? 'PANEL');
+            loc.dashboard.toUpperCase();
       }
     }
 
@@ -300,7 +300,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                                 width: 52,
                                                 height: 52,
                                                 fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) => Center(
+                                                errorBuilder: (_, _, _) => Center(
                                                   child: Text(
                                                     initials.isNotEmpty ? initials : 'İD',
                                                     style: const TextStyle(
@@ -468,7 +468,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                       Row(
                                         children: [
                                           Text(
-                                            loc?.createEmployee ?? 'Yeni İşçi Hesabı Yarat',
+                                            loc.createEmployee,
                                             style: const TextStyle(
                                               color: Colors.white,
                                               fontSize: 15,
@@ -594,7 +594,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
                       _buildAdminStatTile(
-                        title: loc?.teachers ?? 'Müəllimlər',
+                        title: loc.teachers,
                         count: '$teacherCount',
                         icon: Icons.psychology_rounded,
                         color: const Color(0xFF0D9488),
@@ -609,7 +609,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         },
                       ),
                       _buildAdminStatTile(
-                        title: loc?.students ?? 'Şagirdlər',
+                        title: loc.students,
                         count: '$studentCount',
                         icon: Icons.school_rounded,
                         color: AppColors.primaryAccent,
@@ -624,7 +624,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         },
                       ),
                       _buildAdminStatTile(
-                        title: loc?.parents ?? 'Valideynlər',
+                        title: loc.parents,
                         count: '$parentCount',
                         icon: Icons.family_restroom_rounded,
                         color: AppColors.goldDark,
@@ -639,7 +639,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         },
                       ),
                       _buildAdminStatTile(
-                        title: loc?.helpdesk ?? 'Helpdesk',
+                        title: loc.helpdesk,
                         count: '$activeTickets',
                         icon: Icons.support_agent_rounded,
                         color: const Color(0xFF9333EA),
@@ -656,11 +656,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 20),
-
-                  // Yaxınlaşan doğum günləri ( Firestore-dakı doğum tarixlərindən)
-                  _buildBirthdaysCard(appState),
-
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -670,7 +665,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              loc?.roleManagement ?? 'İnzibati Modullar',
+                              loc.roleManagement,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w900,
@@ -680,8 +675,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              loc?.details ??
-                                  'İcazələr, cədvəl və məktəb idarəetməsi',
+                              loc.details,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,
@@ -719,7 +713,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    loc?.role ?? 'Tam Səlahiyyət',
+                                    loc.role,
                                     style: const TextStyle(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w800,
@@ -893,6 +887,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       }
                     },
                   ),
+
+                  const SizedBox(height: 24),
+
+                  // Yaxınlaşan doğum günləri (Səhifənin ən altında)
+                  _buildBirthdaysCard(appState),
                 ],
               ),
             ),

@@ -379,6 +379,7 @@ class ParentDashboardScreen extends StatelessWidget {
 
                     const SizedBox(height: 20),
 
+
                     SectionHeader(
                       title: loc.monitoringModules,
                       subtitle: loc.monitoringModulesDesc,

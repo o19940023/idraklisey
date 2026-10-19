@@ -412,7 +412,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    '${loc.medicalCard}',
+                                    loc.medicalCard,
                                     style: TextStyle(
                                       color: _showBack ? Colors.white : Colors.white60,
                                       fontWeight: FontWeight.w800,
@@ -867,7 +867,7 @@ class _DigitalIdCardScreenState extends State<DigitalIdCardScreen>
                                             ),
                                           ),
                                         ),
-                                  errorBuilder: (_, __, ___) =>
+                                  errorBuilder: (_, _, _) =>
                                       _buildInitialsFallback(student.fullName),
                                 )
                               else
