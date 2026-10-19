@@ -409,7 +409,15 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
 
     final now = DateTime.now();
     final isOverdue = now.isAfter(assignment.dueDate) && status != AssignmentStatus.submitted && status != AssignmentStatus.graded;
-    final diffHours = assignment.dueDate.difference(now).inHours;
+    // Təqvim gününə görə fərqlə — saat fərqi ilə "bugün/yarın" etiketi
+    // səhv günü göstərirdi (səhər 09:00-a qalan iş "bugün" idi).
+    final todayDate = DateTime(now.year, now.month, now.day);
+    final dueDay = DateTime(
+      assignment.dueDate.year,
+      assignment.dueDate.month,
+      assignment.dueDate.day,
+    );
+    final dayDiff = dueDay.difference(todayDate).inDays;
 
     Color statusColor;
     String statusTitle;
@@ -621,7 +629,7 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
                                           ),
                                         ),
                                       ),
-                                      if (!isOverdue && diffHours >= 0 && diffHours <= 48 && status == AssignmentStatus.pending) ...[
+                                      if (!isOverdue && dayDiff >= 0 && dayDiff <= 1 && status == AssignmentStatus.pending) ...[
                                         const SizedBox(width: 6),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -631,7 +639,7 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
                                             border: Border.all(color: AppColors.warning.withAlpha(50)),
                                           ),
                                           child: Text(
-                                            diffHours < 24 ? loc.today : loc.tomorrow,
+                                            dayDiff == 0 ? loc.today : loc.tomorrow,
                                             style: const TextStyle(
                                               fontSize: 9.5,
                                               fontWeight: FontWeight.w800,

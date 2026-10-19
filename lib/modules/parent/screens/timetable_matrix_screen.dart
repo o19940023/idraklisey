@@ -4,6 +4,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../providers/app_state.dart';
 import '../../../core/utils/navigation_utils.dart';
+import '../../../core/widgets/empty_state_widget.dart';
+import '../../../core/widgets/motion.dart';
 
 class TimetableMatrixScreen extends StatefulWidget {
   const TimetableMatrixScreen({super.key});
@@ -32,9 +34,10 @@ class _TimetableMatrixScreenState extends State<TimetableMatrixScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     
-    // Find Monday of current week
+    // Find Monday of current week — həmişə geriyə pazartesiyə qayıt
+    // (şənbə/bazar köhnə hesabla səhv günləri göstərirdi).
     final daysFromMonday = now.weekday - 1;
-    _selectedWeekMonday = today.subtract(Duration(days: daysFromMonday < 5 ? daysFromMonday : 0));
+    _selectedWeekMonday = today.subtract(Duration(days: daysFromMonday));
 
     if (now.weekday >= 1 && now.weekday <= 5) {
       _selectedDayIndex = now.weekday - 1;
@@ -60,7 +63,7 @@ class _TimetableMatrixScreenState extends State<TimetableMatrixScreen> {
     final today = DateTime(now.year, now.month, now.day);
     final daysFromMonday = now.weekday - 1;
     setState(() {
-      _selectedWeekMonday = today.subtract(Duration(days: daysFromMonday < 5 ? daysFromMonday : 0));
+      _selectedWeekMonday = today.subtract(Duration(days: daysFromMonday));
       if (now.weekday >= 1 && now.weekday <= 5) {
         _selectedDayIndex = now.weekday - 1;
       } else {
@@ -89,9 +92,9 @@ class _TimetableMatrixScreenState extends State<TimetableMatrixScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final currentStudent = appState.student;
-    final className = currentStudent.className.isNotEmpty
-        ? currentStudent.className
-        : (appState.allDistinctClasses.isNotEmpty ? appState.allDistinctClasses.first : '');
+    // Sinif boşdursa başqa sinfin cədvəlini göstərmə — boş vəziyyət
+    // düzgün mesajla göstərilir.
+    final className = currentStudent.className;
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -99,9 +102,8 @@ class _TimetableMatrixScreenState extends State<TimetableMatrixScreen> {
     final selectedDate = _selectedWeekMonday.add(Duration(days: _selectedDayIndex));
     final weekFriday = _selectedWeekMonday.add(const Duration(days: 4));
 
-    final isCurrentWeek = _selectedWeekMonday.isAtSameMomentAs(
-      today.subtract(Duration(days: now.weekday - 1 < 5 ? now.weekday - 1 : 0)),
-    );
+    final thisWeeksMonday = today.subtract(Duration(days: now.weekday - 1));
+    final isCurrentWeek = _selectedWeekMonday.isAtSameMomentAs(thisWeeksMonday);
 
     final lessons = appState.getClassLessonsForDate(className, selectedDate);
     final weekRangeTitle = '${_selectedWeekMonday.day} ${_getShortMonthName(_selectedWeekMonday.month)} - ${weekFriday.day} ${_getShortMonthName(weekFriday.month)} ${weekFriday.year}';
@@ -334,7 +336,15 @@ class _TimetableMatrixScreenState extends State<TimetableMatrixScreen> {
 
           // ── Lessons List / Empty State ──
           Expanded(
-            child: lessons.isEmpty
+            child: className.isEmpty
+                ? EmptyStateWidget(
+                    icon: Icons.school_outlined,
+                    title: 'Sinif təyin edilməyib',
+                    message:
+                        'Şagirdin sinifi administrator tərəfindən təyin '
+                        'olunmadığı üçün dərs cədvəli göstərilə bilmir.',
+                  )
+                : lessons.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
@@ -380,7 +390,11 @@ class _TimetableMatrixScreenState extends State<TimetableMatrixScreen> {
                         }
                       }
 
-                      return Container(
+                      return FadeIn(
+                        key: ValueKey('tt_${selectedDate.toIso8601String()}_$index'),
+                        delay: staggerDelay(index, baseMs: 30, stepMs: 45),
+                        duration: const Duration(milliseconds: 320),
+                        child: Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
                           color: AppColors.surface,
@@ -562,6 +576,7 @@ class _TimetableMatrixScreenState extends State<TimetableMatrixScreen> {
                               ],
                             ),
                           ),
+                        ),
                         ),
                       );
                     },
