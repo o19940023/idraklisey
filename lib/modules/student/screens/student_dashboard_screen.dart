@@ -15,6 +15,7 @@ import 'cafeteria_menu_screen.dart';
 import '../../parent/screens/timetable_matrix_screen.dart';
 import '../../parent/screens/grades_analytics_screen.dart';
 import '../../admin/widgets/reorderable_module_grid.dart';
+import '../../../data/models/assignment_model.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../shared/screens/notifications_screen.dart';
 
@@ -409,7 +410,183 @@ class StudentDashboardScreen extends StatelessWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 14),
+
+                    // ── Günün Canlı Panoraması (Today's Live Focus Hub) ──
+                    Builder(
+                      builder: (context) {
+                        final now = DateTime.now();
+                        final todayLessons = appState.getClassLessonsForDate(student.className, now);
+                        final pendingHomeworkCount = appState.assignments.where((a) {
+                          final assignedCls = a.assignedClass?.trim();
+                          final matchesClass = assignedCls == null ||
+                              assignedCls.isEmpty ||
+                              assignedCls.toLowerCase() == 'hamısı' ||
+                              assignedCls.toLowerCase() == 'bütün siniflər' ||
+                              assignedCls.toLowerCase() == student.className.trim().toLowerCase();
+                          final matchesStudent = a.assignedStudentIds.isEmpty || a.assignedStudentIds.contains(student.id);
+                          return matchesClass && matchesStudent && a.getStatusForStudent(student.id) == AssignmentStatus.pending;
+                        }).length;
+
+                        return Row(
+                          children: [
+                            // Dərs Cədvəli Quick Glance
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const TimetableMatrixScreen()),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withAlpha(6),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF2563EB).withAlpha(15),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(Icons.calendar_month_rounded, size: 16, color: Color(0xFF2563EB)),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFEFF6FF),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              '${todayLessons.length} Dərs',
+                                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF2563EB)),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        'Bugünkü Dərs Cədvəli',
+                                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        todayLessons.isNotEmpty
+                                            ? '${todayLessons.first.subject} (${todayLessons.first.time})'
+                                            : 'Dərs saatı yoxdur',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            // Tapşırıqlar Quick Glance
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const AssignmentsTimelineScreen()),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withAlpha(6),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: (pendingHomeworkCount > 0 ? const Color(0xFFF59E0B) : const Color(0xFF10B981)).withAlpha(20),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Icon(
+                                              pendingHomeworkCount > 0 ? Icons.alarm_rounded : Icons.check_circle_rounded,
+                                              size: 16,
+                                              color: pendingHomeworkCount > 0 ? const Color(0xFFD97706) : const Color(0xFF10B981),
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: (pendingHomeworkCount > 0 ? const Color(0xFFFEF3C7) : const Color(0xFFF0FDF4)),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              '$pendingHomeworkCount Qalıb',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w800,
+                                                color: pendingHomeworkCount > 0 ? const Color(0xFFB45309) : const Color(0xFF16A34A),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        'Ev Tapşırıqları',
+                                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        pendingHomeworkCount > 0
+                                            ? '$pendingHomeworkCount tapşırıq gözləyir'
+                                            : 'Bütün tapşırıqlar tamamdır',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          color: pendingHomeworkCount > 0 ? const Color(0xFFB45309) : const Color(0xFF64748B),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 18),
 
                     SectionHeader(
                       title: loc.monitoringModules,

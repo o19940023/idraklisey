@@ -81,7 +81,7 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
       backgroundColor: const Color(0xFF1E40AF),
       foregroundColor: Colors.white,
       backgroundImage: hasPhoto ? NetworkImage(student.photoUrl) : null,
-      onBackgroundImageError: hasPhoto ? (_, __) {} : null,
+      onBackgroundImageError: hasPhoto ? (_, _) {} : null,
       child: hasPhoto
           ? null
           : Text(
@@ -748,21 +748,79 @@ class _QuickGradingScreenState extends State<QuickGradingScreen> {
                       const SizedBox(height: 16),
 
                       // Rəy
-                      Text(
-                        loc.feedback,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textSecondary,
-                          letterSpacing: 0.3,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            loc.feedback,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF475569),
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          const Text(
+                            'Hazır şərhlər:',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
+
+                      // Hazır müəllim şərhləri (Quick Feedback Chips)
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          '🌟 Əla nəticə!',
+                          '🙋‍♂️ Dərsdə çox aktiv idi',
+                          '📖 Mövzunu təkrar etməlidir',
+                          '⚠️ Ev tapşırığı əskikdir',
+                          '✍️ Cavab qənaətbəxşdir',
+                        ].map((preset) {
+                          return GestureDetector(
+                            onTap: () {
+                              HapticHelper.light();
+                              setState(() {
+                                final clean = preset.replaceAll(RegExp(r'^[^\w\s]+'), '').trim();
+                                if (_feedbackController.text.isEmpty) {
+                                  _feedbackController.text = clean;
+                                } else {
+                                  _feedbackController.text = '${_feedbackController.text}, $clean';
+                                }
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Text(
+                                preset,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF334155),
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: 10),
                       TextField(
                         controller: _feedbackController,
-                        maxLines: 3,
+                        maxLines: 2,
                         decoration: InputDecoration(
-                          hintText: loc.feedback,
+                          hintText: 'Şərh yazın və ya yuxarıdakı hazır şərhlərdən birini seçin...',
                           hintStyle: TextStyle(
                             fontSize: 12.5,
                             color: AppColors.textMuted,
