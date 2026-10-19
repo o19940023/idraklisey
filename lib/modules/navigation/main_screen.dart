@@ -130,7 +130,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   /// Üst bardakı profil avatarı — fotoşəkil yoxdursa baş hərflər.
-  Widget _buildHeaderAvatar(AppUser user) {
+  Widget _buildHeaderAvatar(AppUser user, {double radius = 17}) {
     final photo = user.photoUrl;
     final hasPhoto = photo != null && photo.trim().isNotEmpty;
     final initials = _initialsOf(user.fullName);
@@ -147,30 +147,38 @@ class _MainScreenState extends State<MainScreen> {
           boxShadow: [
             BoxShadow(
               color: AppColors.primaryAccent.withAlpha(70),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+              blurRadius: radius >= 15 ? 10 : 4,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        padding: const EdgeInsets.all(2),
+        padding: const EdgeInsets.all(1.5),
         child: CircleAvatar(
-          radius: 17,
+          radius: radius,
           backgroundColor: hasPhoto ? Colors.white : AppColors.primaryAccent,
           backgroundImage: hasPhoto ? NetworkImage(photo) : null,
           child: hasPhoto
               ? null
               : Text(
                   initials,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 12.5,
+                    fontSize: radius * 0.75,
                     fontWeight: FontWeight.w800,
-                    letterSpacing: 0.3,
+                    letterSpacing: 0.2,
                   ),
                 ),
         ),
       ),
     );
+  }
+
+  /// Üst bardakı "Rol • Ad Soyad" sətri.
+  String _headerRoleLabel(AppUser user) {
+    final appState = Provider.of<AppState>(context);
+    final assigned = appState.getRoleById(user.assignedRoleId);
+    final roleLabel = assigned?.name ?? user.role.displayName;
+    return '$roleLabel • ${user.fullName}';
   }
 
   String _initialsOf(String fullName) {
@@ -740,25 +748,28 @@ class _MainScreenState extends State<MainScreen> {
                   letterSpacing: 1.0,
                 ),
               ),
-              Text(
-                currentUser.fullName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.primaryAccent,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
+              // Rol adının solunda profil fotoşəfi (istifadəçinin istəyi).
+              Row(
+                children: [
+                  _buildHeaderAvatar(currentUser, radius: 9),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _headerRoleLabel(currentUser),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.primaryAccent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          actions: [
-            // Profil fotoşəfi hər zaman üst barda görünür (bütün rollar).
-            Padding(
-              padding: const EdgeInsets.only(right: 14),
-              child: Center(child: _buildHeaderAvatar(currentUser)),
-            ),
-          ],
+          actions: const [],
         ),
         body: Stack(
           children: [

@@ -33,9 +33,14 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     setState(() => _isLoading = true);
     try {
       final appState = Provider.of<AppState>(context, listen: false);
-      final roles = await appState.firestoreService.fetchRoles();
+      // ƏSAS: AppState-in yaddaşındakı rolları da yenilə. Yalnız buradaki
+      // lokal siyahını yeniləmək yetmir — hasPermission() appState-dəki
+      // köhnə (geniş) səlahiyyətləri oxumağa davam edirdi və rol daraldılmış
+      // işçi yenə də demək olar hər şeyi görürdü.
+      await appState.loadRoles();
+      if (!mounted) return;
       setState(() {
-        _roles = roles;
+        _roles = appState.roles;
         _isLoading = false;
       });
     } catch (e) {

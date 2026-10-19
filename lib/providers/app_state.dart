@@ -3726,7 +3726,14 @@ class AppState extends ChangeNotifier {
     }
 
     return _notifications.where((n) {
-      // 0. Doğrudan istifadəçiyə hədəflənmiş bildirişlər
+      // Hədəflənmiş bildiriş (spesifik şəxs siyahısı varsa) YALNIZ o
+      // şəxslərə çatır. Kənar şagird/valideynə "ümumi elan" kimi sızması
+      // elə burada baş verirdi (helpdesk/IT cavabları bütün panelə düşürdü).
+      if (n.targetUserIds.isNotEmpty && !n.targetUserIds.contains(userId)) {
+        return false;
+      }
+
+      // 0. Doğrudan istifadəçiyə hədərlənmiş bildirişlər
       //    (ticket cavabı, status dəyişikliyi, helpdesk yönləndirməsi)
       if (n.targetUserIds.contains(userId)) return true;
 
