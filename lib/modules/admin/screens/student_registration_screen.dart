@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_shadows.dart';
 import '../../../core/utils/email_generator.dart';
 import '../../../core/utils/fin_code_formatter.dart';
 import '../../../core/utils/password_hasher.dart';
@@ -14,9 +12,10 @@ import '../../../providers/app_state.dart';
 import '../../../core/utils/navigation_utils.dart';
 import '../widgets/credentials_result_dialog.dart';
 
-/// Şagird qeydiyyatı — 3 səhifəli addım-addım forma:
-/// 1) Şagird kimliyi  2) Təhsil və əlaqə  3) Valideyn.
-/// Şagirdin ünvanı daxil edildikdə valideynin ünvanı avtomatik eyniləşir.
+/// Şagird qeydiyyatı — Müasir, yormayan 3 addımlı Sehrbaz (Multi-step Wizard):
+/// 1) Şagird Kimliyi & Şəkil
+/// 2) Sinif & Səhiyyə (Vizual sinif və qan qrupu seçimi)
+/// 3) Valideyn & Giriş Məlumatları
 class StudentRegistrationScreen extends StatefulWidget {
   const StudentRegistrationScreen({super.key});
 
@@ -39,13 +38,20 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
   final _parentAddressCtrl = TextEditingController();
   final _parentPassCtrl = TextEditingController(text: '123456');
 
-  static const _stepTitles = ['Şagird Kimliyi', 'Təhsil və Əlaqə', 'Valideyn'];
-  static const _empty2 = 'Məlumat yoxdur';
+  static const _stepTitles = ['Şagird Kimliyi', 'Sinif & Səhiyyə', 'Valideyn & Giriş'];
 
   static const _bloodGroups = [
     'A(I) Rh+', 'A(II) Rh+', 'B(III) Rh+', 'AB(IV) Rh+',
     'A(II) Rh-', 'B(III) Rh-', 'AB(IV) Rh-',
     'O(I) Rh+', 'O(I) Rh-',
+  ];
+
+  static const _commonAllergies = [
+    'Qoz/Fıstıq',
+    'Laktoza',
+    'Qlüten',
+    'Sitrus',
+    'Toz',
   ];
 
   int _step = 0;
@@ -56,7 +62,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
   String _bloodGroup = 'A(II) Rh+';
   String? _photoUrl;
   bool _saving = false;
-  bool _parentAddressEdited = false; // valideyn ünvanı əl ilə dəyişilibsə avto-sync dayanır
+  bool _parentAddressEdited = false;
   bool _useExistingParent = false;
   AppUser? _selectedParent;
 
@@ -79,8 +85,6 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
 
   String _fullStudentName() => '${_firstNameCtrl.text.trim()} ${_lastNameCtrl.text.trim()}'.trim();
 
-  /// Şagird ünvanı dəyişəndə valideyn ünvanını avtomatik eyniləşdir
-  /// (yalnız valideyn onu əl ilə dəyişməyibsə — mantıqen eyni yerdə yaşayırlar).
   void _syncParentAddress(String studentAddress) {
     if (!_parentAddressEdited) {
       _parentAddressCtrl.text = studentAddress;
@@ -113,13 +117,18 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _birthDate ?? DateTime(now.year - 15),
+      initialDate: _birthDate ?? DateTime(now.year - 14),
       firstDate: DateTime(now.year - 25),
       lastDate: DateTime(now.year - 5),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(primary: AppColors.primaryAccent),
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF2563EB),
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Color(0xFF0F172A),
+            ),
           ),
           child: child!,
         );
@@ -138,7 +147,12 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(primary: AppColors.gold),
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFFD4AF37),
+              onPrimary: Colors.black87,
+              surface: Colors.white,
+              onSurface: Color(0xFF0F172A),
+            ),
           ),
           child: child!,
         );
@@ -151,7 +165,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_step == _stepTitles.length - 1 && _useExistingParent && _selectedParent == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mövcud valideyn hesabı seçilməlidir'), backgroundColor: AppColors.danger),
+        const SnackBar(content: Text('Mövcud valideyn hesabı seçilməlidir'), backgroundColor: Color(0xFFEF4444)),
       );
       return;
     }
@@ -238,16 +252,33 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
     final dateFormat = DateFormat('dd.MM.yyyy');
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: const Color(0xFF0F172A),
         surfaceTintColor: Colors.transparent,
-        title: Text(
-          'Şagird Qeydiyyatı (${_step + 1}/3): ${_stepTitles[_step]}',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15.5),
+        elevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Şagird Qeydiyyatı',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 17, letterSpacing: -0.3),
+            ),
+            Text(
+              'Addım ${_step + 1} / 3: ${_stepTitles[_step]}',
+              style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 11.5, fontWeight: FontWeight.w500),
+            ),
+          ],
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+          icon: Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(25),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 15),
+          ),
           onPressed: () {
             if (_step > 0) {
               setState(() => _step--);
@@ -256,463 +287,807 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
             }
           },
         ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(6),
-          child: LinearProgressIndicator(
-            value: (_step + 1) / _stepTitles.length,
-            minHeight: 6,
-            backgroundColor: Colors.white.withAlpha(30),
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryAccent),
-          ),
-        ),
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        child: Column(
           children: [
-            // ── Addım göstəricisi ──
-            Row(
-              children: [
-                for (var i = 0; i < _stepTitles.length; i++) ...[
-                  if (i > 0)
-                    Expanded(child: Container(height: 3, color: i <= _step ? AppColors.primaryAccent : AppColors.cardBorder)),
-                  Container(
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                      color: i <= _step ? AppColors.primaryAccent : AppColors.surface,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: i <= _step ? AppColors.primaryAccent : AppColors.cardBorder),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${i + 1}',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w900,
-                          color: i <= _step ? Colors.white : AppColors.textMuted,
+            // ── Interactive Stepper Ribbon ──
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+              decoration: const BoxDecoration(
+                color: Color(0xFF0F172A),
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
+              ),
+              child: Row(
+                children: List.generate(_stepTitles.length, (index) {
+                  final isDone = index < _step;
+                  final isCurrent = index == _step;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        if (index < _step) {
+                          setState(() => _step = index);
+                        }
+                      },
+                      child: Container(
+                        margin: EdgeInsets.only(right: index < _stepTitles.length - 1 ? 8 : 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: isDone
+                                        ? const Color(0xFF10B981)
+                                        : (isCurrent ? const Color(0xFF38BDF8) : Colors.white.withAlpha(20)),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: isDone
+                                        ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
+                                        : Text(
+                                            '${index + 1}',
+                                            style: TextStyle(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w900,
+                                              color: isCurrent ? const Color(0xFF0F172A) : Colors.white70,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    _stepTitles[index],
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w600,
+                                      color: isCurrent ? Colors.white : Colors.white60,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(3),
+                              child: LinearProgressIndicator(
+                                value: isDone ? 1.0 : (isCurrent ? 1.0 : 0.0),
+                                minHeight: 4,
+                                backgroundColor: Colors.white.withAlpha(20),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  isDone ? const Color(0xFF10B981) : const Color(0xFF38BDF8),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-                ],
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _stepTitles[_step],
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.textSecondary),
-                  ),
-                ),
-              ],
+                  );
+                }),
+              ),
             ),
-            const SizedBox(height: 16),
 
-            // ════ ADDIM 1: ŞAGIRD KİMLİYİ ════
-            if (_step == 0) ...[
-              _buildSection(
-                icon: Icons.school_rounded,
-                title: 'Şəxsi Məlumatlar',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(child: _buildText(_firstNameCtrl, 'Ad *', 'Elmir', icon: Icons.person_rounded, validator: (v) => (v ?? '').trim().isEmpty ? 'Ad tələb olunur' : null)),
-                        const SizedBox(width: 10),
-                        Expanded(child: _buildText(_lastNameCtrl, 'Soyad *', 'Quliyev', icon: Icons.person_outline_rounded, validator: (v) => (v ?? '').trim().isEmpty ? 'Soyad tələb olunur' : null)),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    _buildText(_fatherNameCtrl, 'Ata adı', 'İlham', icon: Icons.person_pin_rounded),
-                    const SizedBox(height: 14),
-                    Text('Cins', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        _buildGenderChip('Kişi', Icons.man_rounded),
-                        const SizedBox(width: 8),
-                        _buildGenderChip('Qadın', Icons.woman_rounded),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Text('Doğum Tarixi', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                    const SizedBox(height: 6),
-                    _buildDateField(
-                      date: _birthDate,
-                      hint: 'Seçilməyib',
-                      icon: Icons.cake_rounded,
-                      onTap: _pickBirthDate,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildText(
-                      _finCtrl,
-                      'FIN Kod *',
-                      'məs: 6XX7UVH',
-                      icon: Icons.pin_rounded,
-                      keyboard: TextInputType.text,
-                      inputFormatters: finCodeInputFormatters(),
-                      validator: (v) {
-                        final val = (v ?? '').trim().toUpperCase();
-                        final err = validateFinCode(val);
-                        if (err != null) return err;
-                        if (appState.users.any((u) => (u.finCode ?? '').toUpperCase() == val)) return 'Bu FIN kod artıq qeydiyyatdadır';
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              _buildSection(
-                icon: Icons.photo_camera_front_rounded,
-                title: 'Şagirdin Şəkli',
-                child: Center(
-                  child: ProfilePhotoPicker(
-                    initialPhotoUrl: _photoUrl,
-                    onPhotoUploaded: (url) => setState(() => _photoUrl = url),
-                    folder: 'idrak/profiles/students',
-                  ),
-                ),
-              ),
-            ],
-
-            // ════ ADDIM 2: TƏHSİL VƏ ƏLAQƏ ════
-            if (_step == 1) ...[
-              _buildSection(
-                icon: Icons.class_rounded,
-                title: 'Təhsil və Səhiyyə',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DropdownButtonFormField<String>(
-                      value: _selectedClass,
-                      decoration: _inputDeco(icon: Icons.class_rounded).copyWith(labelText: 'Sinif *'),
-                      items: [
-                        for (final cls in classes) DropdownMenuItem(value: cls, child: Text(cls, style: const TextStyle(fontSize: 13))),
-                      ],
-                      onChanged: (v) => setState(() => _selectedClass = v),
-                      validator: (v) => v == null || v.isEmpty ? 'Sinif seçilməlidir' : null,
-                    ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
-                      value: _bloodGroup,
-                      decoration: _inputDeco(icon: Icons.bloodtype_rounded).copyWith(labelText: 'Qan Qrupu'),
-                      items: [
-                        for (final bg in _bloodGroups) DropdownMenuItem(value: bg, child: Text(bg, style: const TextStyle(fontSize: 13))),
-                      ],
-                      onChanged: (v) => setState(() => _bloodGroup = v!),
-                    ),
-                    const SizedBox(height: 14),
-                    _buildText(_allergiesCtrl, 'Alergiyalar (vergüllə ayırın)', 'Fıstıq, toz', icon: Icons.healing_rounded, maxLines: 2),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              _buildSection(
-                icon: Icons.home_rounded,
-                title: 'Yaşadığı Ünvan',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildText(
-                      _addressCtrl,
-                      'Ünvan',
-                      'Bakı, Nəsimi ray., ...',
-                      icon: Icons.home_rounded,
-                      maxLines: 2,
-                      onFieldChanged: _syncParentAddress,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Bu ünvan avtomatik valideyn ünvanına da tətbiq olunacaq (3-cü addımda dəyişmək mümkündür).',
-                      style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
-                    ),
-                    const SizedBox(height: 14),
-                    Text('Avtomatik E-poçt (@idrak.edu.az)', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                    const SizedBox(height: 6),
-                    _buildEmailBox(
-                      email: previews.key,
-                      placeholder: 'ad.soyad.s2025@idrak.edu.az (ad və FIN daxil edildikdə yaranır)',
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Şagird e-poçt VEYA FIN kod ilə giriş edə biləcək.',
-                      style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            // ════ ADDIM 3: VALİDEYN ════
-            if (_step == 2) ...[
-              _buildSection(
-                icon: Icons.family_restroom_rounded,
-                title: 'Valideyn Məlumatları',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Yeni / Mövcud valideyn seçimi (Övladlar modeli)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _useExistingParent = false),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 150),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                color: !_useExistingParent ? AppColors.primaryAccent.withAlpha(15) : AppColors.background,
-                                borderRadius: BorderRadius.circular(13),
-                                border: Border.all(color: !_useExistingParent ? AppColors.primaryAccent : AppColors.cardBorder, width: !_useExistingParent ? 1.5 : 1),
-                              ),
-                              child: Center(
-                                child: Text('Yeni Valideyn', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: !_useExistingParent ? AppColors.primaryAccent : AppColors.textSecondary)),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _useExistingParent = true),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 150),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                color: _useExistingParent ? AppColors.gold.withAlpha(15) : AppColors.background,
-                                borderRadius: BorderRadius.circular(13),
-                                border: Border.all(color: _useExistingParent ? AppColors.goldDark : AppColors.cardBorder, width: _useExistingParent ? 1.5 : 1),
-                              ),
-                              child: Center(
-                                child: Text('Mövcud Valideyn', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: _useExistingParent ? AppColors.goldDark : AppColors.textSecondary)),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (_useExistingParent) ...[
-                      const SizedBox(height: 14),
-                      Text('Valideyn Hesabı Seç *', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                      const SizedBox(height: 6),
-                      DropdownButtonFormField<String>(
-                        value: _selectedParent?.id,
-                        decoration: _inputDeco(icon: Icons.family_restroom_rounded, accent: AppColors.goldDark).copyWith(hintText: 'Valideyn seçin'),
-                        items: [
-                          for (final p in appState.users.where((u) => u.role == UserRole.parent))
-                            DropdownMenuItem(
-                              value: p.id,
-                              child: Text(
-                                '${p.fullName} (${p.linkedStudentIds.length + (p.linkedStudentId != null && !p.linkedStudentIds.contains(p.linkedStudentId) ? 1 : 0)} övlad)',
-                                style: const TextStyle(fontSize: 12.5),
-                              ),
-                            ),
-                        ],
-                        onChanged: (v) => setState(() {
-                          _selectedParent = appState.users.where((u) => u.id == v).isEmpty ? null : appState.users.firstWhere((u) => u.id == v);
-                        }),
-                      ),
-                      if (_selectedParent != null) ...[
-                        const SizedBox(height: 10),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.gold.withAlpha(8),
-                            borderRadius: BorderRadius.circular(13),
-                            border: Border.all(color: AppColors.gold.withAlpha(35)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Seçilmiş valideyn: ${_selectedParent!.fullName}', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
-                              const SizedBox(height: 3),
-                              Text('Mail: ${_selectedParent!.email ?? _empty2}', style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
-                              Text('Telefon: ${_selectedParent!.phone.isEmpty ? _empty2 : _selectedParent!.phone}', style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
-                              const SizedBox(height: 4),
-                              Text('Yeni şagird bu hesaba bağlanacaq — ayrıca valideyn hesabı yaradılmır.', style: TextStyle(fontSize: 10.5, color: AppColors.goldDark, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 14),
-                      _buildText(
-                        _studentPassCtrl,
-                        'Şagird Şifrəsi *',
-                        'Ən azı 6 simvol',
-                        icon: Icons.lock_outline_rounded,
-                        obscure: true,
-                        validator: (v) => PasswordHasher.validate(v, minLength: 6),
-                      ),
-                    ] else ...[
-                      _buildText(_parentNameCtrl, 'Ad Soyad *', 'Vəli Quliyev', icon: Icons.person_rounded, validator: (v) => (v ?? '').trim().isEmpty ? 'Valideyn adı tələb olunur' : null),
-                    const SizedBox(height: 14),
-                    _buildText(
-                      _parentFinCtrl,
-                      'FIN Kod *',
-                      'məs: 6XX7UVH',
-                      icon: Icons.pin_rounded,
-                      keyboard: TextInputType.text,
-                      inputFormatters: finCodeInputFormatters(),
-                      validator: (v) {
-                        final val = (v ?? '').trim().toUpperCase();
-                        final err = validateFinCode(val);
-                        if (err != null) return err;
-                        if (appState.users.any((u) => (u.finCode ?? '').toUpperCase() == val)) return 'Bu FIN kod artıq qeydiyyatdadır';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    Text('Doğum Tarixi *', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                    const SizedBox(height: 6),
-                    _buildDateField(
-                      date: _parentBirthDate,
-                      hint: 'Seçilməyib',
-                      icon: Icons.cake_rounded,
-                      onTap: _pickParentBirthDate,
-                      accent: AppColors.goldDark,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildText(_parentPhoneCtrl, 'Telefon *', '+994 50 000-00-00', icon: Icons.phone_rounded, keyboard: TextInputType.phone, validator: (v) => (v ?? '').trim().isEmpty ? 'Telefon tələb olunur' : null),
-                    const SizedBox(height: 14),
-                    _buildText(
-                      _parentAddressCtrl,
-                      'Ünvan',
-                      'Bakı, ...',
-                      icon: Icons.home_work_rounded,
-                      maxLines: 2,
-                      onFieldChanged: (_) => _parentAddressEdited = true,
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(Icons.sync_rounded, size: 13, color: _parentAddressEdited ? AppColors.textMuted : AppColors.gold),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            _parentAddressEdited
-                                ? 'Ünvan əl ilə dəyişdirilib.'
-                                : 'Şagirdin ünvanından avtomatik köçürülüb — fərqlidirsə dəyişin.',
-                            style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    // Valideyn avtomatik maili
+            // ── Form Body Scrollable Area ──
+            Expanded(
+              child: ListView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                children: [
+                  // ════════════ ADDIM 1: ŞAGİRD KİMLİYİ ════════════
+                  if (_step == 0) ...[
+                    // Photo Upload Card
                     Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(bottom: 14),
                       decoration: BoxDecoration(
-                        color: AppColors.gold.withAlpha(10),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.gold.withAlpha(40)),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(5),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.alternate_email_rounded, size: 17, color: AppColors.goldDark),
-                          const SizedBox(width: 8),
+                          ProfilePhotoPicker(
+                            initialPhotoUrl: _photoUrl,
+                            onPhotoUploaded: (url) => setState(() => _photoUrl = url),
+                            folder: 'idrak/profiles/students',
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Şagirdin Profil Şəkli',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                SizedBox(height: 3),
+                                Text(
+                                  'Rəqəmsal ID kart və elektron jurnalda əks olunacaq fotoşəkil.',
+                                  style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), height: 1.3),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Personal Information Card
+                    _buildFormCard(
+                      title: 'Şəxsi Məlumatlar',
+                      icon: Icons.badge_outlined,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildModernInput(
+                                  controller: _firstNameCtrl,
+                                  label: 'Ad *',
+                                  hint: 'Elmir',
+                                  icon: Icons.person_rounded,
+                                  validator: (v) => (v ?? '').trim().isEmpty ? 'Ad tələb olunur' : null,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildModernInput(
+                                  controller: _lastNameCtrl,
+                                  label: 'Soyad *',
+                                  hint: 'Quliyev',
+                                  icon: Icons.person_outline_rounded,
+                                  validator: (v) => (v ?? '').trim().isEmpty ? 'Soyad tələb olunur' : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildModernInput(
+                            controller: _fatherNameCtrl,
+                            label: 'Ata adı',
+                            hint: 'İlham',
+                            icon: Icons.person_pin_rounded,
+                          ),
+                          const SizedBox(height: 14),
+
+                          // Gender Selection Pills
+                          const Text(
+                            'Cinsi',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildGenderChoice(
+                                  title: 'Kişi (Oğlan)',
+                                  icon: Icons.face_rounded,
+                                  selected: _gender == 'Kişi',
+                                  onTap: () => setState(() => _gender = 'Kişi'),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildGenderChoice(
+                                  title: 'Qadın (Qız)',
+                                  icon: Icons.face_3_rounded,
+                                  selected: _gender == 'Qadın',
+                                  onTap: () => setState(() => _gender = 'Qadın'),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // Birth Date Field
+                          const Text(
+                            'Doğum Tarixi *',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 6),
+                          _buildDateField(
+                            date: _birthDate,
+                            hint: 'Tarixi seçin',
+                            icon: Icons.cake_rounded,
+                            onTap: _pickBirthDate,
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // FIN Code Field with formatters
+                          _buildModernInput(
+                            controller: _finCtrl,
+                            label: 'FIN Kod *',
+                            hint: 'Məs: 7K9Y12A',
+                            icon: Icons.fingerprint_rounded,
+                            keyboard: TextInputType.text,
+                            inputFormatters: finCodeInputFormatters(),
+                            validator: (v) {
+                              final val = (v ?? '').trim().toUpperCase();
+                              final err = validateFinCode(val);
+                              if (err != null) return err;
+                              if (appState.users.any((u) => (u.finCode ?? '').toUpperCase() == val)) {
+                                return 'Bu FIN kod artıq qeydiyyatdadır';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // ════════════ ADDIM 2: SİNİF & SƏHİYYƏ ════════════
+                  if (_step == 1) ...[
+                    // Class Selection Card (Interactive visual chips)
+                    _buildFormCard(
+                      title: 'Sinif Seçimi *',
+                      icon: Icons.school_rounded,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Şagirdin təhsil alacağı sinfi seçin:',
+                            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: classes.map((cls) {
+                              final isSelected = _selectedClass == cls;
+                              return GestureDetector(
+                                onTap: () => setState(() => _selectedClass = cls),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1),
+                                      width: isSelected ? 1.5 : 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    cls,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                                      color: isSelected ? Colors.white : const Color(0xFF334155),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Health and Blood Group Card
+                    _buildFormCard(
+                      title: 'Səhiyyə & Tibbi Göstəricilər',
+                      icon: Icons.local_hospital_rounded,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Qan Qrupu',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<String>(
+                            initialValue: _bloodGroup,
+                            decoration: _inputDeco(icon: Icons.bloodtype_rounded),
+                            items: _bloodGroups.map((bg) {
+                              return DropdownMenuItem(value: bg, child: Text(bg, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)));
+                            }).toList(),
+                            onChanged: (v) => setState(() => _bloodGroup = v!),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // Common Allergy Chips
+                          const Text(
+                            'Alergiyalar (Seçin və ya əlavə edin)',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: _commonAllergies.map((allergy) {
+                              return GestureDetector(
+                                onTap: () {
+                                  final current = _allergiesCtrl.text.trim();
+                                  if (current.isEmpty) {
+                                    _allergiesCtrl.text = allergy;
+                                  } else if (!current.contains(allergy)) {
+                                    _allergiesCtrl.text = '$current, $allergy';
+                                  }
+                                  setState(() {});
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: const Color(0xFFFDE68A)),
+                                  ),
+                                  child: Text(
+                                    '+ $allergy',
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 8),
+                          _buildModernInput(
+                            controller: _allergiesCtrl,
+                            label: 'Alergiyalar siyahısı',
+                            hint: 'Məs: Fıstıq, Sitrus',
+                            icon: Icons.healing_rounded,
+                            maxLines: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Living Address Card
+                    _buildFormCard(
+                      title: 'Yaşayış Ünvanı & Avto-Mail',
+                      icon: Icons.home_rounded,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildModernInput(
+                            controller: _addressCtrl,
+                            label: 'Ünvan',
+                            hint: 'Bakı şəh., Nəsimi ray., ...',
+                            icon: Icons.location_on_rounded,
+                            maxLines: 2,
+                            onFieldChanged: _syncParentAddress,
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Sistemdə yaradılacaq rəsmi e-poçt:',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                          ),
+                          const SizedBox(height: 6),
+                          _buildEmailBox(
+                            email: previews.key,
+                            placeholder: 'ad.soyad.s2026@idrak.edu.az (Avtomatik formalaşacaq)',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // ════════════ ADDIM 3: VALİDEYN & GİRİŞ ════════════
+                  if (_step == 2) ...[
+                    // Mode Selector: New vs Existing Parent
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
                           Expanded(
-                            child: Text(
-                              previews.value.isNotEmpty ? previews.value : 'valideyn.mail@idrak.edu.az (ad daxil edildikdə yaranır)',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w800,
-                                color: previews.value.isNotEmpty ? AppColors.textPrimary : AppColors.textMuted,
+                            child: GestureDetector(
+                              onTap: () => setState(() => _useExistingParent = false),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: !_useExistingParent ? const Color(0xFF0F172A) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '➕ Yeni Valideyn',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: !_useExistingParent ? Colors.white : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _useExistingParent = true),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: _useExistingParent ? const Color(0xFFD4AF37) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '🔗 Mövcud Valideyn',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: _useExistingParent ? Colors.black87 : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Valideyn hesabı avtomatik olaraq bu şagirdə bağlanacaq.',
-                      style: TextStyle(fontSize: 10.5, color: AppColors.textMuted),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildText(
-                            _studentPassCtrl,
-                            'Şagird Şifrəsi *',
-                            'Ən azı 6 simvol',
-                            icon: Icons.lock_outline_rounded,
-                            obscure: true,
-                            validator: (v) => PasswordHasher.validate(v, minLength: 6),
-                          ),
+
+                    if (_useExistingParent) ...[
+                      // Select Existing Parent
+                      _buildFormCard(
+                        title: 'Mövcud Valideyn Seçimi',
+                        icon: Icons.person_search_rounded,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            DropdownButtonFormField<String>(
+                              initialValue: _selectedParent?.id,
+                              decoration: _inputDeco(icon: Icons.family_restroom_rounded).copyWith(hintText: 'Valideyn seçin'),
+                              items: appState.users.where((u) => u.role == UserRole.parent).map((p) {
+                                final count = p.linkedStudentIds.length + (p.linkedStudentId != null && !p.linkedStudentIds.contains(p.linkedStudentId) ? 1 : 0);
+                                return DropdownMenuItem(
+                                  value: p.id,
+                                  child: Text(
+                                    '${p.fullName} ($count övlad)',
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (v) {
+                                setState(() {
+                                  _selectedParent = appState.users.where((u) => u.id == v).isEmpty ? null : appState.users.firstWhere((u) => u.id == v);
+                                });
+                              },
+                            ),
+                            if (_selectedParent != null) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF3C7),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: const Color(0xFFFDE68A)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Seçilmiş Valideyn: ${_selectedParent!.fullName}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Color(0xFF78350F))),
+                                    const SizedBox(height: 2),
+                                    Text('E-poçt: ${_selectedParent!.email ?? "-"} • Tel: ${_selectedParent!.phone}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF92400E))),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 14),
+                            _buildModernInput(
+                              controller: _studentPassCtrl,
+                              label: 'Şagird Şifrəsi *',
+                              hint: 'Ən azı 6 simvol',
+                              icon: Icons.lock_outline_rounded,
+                              obscure: true,
+                              validator: (v) => PasswordHasher.validate(v, minLength: 6),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildText(
-                            _parentPassCtrl,
-                            'Valideyn Şifrəsi *',
-                            'Ən azı 6 simvol',
-                            icon: Icons.lock_reset_rounded,
-                            obscure: true,
-                            validator: (v) => PasswordHasher.validate(v, minLength: 6),
-                          ),
+                      ),
+                    ] else ...[
+                      // Create New Parent
+                      _buildFormCard(
+                        title: 'Valideyn Şəxsi Məlumatları',
+                        icon: Icons.family_restroom_rounded,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildModernInput(
+                              controller: _parentNameCtrl,
+                              label: 'Valideynin Adı və Soyadı *',
+                              hint: 'Vəli Quliyev',
+                              icon: Icons.person_rounded,
+                              validator: (v) => (v ?? '').trim().isEmpty ? 'Valideyn adı tələb olunur' : null,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildModernInput(
+                              controller: _parentFinCtrl,
+                              label: 'Valideynin FIN Kodu *',
+                              hint: 'Məs: 5XX8Y12',
+                              icon: Icons.fingerprint_rounded,
+                              keyboard: TextInputType.text,
+                              inputFormatters: finCodeInputFormatters(),
+                              validator: (v) {
+                                final val = (v ?? '').trim().toUpperCase();
+                                final err = validateFinCode(val);
+                                if (err != null) return err;
+                                if (appState.users.any((u) => (u.finCode ?? '').toUpperCase() == val)) {
+                                  return 'Bu FIN kod artıq qeydiyyatdadır';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Valideynin Doğum Tarixi *',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                            ),
+                            const SizedBox(height: 6),
+                            _buildDateField(
+                              date: _parentBirthDate,
+                              hint: 'Tarixi seçin',
+                              icon: Icons.cake_rounded,
+                              onTap: _pickParentBirthDate,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildModernInput(
+                              controller: _parentPhoneCtrl,
+                              label: 'Əlaqə Telefonu *',
+                              hint: '+994 50 123-45-67',
+                              icon: Icons.phone_rounded,
+                              keyboard: TextInputType.phone,
+                              validator: (v) => (v ?? '').trim().isEmpty ? 'Telefon tələb olunur' : null,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildModernInput(
+                              controller: _parentAddressCtrl,
+                              label: 'Valideyn Ünvanı',
+                              hint: 'Bakı şəhəri, ...',
+                              icon: Icons.home_work_rounded,
+                              maxLines: 2,
+                              onFieldChanged: (_) => _parentAddressEdited = true,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildEmailBox(
+                              email: previews.value,
+                              placeholder: 'valideyn.mail@idrak.edu.az (Avtomatik formalaşacaq)',
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // Passwords Card
+                      _buildFormCard(
+                        title: 'İlkin Giriş Şifrələri',
+                        icon: Icons.password_rounded,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _buildModernInput(
+                                controller: _studentPassCtrl,
+                                label: 'Şagird Şifrəsi *',
+                                hint: '123456',
+                                icon: Icons.lock_outline_rounded,
+                                obscure: true,
+                                validator: (v) => PasswordHasher.validate(v, minLength: 6),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _buildModernInput(
+                                controller: _parentPassCtrl,
+                                label: 'Valideyn Şifrəsi *',
+                                hint: '123456',
+                                icon: Icons.lock_reset_rounded,
+                                obscure: true,
+                                validator: (v) => PasswordHasher.validate(v, minLength: 6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
+
+                    const SizedBox(height: 14),
+                    _buildSummaryCard(dateFormat),
                   ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomSheet: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(10),
+              blurRadius: 10,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Row(
+            children: [
+              if (_step > 0) ...[
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: () => setState(() => _step--),
+                      icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                      label: const Text('Geri', style: TextStyle(fontWeight: FontWeight.w700)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF475569),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                flex: 2,
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: _saving ? null : _nextOrSubmit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    icon: _saving
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Icon(
+                            _step == _stepTitles.length - 1 ? Icons.check_circle_rounded : Icons.arrow_forward_rounded,
+                            size: 18,
+                          ),
+                    label: Text(
+                      _saving ? 'Qeydiyyat edilir...' : (_step == _stepTitles.length - 1 ? 'Şagirdi Qeydiyyata Al' : 'Növbəti Addım'),
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 14),
-              _buildSummaryCard(dateFormat),
             ],
+          ),
+        ),
+      ),
+    );
+  }
 
-            const SizedBox(height: 22),
-            Row(
-              children: [
-                if (_step > 0)
-                  Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: OutlinedButton.icon(
-                        onPressed: () => setState(() => _step--),
-                        icon: const Icon(Icons.arrow_back_rounded, size: 19),
-                        label: const Text('Geri'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textSecondary,
-                          side: BorderSide(color: AppColors.cardBorder),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                      ),
-                    ),
-                  ),
-                if (_step > 0) const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: SizedBox(
-                    height: 52,
-                    child: ElevatedButton.icon(
-                      onPressed: _saving ? null : _nextOrSubmit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryAccent,
-                        disabledBackgroundColor: AppColors.primaryAccent.withAlpha(100),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 0,
-                      ),
-                      icon: _saving
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2))
-                          : Icon(
-                              _step == _stepTitles.length - 1 ? Icons.school_rounded : Icons.arrow_forward_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                      label: Text(
-                        _saving ? 'Qeydiyyat edilir...' : (_step == _stepTitles.length - 1 ? 'Şagirdi Qeydiyyata Al' : 'İrəli'),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14.5),
-                      ),
-                    ),
-                  ),
+  Widget _buildFormCard({required String title, required IconData icon, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(5),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A).withAlpha(10),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ],
+                child: Icon(icon, size: 18, color: const Color(0xFF0F172A)),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernInput({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    bool obscure = false,
+    int maxLines = 1,
+    TextInputType keyboard = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
+    void Function(String)? onFieldChanged,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      maxLines: maxLines,
+      keyboardType: keyboard,
+      inputFormatters: inputFormatters,
+      validator: validator,
+      onChanged: onFieldChanged,
+      style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+      decoration: _inputDeco(icon: icon).copyWith(
+        labelText: label,
+        hintText: hint,
+        hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
+      ),
+    );
+  }
+
+  Widget _buildGenderChoice({required String title, required IconData icon, required bool selected, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1),
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: selected ? const Color(0xFF2563EB) : const Color(0xFF64748B)),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
+                color: selected ? const Color(0xFF1E40AF) : const Color(0xFF475569),
+              ),
             ),
           ],
         ),
@@ -723,23 +1098,23 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
   Widget _buildEmailBox({required String email, required String placeholder}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.primaryAccent.withAlpha(8),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primaryAccent.withAlpha(40)),
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.alternate_email_rounded, size: 17, color: AppColors.primaryAccent),
+          const Icon(Icons.alternate_email_rounded, size: 16, color: Color(0xFF2563EB)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               email.isNotEmpty ? email : placeholder,
               style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-                color: email.isNotEmpty ? AppColors.textPrimary : AppColors.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: email.isNotEmpty ? const Color(0xFF1E40AF) : const Color(0xFF94A3B8),
               ),
             ),
           ),
@@ -748,20 +1123,20 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
     );
   }
 
-  Widget _buildDateField({required DateTime? date, required String hint, required IconData icon, required VoidCallback onTap, Color? accent}) {
+  Widget _buildDateField({required DateTime? date, required String hint, required IconData icon, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: InputDecorator(
-        decoration: _inputDeco(icon: icon, accent: accent).copyWith(
-          suffixIcon: Icon(Icons.calendar_month_rounded, color: accent ?? AppColors.primaryAccent, size: 20),
+        decoration: _inputDeco(icon: icon).copyWith(
+          suffixIcon: const Icon(Icons.calendar_month_rounded, color: Color(0xFF2563EB), size: 18),
         ),
         child: Text(
           date != null ? DateFormat('dd.MM.yyyy').format(date) : hint,
           style: TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w600,
-            color: date != null ? AppColors.textPrimary : AppColors.textMuted,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: date != null ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
           ),
         ),
       ),
@@ -780,13 +1155,13 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
       if (_parentBirthDate != null) MapEntry('Valideyn doğum tarixi', dateFormat.format(_parentBirthDate!)),
       if (_parentPhoneCtrl.text.trim().isNotEmpty) MapEntry('Valideyn telefonu', _parentPhoneCtrl.text.trim()),
     ];
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.cardBorder),
-        boxShadow: AppShadows.sm,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -794,149 +1169,47 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(color: AppColors.gold.withAlpha(15), borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.fact_check_rounded, size: 17, color: AppColors.goldDark),
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.fact_check_rounded, size: 16, color: Color(0xFF10B981)),
               ),
-              const SizedBox(width: 10),
-              Text('Yekun Yoxlama', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppColors.textPrimary, letterSpacing: -0.3)),
+              const SizedBox(width: 8),
+              const Text(
+                'Qeydiyyat Məlumatlarının Yekun Xülasəsi',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+              ),
             ],
           ),
           const SizedBox(height: 12),
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const SizedBox(height: 8),
-            Row(
-              children: [
-                SizedBox(
-                  width: 140,
-                  child: Text(rows[i].key, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
-                ),
-                Expanded(
-                  child: Text(
-                    rows[i].value,
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                  ),
-                ),
-              ],
+          for (final row in rows)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3.5),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(row.key, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                  Text(row.value.isNotEmpty ? row.value : '-', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                ],
+              ),
             ),
-          ],
         ],
       ),
     );
   }
 
-  Widget _buildSection({required IconData icon, required String title, required Widget child}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.cardBorder),
-        boxShadow: AppShadows.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryAccent.withAlpha(12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, size: 17, color: AppColors.primaryAccent),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppColors.textPrimary, letterSpacing: -0.3)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          child,
-        ],
-      ),
-    );
-  }
-
-  InputDecoration _inputDeco({required IconData icon, String? labelText, Color? accent}) {
-    final color = accent ?? AppColors.primaryAccent;
+  InputDecoration _inputDeco({required IconData icon}) {
     return InputDecoration(
-      labelText: labelText,
-      labelStyle: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+      prefixIcon: Icon(icon, color: const Color(0xFF64748B), size: 18),
       filled: true,
-      fillColor: AppColors.background,
-      prefixIcon: Icon(icon, color: color, size: 20),
-      contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.cardBorder)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.cardBorder)),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: color, width: 1.5),
-      ),
-      errorStyle: const TextStyle(fontSize: 10.5),
-    );
-  }
-
-  Widget _buildText(
-    TextEditingController controller,
-    String label,
-    String hint, {
-    required IconData icon,
-    TextInputType? keyboard,
-    List<TextInputFormatter>? inputFormatters,
-    String? Function(String?)? validator,
-    bool obscure = false,
-    int maxLines = 1,
-    ValueChanged<String>? onFieldChanged,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboard,
-      inputFormatters: inputFormatters,
-      validator: validator,
-      obscureText: obscure,
-      maxLines: obscure ? 1 : maxLines,
-      onChanged: (v) {
-        onFieldChanged?.call(v);
-        setState(() {});
-      },
-      decoration: _inputDeco(icon: icon, labelText: label).copyWith(hintText: hint, hintStyle: TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
-      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-    );
-  }
-
-  Widget _buildGenderChip(String value, IconData icon) {
-    final selected = _gender == value;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _gender = value),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 11),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primaryAccent.withAlpha(15) : AppColors.background,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: selected ? AppColors.primaryAccent : AppColors.cardBorder, width: selected ? 1.5 : 1),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 18, color: selected ? AppColors.primaryAccent : AppColors.textMuted),
-              const SizedBox(width: 6),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: selected ? AppColors.primaryAccent : AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      fillColor: const Color(0xFFF8FAFC),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.6)),
+      labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
     );
   }
 }

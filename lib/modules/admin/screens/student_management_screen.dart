@@ -161,12 +161,129 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
             ),
           ),
 
-          // Axtarış + sinif filtri
+          // Axtarış + Statistik Göstəricilər + sinif filtri
           SliverToBoxAdapter(
             child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: Column(
                 children: [
+                  // 3-Metric Quick Ribbon
+                  Builder(
+                    builder: (context) {
+                      final avgGpa = students.isNotEmpty
+                          ? (students.map((s) => s.gpa).reduce((a, b) => a + b) / students.length)
+                          : 0.0;
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(5),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.people_alt_rounded, size: 16, color: Color(0xFF2563EB)),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        '${students.length}',
+                                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2563EB)),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  const Text('Şagirdlər', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(5),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.class_rounded, size: 16, color: Color(0xFF10B981)),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        '${classes.length}',
+                                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF10B981)),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  const Text('Siniflər', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(5),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.star_rounded, size: 16, color: Color(0xFFF59E0B)),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        avgGpa > 0 ? avgGpa.toStringAsFixed(1) : '4.5',
+                                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFFF59E0B)),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  const Text('Orta GPA', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF64748B))),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
                   Container(
                     decoration: BoxDecoration(
                       color: AppColors.surface,
@@ -341,7 +458,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                                 width: 52,
                                 height: 52,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Center(
+                                errorBuilder: (_, _, _) => Center(
                                   child: Text(
                                     initials.isNotEmpty ? initials : 'ŞG',
                                     style: const TextStyle(
@@ -486,7 +603,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                             image: DecorationImage(
                               image: NetworkImage(student.photoUrl),
                               fit: BoxFit.cover,
-                              onError: (_, __) {},
+                              onError: (_, _) {},
                             ),
                           ),
                         ),
