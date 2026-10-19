@@ -593,7 +593,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 ? DecorationImage(
                                     image: NetworkImage(user.photoUrl!),
                                     fit: BoxFit.cover,
-                                    onError: (_, __) {},
+                                    onError: (_, _) {},
                                   )
                                 : null,
                             color: AppColors.background,
