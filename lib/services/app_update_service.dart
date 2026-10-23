@@ -131,9 +131,14 @@ class AppUpdateService extends ChangeNotifier {  String _currentVersion = '';
 
   String _fallbackStoreUrl() {
     return Platform.isIOS
-        ? 'https://apps.apple.com/az/search?term=idrak+liseyi'
+        ? _iosAppStoreUrl
         : 'https://play.google.com/store/apps/details?id=$_androidPackageName';
   }
+
+  /// Mağaza linkləri
+  /// iOS: unlisted App Store bağlantısı (iTunes lookup ilə tapılmır)
+  static const String _iosAppStoreUrl =
+      'https://apps.apple.com/us/app/i-drak-liseyi-t%C9%99hsil/id6801854699';
 
   /// Semantik versiya müqayisəsi: latest > current ?
   bool _isNewerVersion(String latest, String current) {
