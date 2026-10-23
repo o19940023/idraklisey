@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
+import '../theme/app_palette.dart';
+import 'shimmer_box.dart';
 
 /// Modern avatar component with network image support and fallback.
 class ModernAvatar extends StatelessWidget {
@@ -23,37 +24,47 @@ class ModernAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final avatarRadius = BorderRadius.circular(AppRadius.avatar);
+
     Widget avatar = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: backgroundColor ?? AppColors.primary.withAlpha(30),
-        borderRadius: BorderRadius.circular(AppRadius.avatar),
+        color: backgroundColor ?? colorScheme.primaryContainer,
+        borderRadius: avatarRadius,
         border: Border.all(
-          color: AppColors.cardBorder.withAlpha(50),
+          color: palette.borderHairline,
           width: 2,
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.avatar),
+        borderRadius: avatarRadius,
         child: imageUrl != null && imageUrl!.isNotEmpty
             ? Image.network(
                 imageUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _buildFallback(),
+                cacheWidth: (size * devicePixelRatio).round(),
+                errorBuilder: (_, _, _) => _buildFallback(context),
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
-                  return _buildFallback();
+                  return ShimmerBox(
+                    width: size,
+                    height: size,
+                    borderRadius: AppRadius.avatar,
+                  );
                 },
               )
-            : _buildFallback(),
+            : _buildFallback(context),
       ),
     );
 
     if (onTap != null) {
       return InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.avatar),
+        borderRadius: avatarRadius,
         child: avatar,
       );
     }
@@ -61,12 +72,14 @@ class ModernAvatar extends StatelessWidget {
     return avatar;
   }
 
-  Widget _buildFallback() {
+  Widget _buildFallback(BuildContext context) {
+    final contentColor = Theme.of(context).colorScheme.onPrimaryContainer;
+
     if (fallbackIcon != null) {
       return Icon(
         fallbackIcon,
         size: size * 0.5,
-        color: AppColors.primary,
+        color: contentColor,
       );
     }
 
@@ -78,7 +91,7 @@ class ModernAvatar extends StatelessWidget {
           style: TextStyle(
             fontSize: size * 0.35,
             fontWeight: FontWeight.w700,
-            color: AppColors.primary,
+            color: contentColor,
           ),
         ),
       );
@@ -87,7 +100,7 @@ class ModernAvatar extends StatelessWidget {
     return Icon(
       Icons.person_rounded,
       size: size * 0.5,
-      color: AppColors.primary,
+      color: contentColor,
     );
   }
 
@@ -119,6 +132,8 @@ class AvatarWithStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+
     return Stack(
       children: [
         ModernAvatar(
@@ -134,10 +149,10 @@ class AvatarWithStatus extends StatelessWidget {
               width: size * 0.25,
               height: size * 0.25,
               decoration: BoxDecoration(
-                color: AppColors.success,
+                color: const Color(0xFF10B981),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: AppColors.surface,
+                  color: palette.surface1,
                   width: 2,
                 ),
               ),

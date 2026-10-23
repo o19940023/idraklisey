@@ -1495,6 +1495,40 @@ class FirestoreService {
     return true;
   }
 
+  // --- APP VERSION CONFIG (mağaza yeniləmə xəbərdarlığı) ---
+  Future<bool> saveAppVersionConfig({
+    required String latestVersion,
+    String? updateUrlIos,
+    String? updateUrlAndroid,
+  }) async {
+    try {
+      await db.collection('app_config').doc('version').set({
+        'latest_version': latestVersion.trim(),
+        'update_url_ios': (updateUrlIos ?? '').trim(),
+        'update_url_android': (updateUrlAndroid ?? '').trim(),
+        'updated_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Firestore saveAppVersionConfig error: $e');
+      return false;
+    }
+    return true;
+  }
+
+  Future<Map<String, dynamic>> fetchAppVersionConfig() async {
+    try {
+      final snapshot = await db
+          .collection('app_config')
+          .doc('version')
+          .get(GetOptions(source: Source.server));
+      if (!snapshot.exists) return {};
+      return snapshot.data() ?? {};
+    } catch (e) {
+      debugPrint('Firestore fetchAppVersionConfig error: $e');
+      return {};
+    }
+  }
+
   // --- ROLES & PERMISSIONS ---
   /// Rol kaydetme
   Future<bool> saveRole(Role role) async {

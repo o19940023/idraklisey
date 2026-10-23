@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
+import '../theme/app_palette.dart';
 
 class SectionHeader extends StatelessWidget {
   final String title;
@@ -17,6 +17,9 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: padding,
       child: Row(
@@ -33,7 +36,11 @@ class SectionHeader extends StatelessWidget {
                   height: subtitle != null ? 30 : 18,
                   margin: const EdgeInsets.only(right: 10),
                   decoration: BoxDecoration(
-                    gradient: AppColors.accentGradient,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [palette.brandRoyal, palette.brandAzure],
+                    ),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -43,10 +50,12 @@ class SectionHeader extends StatelessWidget {
                     children: [
                       Text(
                         title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                          color: colorScheme.onSurface,
                           letterSpacing: -0.3,
                         ),
                       ),
@@ -54,10 +63,12 @@ class SectionHeader extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           subtitle!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: AppColors.textSecondary,
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],

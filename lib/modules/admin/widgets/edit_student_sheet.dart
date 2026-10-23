@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/fin_code_formatter.dart';
 import '../../../core/utils/password_hasher.dart';
+import '../../../core/widgets/profile_photo_picker.dart';
 import '../../../data/models/student_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../providers/app_state.dart';
@@ -55,6 +56,7 @@ class _EditStudentFormState extends State<_EditStudentForm> {
   DateTime? _parentBirthDate;
   late String? _selectedClass;
   late String _bloodGroup;
+  late String _photoUrl;
   bool _saving = false;
 
   AppUser? _studentUser;
@@ -79,6 +81,7 @@ class _EditStudentFormState extends State<_EditStudentForm> {
     _birthDate = s.birthDate;
     _selectedClass = s.className;
     _bloodGroup = _bloodGroups.contains(s.bloodGroup) ? s.bloodGroup! : 'Məlumat yoxdur';
+    _photoUrl = s.photoUrl;
 
     final appState = context.read<AppState>();
     for (final u in appState.users) {
@@ -154,6 +157,7 @@ class _EditStudentFormState extends State<_EditStudentForm> {
       finCode: _fin.text.trim(),
       address: _address.text.trim(),
       className: _selectedClass ?? widget.student.className,
+      photoUrl: _photoUrl,
       bloodGroup: bloodGroup,
       allergies: allergies,
       parentName: _parentName.text.trim(),
@@ -246,6 +250,55 @@ class _EditStudentFormState extends State<_EditStudentForm> {
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                   children: [
                     _sectionTitle('Şagird', AppColors.primaryAccent),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          ProfilePhotoPicker(
+                            initialPhotoUrl: _photoUrl.trim().isEmpty
+                                ? null
+                                : _photoUrl,
+                            size: 66,
+                            folder: 'idrak/profiles/students',
+                            onPhotoUploaded: (url) =>
+                                setState(() => _photoUrl = url),
+                            onPhotoRemoved: () =>
+                                setState(() => _photoUrl = ''),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Şagird profil fotoşəkli',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Kataloq, profil və rəqəmsal vəsiqədə görünür.',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    height: 1.3,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     _label('Ad *'),
                     _field(_firstName, 'Ad', validator: _req),
                     _label('Soyad *'),

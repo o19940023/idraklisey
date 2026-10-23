@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_shadows.dart';
+
+import '../../../core/theme/app_palette.dart';
 import '../../../core/widgets/section_header.dart';
-import '../../../providers/app_state.dart';
 import '../../../data/models/attendance_model.dart';
+import '../../../providers/app_state.dart';
 
 class AttendanceCalendarScreen extends StatefulWidget {
   const AttendanceCalendarScreen({super.key});
@@ -16,8 +15,27 @@ class AttendanceCalendarScreen extends StatefulWidget {
 }
 
 class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
+  static const _success = Color(0xFF10B981);
+  static const _late = Color(0xFFF59E0B);
+  static const _danger = Color(0xFFEF4444);
+
   late int _selectedDay;
   final DateTime _currentDate = DateTime.now();
+
+  final List<String> _monthNames = const [
+    'Yanvar',
+    'Fevral',
+    'Mart',
+    'Aprel',
+    'May',
+    'İyun',
+    'İyul',
+    'Avqust',
+    'Sentyabr',
+    'Oktyabr',
+    'Noyabr',
+    'Dekabr',
+  ];
 
   @override
   void initState() {
@@ -27,6 +45,7 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final appState = Provider.of<AppState>(context);
     final currentStudent = appState.student;
     final attendanceMap = appState.attendance;
@@ -34,7 +53,6 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
     int presentCount = 0;
     int lateCount = 0;
     int absentCount = 0;
-
     int totalPeriods = 0;
     int attendedPeriods = 0;
 
@@ -42,642 +60,677 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
       if (att.status == AttendanceStatus.present) presentCount++;
       if (att.status == AttendanceStatus.late) lateCount++;
       if (att.status == AttendanceStatus.absent) absentCount++;
-
-      for (final p in att.periodDetails) {
+      for (final period in att.periodDetails) {
         totalPeriods++;
-        if (p.status == AttendanceStatus.present ||
-            p.status == AttendanceStatus.late) {
+        if (period.status == AttendanceStatus.present ||
+            period.status == AttendanceStatus.late) {
           attendedPeriods++;
         }
       }
     });
 
-    final int calculatedRate = totalPeriods > 0
+    final calculatedRate = totalPeriods > 0
         ? ((attendedPeriods / totalPeriods) * 100).round()
         : (currentStudent.attendanceRate > 0
-              ? currentStudent.attendanceRate
-              : 100);
+            ? currentStudent.attendanceRate
+            : 100);
 
     final selectedDayData = attendanceMap[_selectedDay];
-    final monthName = DateFormat('MMMM yyyy').format(_currentDate);
-
-    final int daysInMonth = DateUtils.getDaysInMonth(
+    final monthName = '${_monthNames[_currentDate.month - 1]} ${_currentDate.year}';
+    final daysInMonth = DateUtils.getDaysInMonth(
       _currentDate.year,
       _currentDate.month,
     );
-    final firstDayWeekday = DateTime(
-      _currentDate.year,
-      _currentDate.month,
-      1,
-    ).weekday;
-    final emptyLeadingSlots = firstDayWeekday - 1;
+    final emptyLeadingSlots =
+        DateTime(_currentDate.year, _currentDate.month, 1).weekday - 1;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: palette.bgBase,
       appBar: AppBar(
-        title: Text('${currentStudent.fullName} • Davamiyyət'),
-        elevation: 0,
+        title: Text(
+          '${currentStudent.fullName} • Davamiyyət',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 30),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.paddingOf(context).bottom + 28,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Month Header & Summary Statistics Card
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: AppShadows.sm,
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.calendar_month_outlined,
-                            color: AppColors.primaryAccent,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            monthName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.success.withAlpha(30),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: AppColors.success.withAlpha(60),
-                          ),
-                        ),
-                        child: Text(
-                          'Davamiyyət: $calculatedRate%',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Divider(color: Colors.white.withAlpha(25), height: 1),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildSummaryStatItem(
-                        'İştirak',
-                        '$presentCount Gün',
-                        AppColors.success,
-                        Icons.check_circle_outline_rounded,
-                      ),
-                      _buildSummaryStatItem(
-                        'Gecikmə',
-                        '$lateCount Dəfə',
-                        AppColors.warning,
-                        Icons.schedule_outlined,
-                      ),
-                      _buildSummaryStatItem(
-                        'Qayıb',
-                        '$absentCount Gün',
-                        AppColors.danger,
-                        Icons.cancel_outlined,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            _buildHero(
+              palette: palette,
+              monthName: monthName,
+              rate: calculatedRate,
+              presentCount: presentCount,
+              lateCount: lateCount,
+              absentCount: absentCount,
             ),
-
-            // Legend Information
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 6,
                 children: [
-                  _buildLegendItem(
-                    'İştirak',
-                    AppColors.success,
-                    Icons.check_circle_outline_rounded,
-                  ),
-                  _buildLegendItem(
-                    'Gecikmə',
-                    AppColors.warning,
-                    Icons.schedule_outlined,
-                  ),
-                  _buildLegendItem(
-                    'Qayıb',
-                    AppColors.danger,
-                    Icons.cancel_outlined,
-                  ),
-                  _buildLegendItem(
-                    'Tətil',
-                    AppColors.textMuted,
-                    Icons.beach_access_outlined,
-                  ),
+                  _legend(palette, 'İştirak', _success,
+                      Icons.check_circle_outline_rounded),
+                  _legend(palette, 'Gecikmə', _late,
+                      Icons.schedule_rounded),
+                  _legend(palette, 'Qayıb', _danger, Icons.cancel_outlined),
+                  _legend(palette, 'Tətil', palette.textMuted,
+                      Icons.beach_access_outlined),
                 ],
               ),
             ),
-
-            const SizedBox(height: 14),
-
-            // Calendar Grid Card
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.cardBorder),
-                boxShadow: AppShadows.sm,
-              ),
-              child: Column(
-                children: [
-                  // Weekday labels
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _CalendarHeaderCell('B.e'),
-                      _CalendarHeaderCell('Ç.a'),
-                      _CalendarHeaderCell('Çər'),
-                      _CalendarHeaderCell('C.a'),
-                      _CalendarHeaderCell('Cüm'),
-                      _CalendarHeaderCell('Şənb', isWeekend: true),
-                      _CalendarHeaderCell('Baz', isWeekend: true),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Divider(color: AppColors.cardBorder, height: 1),
-                  const SizedBox(height: 10),
-
-                  // Days Grid
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 7,
-                          mainAxisSpacing: 6,
-                          crossAxisSpacing: 6,
-                          childAspectRatio: 0.95,
-                        ),
-                    itemCount: emptyLeadingSlots + daysInMonth,
-                    itemBuilder: (context, index) {
-                      if (index < emptyLeadingSlots) {
-                        return const SizedBox.shrink();
-                      }
-                      final dayNum = index - emptyLeadingSlots + 1;
-                      final isSelected = dayNum == _selectedDay;
-                      final isToday = dayNum == _currentDate.day;
-                      final att = attendanceMap[dayNum];
-
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedDay = dayNum;
-                          });
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.primaryAccent.withAlpha(25)
-                                : (isToday
-                                      ? AppColors.background
-                                      : AppColors.surface),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: isSelected
-                                  ? AppColors.primaryAccent
-                                  : (isToday
-                                        ? AppColors.primaryAccent.withAlpha(60)
-                                        : AppColors.cardBorder),
-                              width: isSelected ? 1.8 : 1,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                '$dayNum',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: isSelected || isToday
-                                      ? FontWeight.w800
-                                      : FontWeight.w500,
-                                  color: isSelected
-                                      ? AppColors.primaryAccent
-                                      : AppColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              if (att != null)
-                                _buildStatusIcon(att.status, size: 13)
-                              else
-                                Container(
-                                  width: 4,
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.textMuted.withAlpha(60),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+            const SizedBox(height: 12),
+            _buildCalendarCard(
+              palette: palette,
+              attendanceMap: attendanceMap,
+              daysInMonth: daysInMonth,
+              emptyLeadingSlots: emptyLeadingSlots,
             ),
-
-            const SizedBox(height: 16),
-
-            // Daily Details Section
             SectionHeader(
-              title: '$_selectedDay $monthName - Günlük Qeydlər',
+              title:
+                  '$_selectedDay ${_monthNames[_currentDate.month - 1]} • Günlük qeydlər',
               subtitle: 'Saatlar üzrə dərs davamiyyəti və qeydlər',
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
             ),
-
-            if (selectedDayData != null &&
-                selectedDayData.periodDetails.isNotEmpty) ...[
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.cardBorder),
-                  boxShadow: AppShadows.sm,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _getStatusTitle(selectedDayData.status),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: _getStatusColor(selectedDayData.status),
-                          ),
-                        ),
-                        if (selectedDayData.note != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            'Qeyd: ${selectedDayData.note}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textSecondary,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Divider(color: AppColors.cardBorder, height: 1),
-                    const SizedBox(height: 6),
-
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: selectedDayData.periodDetails.length,
-                      separatorBuilder: (_, _) =>
-                          Divider(color: AppColors.cardBorder, height: 1),
-                      itemBuilder: (context, idx) {
-                        final period = selectedDayData.periodDetails[idx];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 7,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primaryAccent.withAlpha(
-                                        15,
-                                      ),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      '${idx + 1}-ci Dərs',
-                                      style: const TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.primaryAccent,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      period.subject,
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              _buildPeriodStatusBadge(period.status),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ] else ...[
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.cardBorder),
-                ),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.event_busy_outlined,
-                        size: 40,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Bu gün üçün heç bir dərs davamiyyət qeydi yoxdur.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Dərslər başladıqda status burada canlı görünəcək.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            _buildDayDetails(
+              palette: palette,
+              data: selectedDayData,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSummaryStatItem(
-    String label,
-    String value,
-    Color color,
-    IconData icon,
-  ) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(height: 3),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 10.5),
-        ),
-      ],
-    );
-  }
+  Widget _buildHero({
+    required AppPalette palette,
+    required String monthName,
+    required int rate,
+    required int presentCount,
+    required int lateCount,
+    required int absentCount,
+  }) {
+    final rateColor = rate >= 90
+        ? _success
+        : rate >= 75
+            ? _late
+            : _danger;
 
-  Widget _buildLegendItem(String title, Color color, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 14),
-        const SizedBox(width: 3),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-          ),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0A1428), Color(0xFF172554)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-      ],
-    );
-  }
-
-  Widget _buildStatusIcon(AttendanceStatus? status, {double size = 16}) {
-    switch (status) {
-      case AttendanceStatus.present:
-        return Icon(
-          Icons.check_circle_outline_rounded,
-          color: AppColors.success,
-          size: size,
-        );
-      case AttendanceStatus.late:
-        return Icon(
-          Icons.schedule_outlined,
-          color: AppColors.warning,
-          size: size,
-        );
-      case AttendanceStatus.absent:
-        return Icon(Icons.cancel_outlined, color: AppColors.danger, size: size);
-      case AttendanceStatus.holiday:
-        return Icon(
-          Icons.beach_access_outlined,
-          color: AppColors.textMuted,
-          size: size,
-        );
-      default:
-        return Icon(
-          Icons.remove_circle_outline_rounded,
-          color: AppColors.cardBorder,
-          size: size,
-        );
-    }
-  }
-
-  Widget _buildPeriodStatusBadge(AttendanceStatus status) {
-    switch (status) {
-      case AttendanceStatus.present:
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: AppColors.success.withAlpha(20),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: AppColors.success.withAlpha(60)),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: palette.brandRoyal.withValues(alpha: 0.20),
+            blurRadius: 22,
+            offset: const Offset(0, 9),
           ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
             children: [
-              Icon(Icons.check_rounded, color: AppColors.success, size: 12),
-              SizedBox(width: 3),
-              Text(
-                'İştirak Edib',
-                style: TextStyle(
-                  color: AppColors.success,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.10),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.calendar_month_rounded,
+                  color: Color(0xFF7DD3FC),
+                  size: 19,
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      monthName.toUpperCase(),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.48),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Aylıq davamiyyət',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 11,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: rateColor.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(11),
+                  border: Border.all(
+                    color: rateColor.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Text(
+                  '$rate%',
+                  style: TextStyle(
+                    color: rateColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
                 ),
               ),
             ],
           ),
-        );
-      case AttendanceStatus.late:
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: AppColors.warning.withAlpha(20),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: AppColors.warning.withAlpha(60)),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.schedule_outlined, color: AppColors.warning, size: 12),
-              SizedBox(width: 3),
-              Text(
-                'Gecikib',
-                style: TextStyle(
-                  color: AppColors.warning,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        );
-      case AttendanceStatus.absent:
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: AppColors.danger.withAlpha(20),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: AppColors.danger.withAlpha(60)),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.cancel_outlined, color: AppColors.danger, size: 12),
-              SizedBox(width: 3),
-              Text(
-                'Qayıb',
-                style: TextStyle(
-                  color: AppColors.danger,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        );
-      case AttendanceStatus.holiday:
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: AppColors.cardBorder,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            'Tətil',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: (rate.clamp(0, 100)) / 100,
+              minHeight: 5,
+              backgroundColor: Colors.white.withValues(alpha: 0.10),
+              valueColor: AlwaysStoppedAnimation(rateColor),
             ),
           ),
-        );
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              _stat('İştirak', '$presentCount gün', _success),
+              _divider(),
+              _stat('Gecikmə', '$lateCount dəfə', _late),
+              _divider(),
+              _stat('Qayıb', '$absentCount gün', _danger),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stat(String label, String value, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 5,
+                height: 5,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.55),
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _divider() {
+    return Container(
+      width: 1,
+      height: 26,
+      color: Colors.white.withValues(alpha: 0.08),
+    );
+  }
+
+  Widget _legend(AppPalette palette, String title, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: palette.surface1,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: palette.borderHairline),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 12),
+          const SizedBox(width: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: palette.textMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalendarCard({
+    required AppPalette palette,
+    required Map<int, DayAttendance> attendanceMap,
+    required int daysInMonth,
+    required int emptyLeadingSlots,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+      decoration: BoxDecoration(
+        color: palette.surface1,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: palette.borderHairline),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark
+                  ? 0.24
+                  : 0.03,
+            ),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _weekday(palette, 'B.e'),
+              _weekday(palette, 'Ç.a'),
+              _weekday(palette, 'Çər'),
+              _weekday(palette, 'C.a'),
+              _weekday(palette, 'Cüm'),
+              _weekday(palette, 'Şən', weekend: true),
+              _weekday(palette, 'Baz', weekend: true),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Divider(color: palette.borderHairline, height: 1),
+          const SizedBox(height: 10),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 5,
+              crossAxisSpacing: 5,
+              childAspectRatio: 0.92,
+            ),
+            itemCount: emptyLeadingSlots + daysInMonth,
+            itemBuilder: (context, index) {
+              if (index < emptyLeadingSlots) {
+                return const SizedBox.shrink();
+              }
+              final dayNum = index - emptyLeadingSlots + 1;
+              final isSelected = dayNum == _selectedDay;
+              final isToday = dayNum == _currentDate.day;
+              final att = attendanceMap[dayNum];
+
+              return GestureDetector(
+                onTap: () => setState(() => _selectedDay = dayNum),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? palette.brandRoyal.withValues(alpha: 0.13)
+                        : isToday
+                            ? palette.surface3
+                            : Colors.transparent,
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(
+                      color: isSelected
+                          ? palette.brandRoyal
+                          : isToday
+                              ? palette.brandRoyal.withValues(alpha: 0.35)
+                              : palette.borderHairline,
+                      width: isSelected ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '$dayNum',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight:
+                              isSelected || isToday ? FontWeight.w800 : FontWeight.w600,
+                          color: isSelected
+                              ? palette.brandRoyal
+                              : Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      if (att != null)
+                        _statusIcon(att.status, size: 12)
+                      else
+                        Container(
+                          width: 3.5,
+                          height: 3.5,
+                          decoration: BoxDecoration(
+                            color: palette.borderStrong,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _weekday(AppPalette palette, String label,
+      {bool weekend = false}) {
+    return Expanded(
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 9.5,
+          fontWeight: FontWeight.w800,
+          color: weekend ? _danger.withValues(alpha: 0.75) : palette.textMuted,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDayDetails({
+    required AppPalette palette,
+    required DayAttendance? data,
+  }) {
+    if (data == null || data.periodDetails.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: palette.surface1,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: palette.borderHairline),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: palette.surface2,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.event_busy_outlined,
+                size: 24,
+                color: palette.textMuted,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Bu gün üçün davamiyyət qeydi yoxdur',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              'Dərslər başladıqda status burada canlı görünəcək.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                color: palette.textMuted,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      );
     }
+
+    final statusColor = _getStatusColor(data.status);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: palette.surface1,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: palette.borderHairline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  _getStatusIcon(data.status),
+                  color: statusColor,
+                  size: 17,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _getStatusTitle(data.status),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (data.note != null && data.note!.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: palette.surface2,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Qeyd: ${data.note!.trim()}',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  height: 1.35,
+                  color: palette.textMuted,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          ...List.generate(data.periodDetails.length, (index) {
+            final period = data.periodDetails[index];
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: index == data.periodDetails.length - 1 ? 0 : 7,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: palette.surface2,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: palette.borderHairline),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: palette.brandRoyal.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '${index + 1}',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          color: palette.brandRoyal,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: Text(
+                        period.subject,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _periodBadge(period.status),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusIcon(AttendanceStatus? status, {double size = 16}) {
+    switch (status) {
+      case AttendanceStatus.present:
+        return Icon(Icons.check_circle_rounded, color: _success, size: size);
+      case AttendanceStatus.late:
+        return Icon(Icons.schedule_rounded, color: _late, size: size);
+      case AttendanceStatus.absent:
+        return Icon(Icons.cancel_rounded, color: _danger, size: size);
+      case AttendanceStatus.holiday:
+        return Icon(Icons.beach_access_rounded, color: const Color(0xFF94A3B8), size: size);
+      default:
+        return Icon(Icons.remove_circle_outline_rounded, color: const Color(0xFFCBD5E1), size: size);
+    }
+  }
+
+  Widget _periodBadge(AttendanceStatus status) {
+    final color = _getStatusColor(status);
+    final label = switch (status) {
+      AttendanceStatus.present => 'İştirak',
+      AttendanceStatus.late => 'Gecikmə',
+      AttendanceStatus.absent => 'Qayıb',
+      AttendanceStatus.holiday => 'Tətil',
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
   }
 
   String _getStatusTitle(AttendanceStatus status) {
     switch (status) {
       case AttendanceStatus.present:
-        return 'Dərslərdə Tam İştirak Edib';
+        return 'Dərslərdə tam iştirak edib';
       case AttendanceStatus.late:
-        return 'Dərsə Gecikmə Qeydə Alınıb';
+        return 'Dərsə gecikmə qeydə alınıb';
       case AttendanceStatus.absent:
-        return 'Qayıb Qeydə Alınıb';
+        return 'Qayıb qeydə alınıb';
       case AttendanceStatus.holiday:
-        return 'İstirahət / Tətil Günü';
+        return 'İstirahət / tətil günü';
+    }
+  }
+
+  IconData _getStatusIcon(AttendanceStatus status) {
+    switch (status) {
+      case AttendanceStatus.present:
+        return Icons.check_circle_rounded;
+      case AttendanceStatus.late:
+        return Icons.schedule_rounded;
+      case AttendanceStatus.absent:
+        return Icons.cancel_rounded;
+      case AttendanceStatus.holiday:
+        return Icons.beach_access_rounded;
     }
   }
 
   Color _getStatusColor(AttendanceStatus status) {
     switch (status) {
       case AttendanceStatus.present:
-        return AppColors.success;
+        return _success;
       case AttendanceStatus.late:
-        return AppColors.warning;
+        return _late;
       case AttendanceStatus.absent:
-        return AppColors.danger;
+        return _danger;
       case AttendanceStatus.holiday:
-        return AppColors.textSecondary;
+        return const Color(0xFF94A3B8);
     }
-  }
-}
-
-class _CalendarHeaderCell extends StatelessWidget {
-  final String text;
-  final bool isWeekend;
-
-  const _CalendarHeaderCell(this.text, {this.isWeekend = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        color: isWeekend ? AppColors.danger : AppColors.textSecondary,
-      ),
-    );
   }
 }

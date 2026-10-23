@@ -20,6 +20,14 @@ class AppColors {
   static const Color goldLight = Color(0xFFFCC201);
   static const Color goldDark = Color(0xFFB8860B);
 
+  // Elevated neutral tiers for 2026 layering system
+  static const Color darkSurface2 = Color(0xFF161924);
+  static const Color darkSurface3 = Color(0xFF1D2130);
+  static const Color lightSurface2 = Color(0xFFF8F9FE);
+  static const Color lightSurface3 = Color(0xFFEFF0F9);
+  static const Color lightBorderStrong = Color(0xFFD0D3E4);
+  static const Color darkBorderStrong = Color(0xFF343A52);
+
   // Status Colors (Soft, refined variants)
   static const Color success = Color(0xFF10B981);
   static const Color successLight = Color(0xFFD1FAE5);
@@ -30,6 +38,12 @@ class AppColors {
   static const Color info = Color(0xFF3B82F6);
   static const Color infoLight = Color(0xFFDBEAFE);
 
+  // Dark container tonal variants
+  static const Color successContainerDark = Color(0xFF0B2F22);
+  static const Color warningContainerDark = Color(0xFF332506);
+  static const Color dangerContainerDark = Color(0xFF3B1215);
+  static const Color infoContainerDark = Color(0xFF0F2447);
+
   // Dark palette (OLED Pure Black & WCAG AA Compliance)
   static const Color darkBackground = Color(0xFF000000); // Pure OLED Black
   static const Color darkSurface = Color(0xFF0F1118); // Elevated OLED Surface
@@ -37,27 +51,27 @@ class AppColors {
   static const Color darkBorder = Color(0xFF262B3D); // High Contrast Border
 
   // Light palette
-  static const Color _lightBackground = Color(0xFFF2F3FA);
-  static const Color _lightSurface = Color(0xFFFFFFFF);
-  static const Color _lightCardBorder = Color(0xFFE6E7F2);
-  static const Color _lightTextPrimary = Color(0xFF12152A);
-  static const Color _lightTextSecondary = Color(0xFF676A87);
-  static const Color _lightTextMuted = Color(0xFF9A9EB9);
+  static const Color lightBackground = Color(0xFFF2F3FA);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightBorder = Color(0xFFE6E7F2);
+  static const Color lightTextPrimary = Color(0xFF12152A);
+  static const Color lightTextSecondary = Color(0xFF676A87);
+  static const Color lightTextMuted = Color(0xFF9A9EB9);
 
   // WCAG AA compliant text contrast (>4.5:1 ratio on OLED Black & Surfaces)
-  static const Color _darkTextPrimary = Color(0xFFFAFBFD); // 19.8:1 contrast
-  static const Color _darkTextSecondary = Color(0xFFB4B9D2); // 9.2:1 contrast (WCAG AA+)
-  static const Color _darkTextMuted = Color(0xFF888EA8); // 5.5:1 contrast (WCAG AA)
+  static const Color darkTextPrimary = Color(0xFFFAFBFD); // 19.8:1 contrast
+  static const Color darkTextSecondary = Color(0xFFB4B9D2); // 9.2:1 contrast (WCAG AA+)
+  static const Color darkTextMuted = Color(0xFF888EA8); // 5.5:1 contrast (WCAG AA)
 
-  static Color background = _lightBackground;
-  static Color surface = _lightSurface;
-  static Color surfaceElevated = _lightSurface;
-  static Color cardBorder = _lightCardBorder;
+  static Color background = lightBackground;
+  static Color surface = lightSurface;
+  static Color surfaceElevated = lightSurface2;
+  static Color cardBorder = lightBorder;
 
   // Text
-  static Color textPrimary = _lightTextPrimary;
-  static Color textSecondary = _lightTextSecondary;
-  static Color textMuted = _lightTextMuted;
+  static Color textPrimary = lightTextPrimary;
+  static Color textSecondary = lightTextSecondary;
+  static Color textMuted = lightTextMuted;
   static Color get textTertiary => textMuted;
   static const Color textOnPrimary = Color(0xFFFFFFFF);
 
@@ -68,19 +82,22 @@ class AppColors {
       surface = darkSurface;
       surfaceElevated = darkCard;
       cardBorder = darkBorder;
-      textPrimary = _darkTextPrimary;
-      textSecondary = _darkTextSecondary;
-      textMuted = _darkTextMuted;
+      textPrimary = darkTextPrimary;
+      textSecondary = darkTextSecondary;
+      textMuted = darkTextMuted;
     } else {
-      background = _lightBackground;
-      surface = _lightSurface;
-      surfaceElevated = _lightSurface;
-      cardBorder = _lightCardBorder;
-      textPrimary = _lightTextPrimary;
-      textSecondary = _lightTextSecondary;
-      textMuted = _lightTextMuted;
+      background = lightBackground;
+      surface = lightSurface;
+      surfaceElevated = lightSurface2;
+      cardBorder = lightBorder;
+      textPrimary = lightTextPrimary;
+      textSecondary = lightTextSecondary;
+      textMuted = lightTextMuted;
     }
   }
+
+  /// True when adaptive statics currently hold the dark palette.
+  static bool get isDarkMode => background == darkBackground;
 
   // Gradients
   static const LinearGradient primaryGradient = LinearGradient(

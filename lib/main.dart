@@ -42,8 +42,8 @@ void main() async {
   // Push bildirişləri (tətbiq bağlı ikən də gəlməsi üçün) — arxa planda
   unawaited(PushNotificationService.instance.initialize());
 
-  // Yeni versiya yoxlaması (banner üçün) — arxa planda, gecikmə yaratmır
-  final appUpdateService = AppUpdateService();
+  // Yeni versiya yoxlaması (banner üçün) — arxa planda, gecikmə yaratmır.
+  // appUpdateService qlobal nüsxədir (app_update_service.dart-da təyin olunub)
   unawaited(Future.delayed(const Duration(seconds: 3), () {
     appUpdateService.checkForUpdate();
   }));

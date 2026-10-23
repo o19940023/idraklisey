@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_radius.dart';
 
 class StatusBadge extends StatelessWidget {
   final String label;
@@ -21,9 +22,9 @@ class StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: backgroundColor ?? color.withAlpha(28),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withAlpha(80), width: 1),
+        color: backgroundColor ?? color.withValues(alpha: 0.11),
+        borderRadius: BorderRadius.circular(AppRadius.full),
+        border: Border.all(color: color.withValues(alpha: 0.31), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -32,13 +33,17 @@ class StatusBadge extends StatelessWidget {
             Icon(icon, size: fontSize + 2, color: color),
             const SizedBox(width: 4),
           ],
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: fontSize,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: fontSize,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
+              ),
             ),
           ),
         ],

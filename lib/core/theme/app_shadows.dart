@@ -72,4 +72,21 @@ class AppShadows {
       spreadRadius: 0,
     ),
   ];
+
+  static const List<BoxShadow> darkLg = [
+    BoxShadow(
+      color: Color(0x40000000), // 25% black
+      blurRadius: 18,
+      offset: Offset(0, 8),
+      spreadRadius: 0,
+    ),
+  ];
+
+  /// Theme-aware card elevation: subtle depth on dark, soft navy tint on light.
+  static List<BoxShadow> adaptiveCard(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? darkMd : md;
+
+  /// Theme-aware modal elevation for dialogs, sheets and floating panels.
+  static List<BoxShadow> adaptiveModal(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? darkLg : xl;
 }

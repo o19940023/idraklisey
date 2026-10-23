@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/widgets/motion.dart';
 import '../../../data/models/user_preferences_model.dart';
@@ -15,6 +16,7 @@ class ReorderableModuleGrid extends StatefulWidget {
   final bool isReorderMode;
   final Function(String moduleId, BuildContext context)? onModuleTap;
   final Map<String, dynamic>? dynamicData; // subtitle üçün dinamik veri
+  final bool allowTwoLineTitle;
 
   const ReorderableModuleGrid({
     super.key,
@@ -23,6 +25,7 @@ class ReorderableModuleGrid extends StatefulWidget {
     this.isReorderMode = false,
     this.onModuleTap,
     this.dynamicData,
+    this.allowTwoLineTitle = false,
   });
 
   @override
@@ -194,17 +197,21 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
     // Telefon Tərzi Canlı Sürükle-Bırak Qrid (iOS Squircle App Grid)
     return LayoutBuilder(
       builder: (context, constraints) {
-        final itemWidth = (constraints.maxWidth - 12) / 2;
-        final itemHeight = itemWidth / 1.18;
+        final columns = constraints.maxWidth >= 720 ? 3 : 2;
+        const spacing = 10.0;
+        final tileHeight =
+            widget.allowTwoLineTitle && columns == 2 ? 92.0 : 86.0;
+        final itemWidth =
+            (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.18,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: spacing,
+            mainAxisExtent: tileHeight,
           ),
           itemCount: _modules.length,
           itemBuilder: (context, index) {
@@ -217,7 +224,7 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
               delay: staggerDelay(index),
               duration: const Duration(milliseconds: 380),
               offset: const Offset(0, 0.04),
-              child: _buildDraggableGridItem(module, itemWidth, itemHeight, loc),
+              child: _buildDraggableGridItem(module, itemWidth, tileHeight, loc),
             );
           },
         );
@@ -287,103 +294,20 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
               width: width,
               height: height,
               child: Transform.scale(
-                scale: 1.08,
-                child: Container(
+                scale: 1.05,
+                child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: AppColors.primaryAccent,
-                      width: 2.0,
-                    ),
+                    borderRadius: BorderRadius.circular(18),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primaryAccent.withAlpha(90),
+                        color: _getColorFromHex(module.accentColor).withAlpha(60),
                         blurRadius: 24,
-                        spreadRadius: 3,
+                        spreadRadius: 2,
                         offset: const Offset(0, 10),
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  _getColorFromHex(
-                                    module.accentColor,
-                                  ).withAlpha(40),
-                                  _getColorFromHex(
-                                    module.accentColor,
-                                  ).withAlpha(15),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: _getColorFromHex(
-                                  module.accentColor,
-                                ).withAlpha(80),
-                              ),
-                            ),
-                            child: Icon(
-                              _getIconFromString(module.icon),
-                              color: _getColorFromHex(module.accentColor),
-                              size: 22,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.all(5),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryAccent.withAlpha(30),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.drag_indicator_rounded,
-                              size: 14,
-                              color: AppColors.primaryAccent,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            module.getLocalizedTitle(loc),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                              color: AppColors.textPrimary,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _getSubtitle(module, loc),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                  child: _buildModuleTile(module, true, false, loc),
                 ),
               ),
             ),
@@ -422,130 +346,88 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
     final iconData = _getIconFromString(module.icon);
     final accentColor = _getColorFromHex(module.accentColor);
     final subtitleText = _getSubtitle(module, loc);
+    final palette = AppPalette.of(context);
 
     return PressableScale(
-      pressedScale: 0.96,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          // Kartın özünə modulun rəngində çox yüngul tint ver —
-          // hər kart fərqli "canlı" görünür, ağ kart dənizindən fərqlənir.
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.surface,
-              accentColor.withAlpha(isHovered ? 30 : 14),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: isHovered ? accentColor : AppColors.cardBorder.withAlpha(70),
-            width: isHovered ? 2.0 : 1.2,
-          ),
-          boxShadow: isHovered
-              ? [
-                  BoxShadow(
-                    color: accentColor.withAlpha(50),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : AppShadows.sm,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              if (widget.onModuleTap != null) {
-                widget.onModuleTap!(module.id, context);
-              }
-            },
-            onLongPress: () {
-              HapticFeedback.mediumImpact();
-            },
-            borderRadius: BorderRadius.circular(24),
-            child: Semantics(
-              label: '${module.getLocalizedTitle(loc)}, $subtitleText',
-              button: true,
-              child: Stack(
-                children: [
-                  // Sağ altda böyük "qorxu-ikon" filigranı — dərinlik hissi
-                  Positioned(
-                    right: -14,
-                    bottom: -14,
-                    child: Icon(
-                      iconData,
-                      size: 92,
-                      color: accentColor.withAlpha(16),
+      pressedScale: 0.97,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 160),
+        opacity: isDraggingSelf ? 0.45 : 1,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: isHovered
+                ? Color.alphaBlend(
+                    accentColor.withValues(alpha: 0.08),
+                    palette.surface1,
+                  )
+                : palette.surface1,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isHovered
+                  ? accentColor.withValues(alpha: 0.55)
+                  : palette.borderHairline,
+              width: isHovered ? 1.4 : 1,
+            ),
+            boxShadow: isHovered
+                ? [
+                    BoxShadow(
+                      color: accentColor.withValues(alpha: 0.18),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Duotone ikon nişanı — modul rəngindən tündoya
-                            Container(
-                              width: 46,
-                              height: 46,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: AppColors.duoTint(accentColor),
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: accentColor.withAlpha(60),
-                                  width: 1.2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: accentColor.withAlpha(30),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                iconData,
-                                color: accentColor,
-                                size: 23,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: accentColor.withAlpha(14),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.arrow_outward_rounded,
-                                size: 14,
-                                color: accentColor.withAlpha(180),
-                              ),
-                            ),
-                          ],
+                  ]
+                : null,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                if (widget.onModuleTap != null) {
+                  widget.onModuleTap!(module.id, context);
+                }
+              },
+              borderRadius: BorderRadius.circular(18),
+              child: Semantics(
+                label: '${module.getLocalizedTitle(loc)}, $subtitleText',
+                button: true,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: AppColors.duoTint(accentColor),
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: accentColor.withValues(alpha: 0.22),
+                          ),
                         ),
-                        Column(
+                        child: Icon(iconData, color: accentColor, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               module.getLocalizedTitle(loc),
-                              maxLines: 1,
+                              maxLines: widget.allowTwoLineTitle ? 2 : 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w900,
-                                color: AppColors.textPrimary,
-                                letterSpacing: -0.4,
+                                fontSize: 13,
+                                height: 1.12,
+                                fontWeight: FontWeight.w800,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                letterSpacing: -0.2,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -555,16 +437,22 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 10.5,
-                                color: AppColors.textSecondary,
+                                color: palette.textMuted,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 11,
+                        color: accentColor.withValues(alpha: 0.65),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -572,7 +460,6 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
       ),
     );
   }
-
   Widget _buildReorderListTile(
     ModuleItem module,
     int index,

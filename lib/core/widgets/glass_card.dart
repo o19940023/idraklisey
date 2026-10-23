@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../theme/app_palette.dart';
 
 /// A frosted-glass container inspired by iOS 27's real glassmorphism.
 ///
@@ -33,36 +34,46 @@ class GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+
     final fillColor = isDark
-        ? Colors.black.withAlpha((255 * opacity * 0.45).round())
-        : Colors.white.withAlpha((255 * opacity).round());
+        ? Colors.black.withValues(alpha: opacity * 0.45)
+        : Colors.white.withValues(alpha: opacity);
 
-    final borderColor = isDark
-        ? Colors.white.withAlpha(25)
-        : Colors.white.withAlpha(55);
+    final highlightColor = palette.glassHighlight;
 
-    Widget card = ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-        child: Container(
-          decoration: BoxDecoration(
-            color: fillColor,
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(color: borderColor, width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: isDark
-                    ? Colors.black.withAlpha(50)
-                    : Colors.black.withAlpha(8),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+    Widget card = RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  highlightColor.withValues(alpha: 0.10),
+                  highlightColor.withValues(alpha: 0.0),
+                ],
               ),
-            ],
-          ),
-          child: Padding(
-            padding: padding ?? const EdgeInsets.all(16),
-            child: child,
+              color: fillColor,
+              borderRadius: BorderRadius.circular(borderRadius),
+              border: Border.all(color: palette.glassBorder, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.196)
+                      : Colors.black.withValues(alpha: 0.031),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: padding ?? const EdgeInsets.all(16),
+              child: child,
+            ),
           ),
         ),
       ),

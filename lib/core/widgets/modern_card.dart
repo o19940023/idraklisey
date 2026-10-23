@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_shadows.dart';
+import '../theme/app_palette.dart';
 import 'motion.dart';
 
 /// Modern 2026-style card component with consistent styling.
@@ -31,16 +31,19 @@ class ModernCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final effectiveRadius = borderRadius ?? AppRadius.cardRadius;
+
     final Widget cardContent = Container(
       padding: padding ?? EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: color ?? AppColors.surface,
-        borderRadius: borderRadius ?? AppRadius.cardRadius,
+        color: color ?? palette.surface1,
+        borderRadius: effectiveRadius,
         border: Border.all(
-          color: AppColors.cardBorder,
+          color: palette.borderHairline,
           width: 1,
         ),
-        boxShadow: elevated ? AppShadows.card : null,
+        boxShadow: elevated ? AppShadows.adaptiveCard(context) : null,
       ),
       child: child,
     );
@@ -54,7 +57,8 @@ class ModernCard extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: onTap,
-              borderRadius: (borderRadius ?? AppRadius.cardRadius) as BorderRadius?,
+              borderRadius: effectiveRadius is BorderRadius ? effectiveRadius : null,
+              highlightColor: palette.brandRoyal.withValues(alpha: 0.06),
               child: cardContent,
             ),
           ),

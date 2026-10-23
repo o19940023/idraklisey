@@ -35,7 +35,7 @@ class _AppUpdateBannerState extends State<AppUpdateBanner>
       duration: const Duration(milliseconds: 500),
     );
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, -1),
+      begin: const Offset(0, 1),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _animController,
@@ -122,7 +122,7 @@ class _AppUpdateBannerState extends State<AppUpdateBanner>
                             children: [
                               Flexible(
                                 child: Text(
-                                  loc != null ? '${loc.version} • ${loc.update}' : 'Yeni versiya mövcuddur!',
+                                  'Yeni versiya!',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -156,7 +156,7 @@ class _AppUpdateBannerState extends State<AppUpdateBanner>
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${loc?.version ?? "Versiya"}: v${widget.updateService.currentVersion}',
+                            '${loc.version}: v${widget.updateService.currentVersion}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -194,7 +194,7 @@ class _AppUpdateBannerState extends State<AppUpdateBanner>
                                     color: Color(0xFF1E40AF), size: 14),
                                 const SizedBox(width: 4),
                                 Text(
-                                  loc?.update ?? 'Yenilə',
+                                  loc.update,
                                   style: const TextStyle(
                                     color: Color(0xFF1E40AF),
                                     fontSize: 12,
@@ -215,7 +215,7 @@ class _AppUpdateBannerState extends State<AppUpdateBanner>
                           const BoxConstraints(minWidth: 32, minHeight: 32),
                       padding: EdgeInsets.zero,
                       onPressed: _dismiss,
-                      tooltip: loc?.close ?? 'Bağla',
+                      tooltip: loc.close,
                     ),
                   ],
                 ),

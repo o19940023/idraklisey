@@ -10,6 +10,7 @@ import '../../../core/utils/password_hasher.dart';
 import '../../../providers/app_state.dart';
 import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/student_model.dart';
+import '../../../services/app_update_service.dart';
 import '../../admin/widgets/reorderable_module_grid.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -255,6 +256,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
 
+            // İnzibatçı bölməsi — yalnız admin üçün
+            if (appState.currentRole == UserRole.admin) ...[
+              _buildSectionTitle('İnzibatçı'),
+              _buildSettingCard(
+                icon: Icons.system_update_rounded,
+                title: 'Tətbiq versiyası',
+                subtitle:
+                    'Yeni versiya elan və mağaza linkləri — istifadəçilər hər açılışda xəbərdarlıq görəcək',
+                onTap: () => _showAppVersionAdminSheet(context, appState),
+              ),
+            ],
+
             _buildSectionTitle(loc.account),
             _buildSettingCard(
               icon: Icons.lock_outline_rounded,
@@ -446,6 +459,193 @@ class _SettingsScreenState extends State<SettingsScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text(loc.languageChanged)));
     });
+  }
+
+  /// Admin: mağaza yeniləmə xəbərdarlığı tənzimi.
+  /// `app_config/version` sənədinə `latest_version` yazır;
+  /// versiya tətbiq versiyasından böyükdürsə bütün istifadəçilərin
+  /// açılışında banner/dialoq göstərilir.
+  Future<void> _showAppVersionAdminSheet(
+    BuildContext context,
+    AppState appState,
+  ) async {
+    final config = await appState.fetchAppVersionConfig();
+    if (!context.mounted) return;
+
+    final versionCtrl = TextEditingController(
+      text: (config['latest_version'] ?? '').toString(),
+    );
+    final iosUrlCtrl = TextEditingController(
+      text: (config['update_url_ios'] ?? '').toString(),
+    );
+    final androidUrlCtrl = TextEditingController(
+      text: (config['update_url_android'] ?? '').toString(),
+    );
+    final currentVersion = _packageInfo?.version ?? '';
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        var saving = false;
+        return StatefulBuilder(
+          builder: (context, setSheet) {
+            Future<void> save() async {
+              final latest = versionCtrl.text.trim();
+              if (latest.isEmpty || saving) return;
+              setSheet(() => saving = true);
+              final ok = await appState.saveAppVersionConfig(
+                latestVersion: latest,
+                updateUrlIos: iosUrlCtrl.text.trim(),
+                updateUrlAndroid: androidUrlCtrl.text.trim(),
+              );
+              // Servisi yenidən yoxlat — banner dərhal reaksiya verir
+              await appUpdateService.checkForUpdate();
+              if (!sheetContext.mounted) return;
+              Navigator.pop(sheetContext);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      ok
+                          ? (appUpdateService.hasUpdate
+                              ? 'Saxlanıldı — banner hər açılışda göstəriləcək.'
+                              : '"$latest" elan olundu (tətbiq v$currentVersion).')
+                          : 'Saxlanmadı — əlaqəni yoxlayın.',
+                    ),
+                    backgroundColor: ok
+                        ? AppColors.success
+                        : AppColors.danger,
+                  ),
+                );
+              }
+            }
+
+            return SafeArea(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  18,
+                  16,
+                  18,
+                  18 + MediaQuery.viewInsetsOf(context).bottom,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tətbiq versiyası',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Tətbiqdəki v$currentVersion • ekran altında '
+                      '"Yeni versiya — Yenilə" banneri göstərilir.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: versionCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Son versiya (latest_version) *',
+                        hintText: 'Məs: 1.6.0',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: iosUrlCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'App Store linki (iOS)',
+                        hintText: 'https://apps.apple.com/app/id...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: androidUrlCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Google Play linki (Android)',
+                        hintText: 'https://play.google.com/store/apps/details?id=...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryAccent.withAlpha(14),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Qeyd: linklər boşdursa tətbiq birbaşa İdrak '
+                        'Liseyi mağaza səhifəsinə açılır. Versiya '
+                        'tətbiq versiyası ilə eyni və ya kiçik olsa '
+                        'banner göstərilmir.',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          height: 1.4,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primaryAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                        ),
+                        onPressed: saving ? null : save,
+                        icon: saving
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.check_rounded, size: 18),
+                        label: Text(
+                          saving ? 'Saxlanılır...' : 'Saxla və Yoxla',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildSectionTitle(String title) {

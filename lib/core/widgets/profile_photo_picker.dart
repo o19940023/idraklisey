@@ -7,6 +7,7 @@ import '../../services/cloudinary_service.dart';
 class ProfilePhotoPicker extends StatefulWidget {
   final String? initialPhotoUrl;
   final ValueChanged<String> onPhotoUploaded;
+  final VoidCallback? onPhotoRemoved;
   final double size;
   final String folder;
 
@@ -14,6 +15,7 @@ class ProfilePhotoPicker extends StatefulWidget {
     super.key,
     this.initialPhotoUrl,
     required this.onPhotoUploaded,
+    this.onPhotoRemoved,
     this.size = 100,
     this.folder = 'idrak/profiles',
   });
@@ -125,6 +127,7 @@ class _ProfilePhotoPickerState extends State<ProfilePhotoPicker>
 
     if (source == ImageSourceOption.remove) {
       setState(() => _photoUrl = null);
+      widget.onPhotoRemoved?.call();
       return;
     }
 

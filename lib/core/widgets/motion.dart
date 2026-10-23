@@ -66,6 +66,9 @@ class _FadeInState extends State<FadeIn> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return widget.child;
+    }
     return FadeTransition(
       opacity: _fade,
       child: SlideTransition(position: _slide, child: widget.child),
@@ -100,9 +103,10 @@ class _PressableScaleState extends State<PressableScale> {
 
   @override
   Widget build(BuildContext context) {
+    final scaleEnabled = widget.enabled && !MediaQuery.disableAnimationsOf(context);
     return Listener(
       onPointerDown: (_) {
-        if (widget.enabled) setState(() => _pressed = true);
+        if (scaleEnabled) setState(() => _pressed = true);
       },
       onPointerUp: (_) {
         if (_pressed) setState(() => _pressed = false);

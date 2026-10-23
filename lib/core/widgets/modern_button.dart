@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_radius.dart';
+import '../theme/app_palette.dart';
 import 'motion.dart';
 
 /// Modern primary button component (2026 style).
@@ -23,6 +23,9 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final royal = palette.brandRoyal;
+
     Widget buttonChild = isLoading
         ? const SizedBox(
             height: 20,
@@ -46,8 +49,10 @@ class PrimaryButton extends StatelessWidget {
     final button = FilledButton(
       onPressed: isLoading ? null : onPressed,
       style: FilledButton.styleFrom(
-        backgroundColor: AppColors.primary,
+        backgroundColor: royal,
         foregroundColor: Colors.white,
+        disabledBackgroundColor:
+            royal.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.4 : 0.45),
         minimumSize: Size(fullWidth ? double.infinity : 120, 48),
         padding: EdgeInsets.symmetric(
           horizontal: AppSpacing.buttonPaddingH,
@@ -87,6 +92,8 @@ class SecondaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final royal = _royal(context);
+
     Widget buttonChild = icon != null
         ? Row(
             mainAxisSize: MainAxisSize.min,
@@ -101,7 +108,8 @@ class SecondaryButton extends StatelessWidget {
     final button = OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.primary,
+        foregroundColor: royal,
+        side: BorderSide(color: royal, width: 1.5),
         minimumSize: Size(fullWidth ? double.infinity : 120, 48),
       ),
       child: buttonChild,
@@ -126,19 +134,82 @@ class TextOnlyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final royal = _royal(context);
+
+    final child = icon != null
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: AppSpacing.iconMd),
+              SizedBox(width: AppSpacing.sm),
+              Text(label),
+            ],
+          )
+        : Text(label);
+
     return TextButton(
       onPressed: onPressed,
-      child: icon != null
-          ? Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: AppSpacing.iconMd),
-                SizedBox(width: AppSpacing.sm),
-                Text(label),
-              ],
-            )
-          : Text(label),
+      style: TextButton.styleFrom(foregroundColor: royal),
+      child: child,
     );
+  }
+}
+
+/// Borderless tonal action button with a soft royal highlight on press.
+class GhostButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool fullWidth;
+
+  const GhostButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.fullWidth = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
+    final royal = _royal(context);
+
+    final child = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null) ...[
+          Icon(icon, size: 18, color: royal),
+          const SizedBox(width: AppSpacing.sm),
+        ],
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+            color: royal,
+          ),
+        ),
+      ],
+    );
+
+    final button = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        highlightColor: palette.brandRoyal.withValues(alpha: 0.06),
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          alignment: Alignment.center,
+          child: child,
+        ),
+      ),
+    );
+
+    return fullWidth ? SizedBox(width: double.infinity, child: button) : button;
   }
 }
 
@@ -161,20 +232,33 @@ class ModernIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: backgroundColor ?? AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: IconButton(
-        onPressed: onPressed,
-        icon: Icon(icon, size: AppSpacing.iconMd),
-        color: color ?? AppColors.textPrimary,
-        padding: EdgeInsets.zero,
+    final palette = AppPalette.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Semantics(
+      button: true,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: backgroundColor ?? palette.surface2,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: palette.borderHairline),
+        ),
+        child: IconButton(
+          onPressed: onPressed,
+          icon: Icon(icon, size: AppSpacing.iconMd),
+          color: color ?? colorScheme.onSurface,
+          padding: EdgeInsets.zero,
+        ),
       ),
     );
   }
+}
+
+Color _royal(BuildContext context) {
+  if (Theme.of(context).brightness == Brightness.dark) {
+    return const Color(0xFF60A5FA);
+  }
+  return AppPalette.of(context).brandRoyal;
 }

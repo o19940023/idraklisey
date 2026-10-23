@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
+
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_palette.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/adaptive_route.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/app_search_bar.dart';
+import '../../../core/widgets/modern_avatar.dart';
+import '../../../core/widgets/stat_card.dart';
 import '../../../core/widgets/status_badge.dart';
-import '../../../providers/app_state.dart';
-import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/user_model.dart';
-import '../../../data/models/role_model.dart';
+import '../../../providers/app_state.dart';
 import '../widgets/edit_employee_sheet.dart';
 import 'create_employee_screen.dart';
+import 'employee_profile_screen.dart';
+
+enum _StaffFilter { all, teachers, administration }
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -19,8 +26,8 @@ class AdminUsersScreen extends StatefulWidget {
 }
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
-  UserRole? _filterRole;
   final TextEditingController _searchCtrl = TextEditingController();
+  _StaffFilter _filter = _StaffFilter.all;
 
   @override
   void dispose() {
@@ -30,1061 +37,745 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final appState = Provider.of<AppState>(context);
-    // Yalnız işçilər: şagird və valideyn hesabları Şagird İdarəsindədir
-    final staff = appState.users
-        .where((u) => u.role != UserRole.student && u.role != UserRole.parent)
-        .toList();
-    final dateFormat = DateFormat('dd.MM.yyyy');
+    final appState = context.watch<AppState>();
+    final palette = AppPalette.of(context);
+    final canAdd = appState.hasPermission('add_users');
+    final canEdit = appState.hasPermission('edit_users');
 
-    final filtered = staff.where((u) {
-      final matchesRole = _filterRole == null || u.role == _filterRole;
-      final q = _searchCtrl.text.toLowerCase().trim();
-      final matchesSearch = q.isEmpty ||
-          u.fullName.toLowerCase().contains(q) ||
-          u.username.toLowerCase().contains(q) ||
-          (u.email ?? '').toLowerCase().contains(q) ||
-          (u.finCode ?? '').toLowerCase().contains(q) ||
-          u.idrakCode.toLowerCase().contains(q);
-      return matchesRole && matchesSearch;
-    }).toList();
+    final staff = appState.users
+        .where((user) =>
+            user.role != UserRole.student && user.role != UserRole.parent)
+        .toList()
+      ..sort((a, b) {
+        if (a.role != b.role) {
+          return a.role == UserRole.teacher ? -1 : 1;
+        }
+        return a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase());
+      });
+    final teachers =
+        staff.where((user) => user.role == UserRole.teacher).toList();
+    final administration =
+        staff.where((user) => user.role == UserRole.admin).toList();
+    final activeCount = staff.where((user) => user.isActive).length;
+
+    final query = _searchCtrl.text.trim().toLowerCase();
+    final scoped = switch (_filter) {
+      _StaffFilter.teachers => teachers,
+      _StaffFilter.administration => administration,
+      _StaffFilter.all => staff,
+    };
+    final filtered = query.isEmpty
+        ? scoped
+        : scoped.where((user) {
+            return user.fullName.toLowerCase().contains(query) ||
+                user.username.toLowerCase().contains(query) ||
+                (user.email ?? '').toLowerCase().contains(query) ||
+                (user.finCode ?? '').toLowerCase().contains(query) ||
+                user.idrakCode.toLowerCase().contains(query) ||
+                (user.position ?? '').toLowerCase().contains(query) ||
+                (user.subject ?? '').toLowerCase().contains(query);
+          }).toList();
+
+    final entries = <_DirectoryEntry>[];
+    if (_filter == _StaffFilter.all) {
+      final visibleTeachers = filtered
+          .where((user) => user.role == UserRole.teacher)
+          .toList();
+      final visibleAdministration = filtered
+          .where((user) => user.role == UserRole.admin)
+          .toList();
+      if (visibleTeachers.isNotEmpty) {
+        entries.add(
+          _SectionEntry(
+            title: 'Müəllimlər',
+            count: visibleTeachers.length,
+            icon: Icons.psychology_rounded,
+            color: const Color(0xFF0D9488),
+          ),
+        );
+        entries.addAll(visibleTeachers.map(_UserEntry.new));
+      }
+      if (visibleAdministration.isNotEmpty) {
+        entries.add(
+          _SectionEntry(
+            title: 'İnzibatçı və işçilər',
+            count: visibleAdministration.length,
+            icon: Icons.admin_panel_settings_rounded,
+            color: palette.brandRoyal,
+          ),
+        );
+        entries.addAll(visibleAdministration.map(_UserEntry.new));
+      }
+    } else {
+      entries.addAll(filtered.map(_UserEntry.new));
+    }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: palette.bgBase,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // ── Gradient Header ──
-          SliverAppBar(
-            expandedHeight: 140,
-            pinned: true,
-            elevation: 0,
-            backgroundColor: AppColors.primary,
-            surfaceTintColor: Colors.transparent,
-            leading: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(20),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
+          _buildHeader(
+            context,
+            palette,
+            canAdd,
+            teachers.length,
+            administration.length,
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  StatCardRow(
+                    columns: 3,
+                    spacing: 8,
+                    children: [
+                      StatCard(
+                        value: '${teachers.length}',
+                        label: 'Müəllim',
+                        icon: Icons.psychology_rounded,
+                        color: const Color(0xFF0D9488),
+                        compact: true,
+                      ),
+                      StatCard(
+                        value: '${administration.length}',
+                        label: 'İnzibatçı / İşçi',
+                        icon: Icons.admin_panel_settings_rounded,
+                        color: palette.brandRoyal,
+                        compact: true,
+                      ),
+                      StatCard(
+                        value: '$activeCount',
+                        label: 'Aktiv hesab',
+                        icon: Icons.verified_user_rounded,
+                        color: AppColors.success,
+                        compact: true,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  AppSearchBar(
+                    controller: _searchCtrl,
+                    hintText: 'Ad, vəzifə, e-poçt və ya İdrak kodu axtar...',
+                    onChanged: (_) => setState(() {}),
+                    onClear: () => setState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildFilters(palette, staff.length, teachers.length,
+                      administration.length),
+                ],
               ),
-              onPressed: () => handleBackNavigation(context),
             ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryAccent,
-                      borderRadius: BorderRadius.circular(10),
+          ),
+          if (filtered.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: _buildEmptyState(
+                context,
+                palette,
+                canAdd,
+                staff.isNotEmpty,
+              ),
+            )
+          else ...[
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+              sliver: SliverToBoxAdapter(
+                child: Row(
+                  children: [
+                    Text(
+                      'İşçi heyəti',
+                      style: AppTypography.title1(context).copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                    child: const Icon(Icons.person_add_rounded, size: 18, color: Colors.white),
-                  ),
-                  tooltip: 'Yeni İşçi Hesabı Yarat',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const CreateEmployeeScreen()),
-                    );
-                  },
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: palette.brandRoyal.withValues(alpha: 0.09),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '${filtered.length}',
+                        style: TextStyle(
+                          color: palette.brandRoyal,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    if (canEdit)
+                      Text(
+                        'Redaktə üçün kartdakı qələmi seçin',
+                        style: TextStyle(
+                          color: palette.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
                 ),
               ),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0D9488)],
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final entry = entries[index];
+                    return switch (entry) {
+                      _SectionEntry() => _buildSectionHeader(
+                          context,
+                          palette,
+                          entry,
+                        ),
+                      _UserEntry() => _buildUserCard(
+                          context,
+                          appState,
+                          entry.user,
+                          canEdit,
+                        ),
+                    };
+                  },
+                  childCount: entries.length,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context,
+    AppPalette palette,
+    bool canAdd,
+    int teacherCount,
+    int administrationCount,
+  ) {
+    return SliverAppBar(
+      expandedHeight: 132,
+      pinned: true,
+      elevation: 0,
+      backgroundColor: palette.brandNavy,
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: Colors.white,
+      actions: [
+        if (canAdd)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              tooltip: 'Yeni işçi hesabı',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  appRoute(builder: (_) => const CreateEmployeeScreen()),
+                );
+              },
+              icon: Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.14),
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      right: -15,
-                      bottom: -15,
-                      child: Icon(Icons.manage_accounts_rounded, size: 130, color: Colors.white.withAlpha(10)),
-                    ),
-                    SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 44, 20, 16),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                child: const Icon(
+                  Icons.person_add_alt_1_rounded,
+                  size: 18,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: LayoutBuilder(
+          builder: (context, constraints) {
+            final showContent = constraints.maxHeight >= 96;
+            return Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF11152C),
+                    Color(0xFF28326F),
+                    Color(0xFF2563EB),
+                  ],
+                ),
+              ),
+              child: !showContent
+                  ? const SizedBox.expand()
+                  : Stack(
+                      children: [
+                        Positioned(
+                          right: -34,
+                          top: -40,
+                          child: Container(
+                            width: 150,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: 0.06),
+                            ),
+                          ),
+                        ),
+                        SafeArea(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 44, 20, 16),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withAlpha(20),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(Icons.people_alt_rounded, size: 22, color: Colors.white),
-                                ),
-                                const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                Row(
                                   children: [
-                                    const Text(
-                                      'İstifadəçi Hesabları',
-                                      style: TextStyle(
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.14),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.manage_accounts_rounded,
+                                        size: 22,
                                         color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: -0.5,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${staff.length} işçi hesabı',
-                                      style: TextStyle(
-                                        color: Colors.white.withAlpha(180),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                    const SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'İstifadəçi Hesabları',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '$teacherCount müəllim • '
+                                          '$administrationCount inzibatçı / işçi',
+                                          style: TextStyle(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.72),
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // ── Search & Filter Controls ──
-          SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Column(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.cardBorder),
-                      boxShadow: AppShadows.sm,
-                    ),
-                    child: TextField(
-                      controller: _searchCtrl,
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        hintText: 'Ad, İdrak kodu və ya istifadəçi adı axtar...',
-                        hintStyle: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primaryAccent, size: 20),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: AppColors.primaryAccent, width: 1.5),
-                        ),
-                        suffixIcon: _searchCtrl.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear_rounded, size: 18),
-                                onPressed: () {
-                                  _searchCtrl.clear();
-                                  setState(() {});
-                                },
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    child: Row(
-                      children: [
-                        _buildRoleFilterChip('Hamısı (${staff.length})', null),
-                        _buildRoleFilterChip('Müəllimlər', UserRole.teacher),
-                        _buildRoleFilterChip('İnzibatçı və İşçilər', UserRole.admin),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Users List ──
-          if (filtered.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryAccent.withAlpha(8),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.person_search_rounded, size: 44, color: AppColors.textMuted),
-                    ),
-                    const SizedBox(height: 14),
-                    Text('Axtarışa uyğun istifadəçi tapılmadı.', style: TextStyle(color: AppColors.textSecondary, fontSize: 14, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final user = filtered[index];
-                    return _buildUserCard(context, appState, user, dateFormat);
-                  },
-                  childCount: filtered.length,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRoleFilterChip(String label, UserRole? role) {
-    final isSelected = _filterRole == role;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: () => setState(() => _filterRole = role),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primaryAccent : AppColors.surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isSelected ? AppColors.primaryAccent : AppColors.cardBorder,
-              width: isSelected ? 1.5 : 1,
-            ),
-            boxShadow: isSelected
-                ? [BoxShadow(color: AppColors.primaryAccent.withAlpha(30), blurRadius: 6, offset: const Offset(0, 2))]
-                : [],
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.white : AppColors.textPrimary,
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserCard(BuildContext context, AppState appState, AppUser user, DateFormat dateFormat) {
-    Color roleColor;
-    switch (user.role) {
-      case UserRole.admin:
-        roleColor = Colors.red;
-        break;
-      case UserRole.teacher:
-        roleColor = const Color(0xFF0D9488);
-        break;
-      case UserRole.student:
-        roleColor = AppColors.primaryAccent;
-        break;
-      case UserRole.parent:
-        roleColor = AppColors.goldDark;
-        break;
-    }
-
-    final assignedRole = appState.getRoleById(user.assignedRoleId);
-    final badgeLabel = assignedRole?.name ?? user.role.displayName.split(' ').first;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          onTap: () => _showStaffDetails(context, appState, user, assignedRole, dateFormat),
-          borderRadius: BorderRadius.circular(18),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.cardBorder),
-              boxShadow: AppShadows.sm,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: roleColor.withAlpha(15),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: roleColor.withAlpha(30)),
-                      ),
-                      child: Icon(user.role.icon, color: roleColor, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  user.fullName,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.textPrimary,
-                                    letterSpacing: -0.2,
-                                  ),
-                                ),
-                              ),
-                              StatusBadge(
-                                label: badgeLabel,
-                                color: roleColor,
-                                fontSize: 10,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 3),
-                          if (user.email != null && user.email!.isNotEmpty) ...[
-                            Text(
-                              user.email!,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 11.5, color: AppColors.primaryAccent, fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 2),
-                          ],
-                          Text(
-                            'İdrak Kodu: ${user.idrakCode}${user.finCode != null ? ' • FIN: ${user.finCode}' : ''}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
-                          ),
-                          if (user.role == UserRole.teacher && user.subject != null) ...[
-                            const SizedBox(height: 3),
-                            Text(
-                              'Fənn: ${user.subject} (${user.roomNumber ?? "Otaq təyin olunmayıb"})',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 11.5, color: AppColors.primaryAccent, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                          if (user.role == UserRole.parent && user.linkedStudentId != null) ...[
-                            const SizedBox(height: 3),
-                            Text(
-                              'Əlaqəli Şagird ID: ${user.linkedStudentId}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 11.5, color: AppColors.goldDark, fontWeight: FontWeight.w700),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Teacher Permissions Panel (if Teacher)
-                if (user.role == UserRole.teacher && user.teacherPermissions != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.cardBorder),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Müəllimə Verilmiş Admin Yetkiləri:',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: () => _showEditPermissionsDialog(context, appState, user),
-                              child: const Text('Dəyiş', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primaryAccent)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: [
-                            _buildPermChip('Yeməkxana Menyu', user.teacherPermissions!.canManageCafeteria, AppColors.gold),
-                            _buildPermChip('Tibbi Qeydlər', user.teacherPermissions!.canManageMedical, AppColors.danger),
-                            _buildPermChip('İnventar QR', user.teacherPermissions!.canManageInventory, AppColors.primaryAccent),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 10),
-                Divider(color: AppColors.cardBorder, height: 1),
-                const SizedBox(height: 8),
-
-                // Footer: Status toggle & Credentials view (Responsive & Overflow-safe)
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          user.isActive ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                          size: 14,
-                          color: user.isActive ? AppColors.success : AppColors.danger,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          user.isActive ? 'Aktiv Hesab' : 'Deaktiv Edilib',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: user.isActive ? AppColors.success : AppColors.danger,
                           ),
                         ),
                       ],
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 110),
-                          child: Text(
-                            user.password.length > 12 ? 'Şifrə: ••••••' : 'Şifrə: ${user.password}',
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                            style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppColors.textMuted),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () => _showResetPasswordDialog(context, appState, user),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryAccent.withAlpha(15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.lock_reset_rounded, size: 12, color: AppColors.primaryAccent),
-                                SizedBox(width: 3),
-                                Text(
-                                  'Sıfırla',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.primaryAccent,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: () => appState.toggleUserStatus(user.id),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: (user.isActive ? AppColors.danger : AppColors.success).withAlpha(12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              user.isActive ? 'Deaktiv et' : 'Aktivləşdir',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: user.isActive ? AppColors.danger : AppColors.success,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// İşçinin tam profili: bütün HR məlumatları, rol, səlahiyyətlər, hesab
-  void _showStaffDetails(BuildContext context, AppState appState, AppUser user, Role? assignedRole, DateFormat dateFormat) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final isTeacher = user.role == UserRole.teacher;
-        return Container(
-          height: MediaQuery.of(ctx).size.height * 0.86,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 10),
-                width: 42,
-                height: 4.5,
-                decoration: BoxDecoration(color: AppColors.cardBorder, borderRadius: BorderRadius.circular(10)),
-              ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 30),
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: AppColors.cardBorder),
-                            image: user.photoUrl != null
-                                ? DecorationImage(
-                                    image: NetworkImage(user.photoUrl!),
-                                    fit: BoxFit.cover,
-                                    onError: (_, _) {},
-                                  )
-                                : null,
-                            color: AppColors.background,
-                          ),
-                          child: user.photoUrl == null
-                              ? Icon(user.role.icon, color: AppColors.primaryAccent, size: 26)
-                              : null,
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                user.fullName,
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.textPrimary, letterSpacing: -0.4),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  StatusBadge(
-                                    label: user.role == UserRole.teacher ? 'Müəllim' : (assignedRole?.name ?? 'İnzibatçı'),
-                                    color: user.role == UserRole.teacher ? const Color(0xFF0D9488) : Colors.red,
-                                    fontSize: 10.5,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  StatusBadge(
-                                    label: user.isActive ? 'Aktiv' : 'Deaktiv',
-                                    color: user.isActive ? AppColors.success : AppColors.danger,
-                                    fontSize: 10,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Redaktə düyməsi (edit_users səlahiyyəti olanlara)
-                        if (appState.hasPermission('edit_users'))
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              showEditEmployeeSheet(context, user);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryAccent.withAlpha(15),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.primaryAccent.withAlpha(40)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.edit_rounded, size: 15, color: AppColors.primaryAccent),
-                                  const SizedBox(width: 5),
-                                  Text('Redaktə', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primaryAccent)),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // ═══ ƏSAS MƏLUMATLAR (dönər, ən vacib faktlar) ═══
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        gradient: isTeacher
-                            ? const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0xFF134E4A), Color(0xFF0D9488), Color(0xFF14B8A6)],
-                              )
-                            : const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [Color(0xFF7F1D1D), Color(0xFFB91C1C), Color(0xFFEF4444)],
-                              ),
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: AppShadows.md,
-                      ),
-                      child: Column(
-                        children: [
-                          if (isTeacher) ...[
-                            Row(
-                              children: [
-                                Expanded(child: _heroFact(Icons.menu_book_rounded, 'Fənn', _dv(user.subject))),
-                                Expanded(child: _heroFact(Icons.meeting_room_rounded, 'Otaq', _dv(user.roomNumber))),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _heroFact(
-                                    Icons.school_rounded,
-                                    'Siniflər (${user.assignedClasses.length})',
-                                    user.assignedClasses.isEmpty ? 'Yoxdur' : user.assignedClasses.join(', '),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ] else ...[
-                            Row(
-                              children: [
-                                Expanded(child: _heroFact(Icons.admin_panel_settings_rounded, 'Rol', assignedRole?.name ?? 'İnzibatçı')),
-                                Expanded(child: _heroFact(Icons.work_rounded, 'Vəzifə', _dv(user.position))),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(child: _heroFact(Icons.phone_rounded, 'Telefon', user.phone.isEmpty ? _empty : user.phone)),
-                                Expanded(child: _heroFact(Icons.alternate_email_rounded, 'E-poçt (Login)', _dv(user.email))),
-                              ],
-                            ),
-                          ],
-                          if (isTeacher) ...[
-                            Divider(color: Colors.white.withAlpha(40), height: 22),
-                            Row(
-                              children: [
-                                Expanded(child: _heroFact(Icons.phone_rounded, 'Telefon', user.phone.isEmpty ? _empty : user.phone)),
-                                Expanded(child: _heroFact(Icons.cake_rounded, 'Doğum', user.birthDate != null ? dateFormat.format(user.birthDate!) : _empty)),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    _buildStaffInfoBox(
-                      icon: Icons.badge_rounded,
-                      title: 'Şəxsi Məlumatlar',
-                      color: AppColors.primaryAccent,
-                      rows: [
-                        MapEntry('Ad / Soyad', user.fullName),
-                        MapEntry('Ata adı', _dv(user.fatherName)),
-                        MapEntry('Cins', _dv(user.gender)),
-                        MapEntry('Doğum Tarixi', user.birthDate != null ? dateFormat.format(user.birthDate!) : _empty),
-                        MapEntry('FIN Kod', _dv(user.finCode)),
-                        MapEntry('Vətəndaşlıq', _dv(user.citizenship)),
-                        MapEntry('ŞV Seriyası', _dv(user.idCardSerial)),
-                        MapEntry('Ünvan', _dv(user.address)),
-                        MapEntry('Telefon', user.phone.isEmpty ? _empty : user.phone),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    _buildStaffInfoBox(
-                      icon: Icons.payments_rounded,
-                      title: 'İş Müqaviləsi və Əmək Haqqı',
-                      color: AppColors.goldDark,
-                      rows: [
-                        MapEntry('Vəzifə adı', _dv(user.position)),
-                        MapEntry('Təhsil Dərəcəsi', _dv(user.educationLevel)),
-                        MapEntry('Bank', _dv(user.bankName)),
-                        MapEntry('Əmək haqqı (gross)', user.salary != null ? '${_fmtSalary(user.salary!)} AZN' : _empty),
-                        MapEntry('İşə qəbul', user.hireDate != null ? dateFormat.format(user.hireDate!) : _empty),
-                        MapEntry('Müqavilə başlanğıc', user.contractStart != null ? dateFormat.format(user.contractStart!) : _empty),
-                        MapEntry('Müqavilə bitmə', user.contractEnd != null ? dateFormat.format(user.contractEnd!) : 'Müddətsiz'),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    if (user.role == UserRole.teacher) ...[
-                      _buildStaffInfoBox(
-                        icon: Icons.work_rounded,
-                        title: 'Müəllim Məlumatları',
-                        color: const Color(0xFF0D9488),
-                        rows: [
-                          MapEntry('Fənn', _dv(user.subject)),
-                          MapEntry('Otaq', _dv(user.roomNumber)),
-                          MapEntry('Təyin Olunan Siniflər', user.assignedClasses.isEmpty ? 'Yoxdur' : user.assignedClasses.join(', ')),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                    ] else ...[
-                      _buildStaffInfoBox(
-                        icon: Icons.admin_panel_settings_rounded,
-                        title: 'Rol və Səlahiyyətlər',
-                        color: Colors.red,
-                        rows: [
-                          MapEntry('Rol', assignedRole?.name ?? 'Təyin olunmayıb'),
-                          MapEntry('Səlahiyyət sayı', '${assignedRole?.permissionIds.length ?? 0}'),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                    ],
-                    _buildStaffInfoBox(
-                      icon: Icons.key_rounded,
-                      title: 'Hesab Məlumatları',
-                      color: AppColors.primaryAccent,
-                      rows: [
-                        MapEntry('E-poçt (Login)', _dv(user.email)),
-                        MapEntry('İstifadəçi adı', user.username),
-                        MapEntry('İdrak kodu', user.idrakCode),
-                        MapEntry('Şifrə', user.password),
-                        MapEntry('Qeydiyyat', dateFormat.format(user.createdAt)),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primaryAccent,
-                        side: const BorderSide(color: AppColors.primaryAccent, width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
-                      ),
-                      icon: const Icon(Icons.lock_reset_rounded, size: 20),
-                      label: const Text(
-                        'Şifrəni Sıfırla (123456)',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
-                      ),
-                      onPressed: () => _showResetPasswordDialog(context, appState, user),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showResetPasswordDialog(BuildContext context, AppState appState, AppUser user) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: AppColors.surface,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.primaryAccent.withAlpha(20),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.lock_reset_rounded, color: AppColors.primaryAccent, size: 22),
-            ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'Şifrəni Sıfırla',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${user.fullName} üçün şifrə standart "123456" olaraq sıfırlansın?',
-              style: TextStyle(fontSize: 13.5, color: AppColors.textPrimary, height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.cardBorder),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.primaryAccent),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'İstifadəçi növbəti dəfə daxil olduqdan sonra öz parametrlərindən yeni şifrə təyin edə bilər.',
-                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Ləğv et', style: TextStyle(color: AppColors.textMuted)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryAccent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final success = await appState.resetUserPasswordByAdmin(user.id, newPassword: '123456');
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      success
-                          ? '✓ ${user.fullName} üçün şifrə "123456" olaraq sıfırlandı!'
-                          : 'Xəta: İstifadəçi tapılmadı.',
-                    ),
-                    backgroundColor: success ? AppColors.success : AppColors.danger,
-                    duration: const Duration(seconds: 3),
-                  ),
-                );
-              }
-            },
-            child: const Text('Bəli, Sıfırla (123456)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Detal görüntüsündə boş sahələr üçün fallback mətn
-  static const _empty = 'Daxil edilməyib';
-  String _dv(String? v) => (v == null || v.trim().isEmpty) ? _empty : v;
-
-  /// Detal kartının ən üstündəki vurğulu əsas fakt
-  Widget _heroFact(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(7),
-          decoration: BoxDecoration(color: Colors.white.withAlpha(22), shape: BoxShape.circle),
-          child: Icon(icon, size: 15, color: Colors.white),
-        ),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: TextStyle(color: Colors.white.withAlpha(170), fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.3)),
-              const SizedBox(height: 1),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _fmtSalary(double s) =>
-      s == s.roundToDouble() ? s.toStringAsFixed(0) : s.toStringAsFixed(2);
-
-  Widget _buildStaffInfoBox({
-    required IconData icon,
-    required String title,
-    required Color color,
-    required List<MapEntry<String, String>> rows,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(color: color.withAlpha(15), borderRadius: BorderRadius.circular(10)),
-                child: Icon(icon, size: 16, color: color),
-              ),
-              const SizedBox(width: 10),
-              Text(title, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w900, color: AppColors.textPrimary, letterSpacing: -0.2)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) Divider(color: AppColors.cardBorder.withAlpha(60), height: 14),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 130,
-                  child: Text(rows[i].key, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
-                ),
-                Expanded(
-                  child: Text(
-                    rows[i].value,
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPermChip(String label, bool isEnabled, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: isEnabled ? color.withAlpha(15) : AppColors.background,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isEnabled ? color.withAlpha(50) : AppColors.cardBorder),
-      ),
-      child: Text(
-        '${isEnabled ? "✓" : "✗"} $label',
-        style: TextStyle(
-          fontSize: 10.5,
-          fontWeight: FontWeight.w700,
-          color: isEnabled ? color : AppColors.textMuted,
-        ),
-      ),
-    );
-  }
-
-  void _showEditPermissionsDialog(BuildContext context, AppState appState, AppUser user) {
-    bool pCaf = user.teacherPermissions?.canManageCafeteria ?? false;
-    bool pMed = user.teacherPermissions?.canManageMedical ?? false;
-    // Köhnə hesablarda teacherPermissions null ola bilər — defolt AÇIQ
-    // olmasın (dialogu açmaq özü icazə verirdi).
-    bool pInv = user.teacherPermissions?.canManageInventory ?? false;
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-              title: Text('${user.fullName} üçün Yetkilər', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SwitchListTile(
-                    title: const Text('Yeməkxana Menyu İdarəsi', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                    value: pCaf,
-                    activeThumbColor: AppColors.gold,
-                    onChanged: (v) => setDialogState(() => pCaf = v),
-                  ),
-                  SwitchListTile(
-                    title: const Text('Tibbi Kart & Allergiya Qeydləri', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                    value: pMed,
-                    activeThumbColor: AppColors.danger,
-                    onChanged: (v) => setDialogState(() => pMed = v),
-                  ),
-                  SwitchListTile(
-                    title: const Text('İnventar & QR Ticket Göndərmə', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                    value: pInv,
-                    activeThumbColor: AppColors.primaryAccent,
-                    onChanged: (v) => setDialogState(() => pInv = v),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Ləğv et'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryAccent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () {
-                    appState.updateTeacherPermissions(
-                      user.id,
-                      TeacherPermissions(
-                        canManageCafeteria: pCaf,
-                        canManageMedical: pMed,
-                        canManageInventory: pInv,
-                      ),
-                    );
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Müəllim yetkiləri uğurla yeniləndi!'), backgroundColor: AppColors.success),
-                    );
-                  },
-                  child: const Text('Yadda Saxla', style: TextStyle(color: Colors.white)),
-                ),
-              ],
             );
           },
-        );
-      },
+        ),
+      ),
     );
   }
+
+  Widget _buildFilters(
+    AppPalette palette,
+    int allCount,
+    int teacherCount,
+    int administrationCount,
+  ) {
+    final items = [
+      (label: 'Hamısı', count: allCount, filter: _StaffFilter.all),
+      (label: 'Müəllimlər', count: teacherCount, filter: _StaffFilter.teachers),
+      (
+        label: 'İnzibatçı / İşçi',
+        count: administrationCount,
+        filter: _StaffFilter.administration,
+      ),
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          for (final item in items)
+            Padding(
+              padding: const EdgeInsets.only(right: 7),
+              child: GestureDetector(
+                onTap: () => setState(() => _filter = item.filter),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _filter == item.filter
+                        ? palette.brandRoyal
+                        : palette.surface1,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: _filter == item.filter
+                          ? palette.brandRoyal
+                          : palette.borderHairline,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        item.label,
+                        style: TextStyle(
+                          color: _filter == item.filter
+                              ? Colors.white
+                              : palette.surface1.computeLuminance() > 0.5
+                                  ? const Color(0xFF334155)
+                                  : Colors.white70,
+                          fontSize: 11.5,
+                          fontWeight: _filter == item.filter
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _filter == item.filter
+                              ? Colors.white.withValues(alpha: 0.18)
+                              : palette.surface3,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '${item.count}',
+                          style: TextStyle(
+                            color: _filter == item.filter
+                                ? Colors.white
+                                : palette.textMuted,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(
+    BuildContext context,
+    AppPalette palette,
+    _SectionEntry entry,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: entry.color.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(entry.icon, size: 15, color: entry.color),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            entry.title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '${entry.count}',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: palette.textMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserCard(
+    BuildContext context,
+    AppState appState,
+    AppUser user,
+    bool canEdit,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isTeacher = user.role == UserRole.teacher;
+    final assignedRole = appState.getRoleById(user.assignedRoleId);
+    final roleColor =
+        isTeacher ? const Color(0xFF0D9488) : AppPalette.of(context).brandRoyal;
+    final roleLabel = isTeacher
+        ? 'Müəllim'
+        : (assignedRole?.name ?? 'İnzibatçı / İşçi');
+    final secondary = isTeacher
+        ? [
+            if ((user.subject ?? '').trim().isNotEmpty) user.subject!.trim(),
+            if ((user.roomNumber ?? '').trim().isNotEmpty)
+              'Otaq ${user.roomNumber!.trim()}',
+            if (user.assignedClasses.isNotEmpty)
+              user.assignedClasses.join(', '),
+          ].join(' • ')
+        : [
+            if ((user.position ?? '').trim().isNotEmpty) user.position!.trim(),
+            if (assignedRole != null) assignedRole.name,
+          ].join(' • ');
+
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: EdgeInsets.zero,
+      borderRadius: 18,
+      onTap: () {
+        Navigator.push(
+          context,
+          appRoute(builder: (_) => EmployeeProfileScreen(user: user)),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(11, 11, 8, 11),
+        child: Row(
+          children: [
+            ModernAvatar(
+              imageUrl: user.photoUrl,
+              name: user.fullName,
+              size: 52,
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          user.fullName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 120),
+                        child: StatusBadge(
+                          label: roleLabel,
+                          color: roleColor,
+                          fontSize: 9.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    secondary.isEmpty ? user.idrakCode : secondary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Icon(
+                        user.isActive
+                            ? Icons.circle
+                            : Icons.circle_outlined,
+                        size: 8,
+                        color: user.isActive
+                            ? AppColors.success
+                            : AppColors.danger,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        user.isActive ? 'Aktiv' : 'Deaktiv',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          color: user.isActive
+                              ? AppColors.success
+                              : AppColors.danger,
+                        ),
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          user.idrakCode,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            color: AppPalette.of(context).textMuted,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (canEdit)
+              IconButton(
+                tooltip: 'Redaktə et',
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(
+                  minWidth: 32,
+                  minHeight: 32,
+                ),
+                padding: EdgeInsets.zero,
+                onPressed: () => showEditEmployeeSheet(context, user),
+                icon: Icon(
+                  Icons.edit_outlined,
+                  size: 17,
+                  color: AppPalette.of(context).brandRoyal,
+                ),
+              ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: AppPalette.of(context).textMuted,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(
+    BuildContext context,
+    AppPalette palette,
+    bool canAdd,
+    bool hasStaff,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                color: palette.brandRoyal.withValues(alpha: 0.07),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: palette.brandRoyal.withValues(alpha: 0.12),
+                ),
+              ),
+              child: Icon(
+                hasStaff
+                    ? Icons.person_search_rounded
+                    : Icons.group_add_outlined,
+                size: 34,
+                color: palette.brandRoyal,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              hasStaff ? 'Nəticə tapılmadı' : 'Hələ işçi hesabı yoxdur',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              hasStaff
+                  ? 'Axtarış və ya filtrə uyğun işçi tapılmadı.'
+                  : 'İlk müəllim və ya işçi hesabını yaratmaqla başlayın.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.5,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (canAdd && !hasStaff) ...[
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    appRoute(builder: (_) => const CreateEmployeeScreen()),
+                  );
+                },
+                icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                label: const Text('Yeni işçi hesabı'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+sealed class _DirectoryEntry {
+  const _DirectoryEntry();
+}
+
+class _SectionEntry extends _DirectoryEntry {
+  final String title;
+  final int count;
+  final IconData icon;
+  final Color color;
+
+  const _SectionEntry({
+    required this.title,
+    required this.count,
+    required this.icon,
+    required this.color,
+  });
+}
+
+class _UserEntry extends _DirectoryEntry {
+  final AppUser user;
+
+  const _UserEntry(this.user);
 }

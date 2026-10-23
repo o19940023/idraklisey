@@ -62,7 +62,12 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     }).toList();
   }
 
+  bool get _canManageRoles =>
+      Provider.of<AppState>(context, listen: false)
+          .hasPermission('manage_roles');
+
   void _showCreateRoleDialog() {
+    if (!_canManageRoles) return;
     showDialog(
       context: context,
       builder: (context) => CreateRoleDialog(
@@ -74,6 +79,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   }
 
   void _showEditRoleDialog(Role role) {
+    if (!_canManageRoles) return;
     showDialog(
       context: context,
       builder: (context) => EditRoleDialog(
@@ -86,6 +92,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   }
 
   Future<void> _deleteRole(Role role) async {
+    if (!_canManageRoles) return;
     if (role.isDefault || !role.isDeletable) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -146,6 +153,8 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canManage = context.watch<AppState>().hasPermission('manage_roles');
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -198,7 +207,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _showCreateRoleDialog,
+                    onPressed: canManage ? _showCreateRoleDialog : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -255,8 +264,12 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                           final role = _filteredRoles[index];
                           return _RoleCard(
                             role: role,
-                            onTap: () => _showEditRoleDialog(role),
-                            onDelete: () => _deleteRole(role),
+                            onTap: canManage
+                                ? () => _showEditRoleDialog(role)
+                                : null,
+                            onDelete: canManage
+                                ? () => _deleteRole(role)
+                                : null,
                           );
                         },
                       ),
@@ -270,13 +283,13 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
 /// Rol Kartı Widget
 class _RoleCard extends StatelessWidget {
   final Role role;
-  final VoidCallback onTap;
-  final VoidCallback onDelete;
+  final VoidCallback? onTap;
+  final VoidCallback? onDelete;
 
   const _RoleCard({
     required this.role,
-    required this.onTap,
-    required this.onDelete,
+    this.onTap,
+    this.onDelete,
   });
 
   @override
@@ -370,7 +383,7 @@ class _RoleCard extends StatelessWidget {
                   ),
                   
                   // Sil butonu
-                  if (role.isDeletable)
+                  if (role.isDeletable && onDelete != null)
                     IconButton(
                       icon: const Icon(Icons.delete_outline),
                       color: Colors.red,

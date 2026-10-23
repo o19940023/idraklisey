@@ -148,6 +148,16 @@ class AppState extends ChangeNotifier {
   // Active Role
   UserRole get currentRole => _currentUser?.role ?? UserRole.admin;
 
+  /// Yalnız quraşdırma ilə gələn baş inzibatçı hesabı bütün icazələrə
+  /// sahibdir. Sonradan yaradılan və rol təyin edilməyən admin hesabları
+  /// avtomatik tam səlahiyyət almamalıdır.
+  bool get isPrimaryAdmin {
+    final user = _currentUser;
+    if (user == null || user.role != UserRole.admin) return false;
+    return user.id == 'usr-admin-1' ||
+        user.username.toLowerCase() == 'admin';
+  }
+
   // User Accounts Database (Default Master Admin)
   final List<AppUser> _users = [
     AppUser(
@@ -508,11 +518,38 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
+  /// İdarəetmə icazəsi verildikdə ona uyğun baxış icazəsini də qəbul edir.
+  /// Məsələn, yalnız "manage_inventory" seçilmiş rolda inventar modulu
+  /// görünməlidir; əks halda istifadəçi idarəetmə icazəsi olsa da modulu
+  /// tapa bilmir.
+  static const Map<String, List<String>> _permissionImplications = {
+    'view_students': ['add_students', 'edit_students', 'delete_students'],
+    'view_classes': ['manage_classes', 'assign_teachers'],
+    'view_timetable': ['manage_timetable'],
+    'view_grades': ['add_grades', 'edit_grades', 'delete_grades'],
+    'view_attendance': ['add_attendance', 'edit_attendance', 'delete_attendance'],
+    'view_medical': ['manage_medical'],
+    'view_library': ['manage_library'],
+    'view_cafeteria': ['manage_cafeteria'],
+    'view_inventory': ['manage_inventory'],
+    'view_tickets': ['manage_tickets', 'view_all_tickets'],
+    'view_settings': ['manage_settings'],
+    'view_roles': ['manage_roles'],
+    'view_users': ['add_users', 'edit_users', 'delete_users'],
+  };
+
+  bool _roleGrants(Role role, String permissionId) {
+    if (role.permissionIds.contains(permissionId)) return true;
+    final alternatives = _permissionImplications[permissionId];
+    return alternatives?.any(role.permissionIds.contains) ?? false;
+  }
+
   /// Səlahiyyət yoxlaması.
   /// assignedRoleId olan istifadəçi YALNIZ rolunun icazə verdiyi
   /// səlahiyyətlərə çatır (UserRole.admin olan işçilər də daxil —
   /// IT/Helpdesk kimi rollar məhz belə yaradılır). Rol təyin olunmayan
-  /// istifadəçilər öz rollarının standart modullarına giriş əldə edirlər.
+  /// şagird/müəllim/valideynlər öz standart modullarına giriş əldə edir;
+  /// yalnız baş inzibatçı hesabı bütün idarəetmə modullarını görür.
   bool hasPermission(String permissionId) {
     final user = _currentUser;
     if (user == null) return false;
@@ -561,10 +598,12 @@ class AppState extends ChangeNotifier {
     final roleId = user.assignedRoleId;
     final hasAssignedRole = roleId != null && roleId.isNotEmpty;
 
-    // Yalnız rol təyin olunMAYAN admin tam səlahiyyətlidir. Xüsusi rolla
-    // yaradılmış işçilər (IT, Helpdesk, Kitabxanaçı...) UserRole.admin
-    // olsalar belə yalnız rollarının icazə etdiyi modulları görür.
-    if (user.role == UserRole.admin && !hasAssignedRole) return true;
+    // Yalnız quraşdırma ilə gələn baş inzibatçı tam səlahiyyətlidir.
+    // Rol təyin olunmayan digər admin/işçi hesabları avtomatik olaraq
+    // bütün modullara giriş almamalıdır (fail-closed).
+    if (user.role == UserRole.admin && !hasAssignedRole) {
+      return isPrimaryAdmin;
+    }
 
     if (hasAssignedRole) {
       final role = getRoleById(roleId);
@@ -575,33 +614,33 @@ class AppState extends ChangeNotifier {
       // Teacher navigation ID mapping to Permission IDs
       if (user.role == UserRole.teacher) {
         if (permissionId == 'teacher_students') {
-          return role.permissionIds.contains('view_students');
+          return _roleGrants(role, 'view_students');
         }
         if (permissionId == 'teacher_timetable') {
-          return role.permissionIds.contains('view_timetable');
+          return _roleGrants(role, 'view_timetable');
         }
         if (permissionId == 'teacher_grading') {
-          return role.permissionIds.contains('view_grades');
+          return _roleGrants(role, 'view_grades');
         }
         if (permissionId == 'teacher_inventory') {
-          return role.permissionIds.contains('view_inventory');
+          return _roleGrants(role, 'view_inventory');
         }
         if (permissionId == 'teacher_medical') {
-          return role.permissionIds.contains('manage_medical') ||
-              role.permissionIds.contains('view_medical');
+          return _roleGrants(role, 'manage_medical') ||
+              _roleGrants(role, 'view_medical');
         }
         if (permissionId == 'teacher_library') {
-          return role.permissionIds.contains('view_library');
+          return _roleGrants(role, 'view_library');
         }
         if (permissionId == 'teacher_notifications') {
-          return role.permissionIds.contains('view_settings');
+          return _roleGrants(role, 'view_settings');
         }
         if (permissionId == 'teacher_meet') {
-          return role.permissionIds.contains('view_meet');
+          return _roleGrants(role, 'view_meet');
         }
       }
 
-      return role.permissionIds.contains(permissionId);
+      return _roleGrants(role, permissionId);
     }
 
     // Rol təyin olunmayan istifadəçilər — standart modullar.
@@ -741,8 +780,15 @@ class AppState extends ChangeNotifier {
       final cloudUsers = await _firestoreService.fetchUsers();
       if (cloudUsers.isNotEmpty) {
         for (final u in cloudUsers) {
-          if (!_users.any((x) => x.id == u.id)) {
+          final index = _users.indexWhere((x) => x.id == u.id);
+          if (index == -1) {
             _users.add(u);
+          } else {
+            // Buluddakı rol təyinatı lokal köhnə kopyadan üstün olmalıdır.
+            _users[index] = u;
+            if (_currentUser?.id == u.id) {
+              _currentUser = u;
+            }
           }
         }
       }
@@ -972,13 +1018,10 @@ class AppState extends ChangeNotifier {
       unawaited(_firestoreService.saveUser(migrated));
     }
 
-    // Səlahiyyət qapısı üçün rollar mütləq yüklənməlidir —
-    // manual loginda auto-login yolu işləmir, buradan yükləyirik.
-    // (login sync-dır; ensureDataReady artıq rolları gözləyir, bu
-    // yalnız təhlükəsiz ehtiyat yolu kimi arxa planda qalır.)
-    if (_roles.isEmpty) {
-      unawaited(loadRoles());
-    }
+    // Səlahiyyət qapısı üçün rollar mütləq yüklənməlidir. Hər girişdə
+    // yenilənir ki, admin rolu dəyişdikdən sonra köhnə icazələrlə
+    // davam edilməsin. (login sync-dır; UI loadRoles bitəndə yenilənir.)
+    unawaited(loadRoles());
 
     // 🆕 İstifadəçi seçimlərini yüklə (modul sıralaması üçün)
     loadUserPreferences();
@@ -1090,10 +1133,28 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- APP VERSION CONFIG (mağaza yeniləmə xəbərdarlığı) ---
+  /// Son versiya xəbərdarlığını `app_config/version` sənədinə yazır
+  Future<bool> saveAppVersionConfig({
+    required String latestVersion,
+    String? updateUrlIos,
+    String? updateUrlAndroid,
+  }) {
+    return _firestoreService.saveAppVersionConfig(
+      latestVersion: latestVersion,
+      updateUrlIos: updateUrlIos,
+      updateUrlAndroid: updateUrlAndroid,
+    );
+  }
+
+  /// `app_config/version` sənədini oxuyur (boşdursa → {})
+  Future<Map<String, dynamic>> fetchAppVersionConfig() {
+    return _firestoreService.fetchAppVersionConfig();
+  }
+
   // --- SMART CLASS MANAGEMENT & PROMOTION ---
   /// Yeni sinif yaradır — detallarla birlikdə Firestore-da saxlanır
-  void addNewClass(
-    String className, {
+  void addNewClass(    String className, {
     String? room,
     String? curatorTeacherId,
     String academicYear = '2025 - 2026',
