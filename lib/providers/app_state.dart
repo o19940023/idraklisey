@@ -5189,6 +5189,8 @@ class AppState extends ChangeNotifier {
 
   /// Valideynin uşaqlarının sinif adları — class_<sinif> push topic-ləri üçün.
   Set<String> _childClassesFor(AppUser user) {
+    // Valideynlər və eyni zamanda övladı olan işçilər (müəllim/admin)
+    // övlad siniflərinin elanlarına abunə olurlar.
     final ids = <String>{
       if (user.linkedStudentId != null && user.linkedStudentId!.isNotEmpty)
         user.linkedStudentId!,

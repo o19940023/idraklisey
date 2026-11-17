@@ -97,14 +97,6 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
   ];
   static const _commonAllergies = ['Qoz/Fıstıq', 'Laktoza', 'Qlüten', 'Sitrus', 'Toz'];
 
-  static const _commonAllergies = [
-    'Qoz/Fıstıq',
-    'Laktoza',
-    'Qlüten',
-    'Sitrus',
-    'Toz',
-  ];
-
   int _step = 0;
   bool _loading = true;
   bool _saving = false;

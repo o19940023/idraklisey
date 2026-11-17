@@ -87,17 +87,13 @@ class _AssignmentsTimelineScreenState extends State<AssignmentsTimelineScreen> {
 
   IconData _getSubjectIcon(String subject) {
     final s = subject.toLowerCase();
-    if (s.contains('riyaziyyat') ||
-        s.contains('cəbr') ||
-        s.contains('həndəsə')) {
+    if (s.contains('riyaziyyat') || s.contains('cəbr') || s.contains('həndəsə')) {
       return Icons.calculate_rounded;
     } else if (s.contains('fizika')) {
       return Icons.wb_twilight_rounded;
     } else if (s.contains('kimya')) {
       return Icons.biotech_rounded;
-    } else if (s.contains('biologiya') ||
-        s.contains('həyat bilgisi') ||
-        s.contains('təbiət')) {
+    } else if (s.contains('biologiya') || s.contains('həyat bilgisi') || s.contains('təbiət')) {
       return Icons.eco_rounded;
     } else if (s.contains('ingilis') || s.contains('rus') || s.contains('xarici dil') || s.contains('tədris dili')) {
       return Icons.translate_rounded;
