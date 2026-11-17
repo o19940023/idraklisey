@@ -31,6 +31,16 @@ class _TimetableMatrixScreenState extends State<TimetableMatrixScreen> {
 
   final List<String> _shortDays = ['B.E', 'Ç.A', 'Ç.', 'C.A', 'C.'];
 
+  final List<String> _dayNames = [
+    'Bazar ertəsi',
+    'Çərşənbə axşamı',
+    'Çərşənbə',
+    'Cümə axşamı',
+    'Cümə',
+  ];
+
+  final List<String> _shortDays = ['B.E', 'Ç.A', 'Ç.', 'C.A', 'C.'];
+
   @override
   void initState() {
     super.initState();

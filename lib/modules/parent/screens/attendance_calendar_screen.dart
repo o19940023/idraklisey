@@ -39,6 +39,21 @@ class _AttendanceCalendarScreenState extends State<AttendanceCalendarScreen> {
     'Dekabr',
   ];
 
+  final List<String> _monthNames = const [
+    'Yanvar',
+    'Fevral',
+    'Mart',
+    'Aprel',
+    'May',
+    'İyun',
+    'İyul',
+    'Avqust',
+    'Sentyabr',
+    'Oktyabr',
+    'Noyabr',
+    'Dekabr',
+  ];
+
   @override
   void initState() {
     super.initState();

@@ -104,6 +104,7 @@ class _CafeteriaMenuScreenState extends State<CafeteriaMenuScreen> {
                     ),
                   ),
                 ),
+                child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
               ),
             ],
           ),

@@ -3,6 +3,8 @@
 
 import '../../l10n/app_localizations.dart';
 
+import '../../l10n/app_localizations.dart';
+
 class ModuleItem {
   final String id;
   final String title;
