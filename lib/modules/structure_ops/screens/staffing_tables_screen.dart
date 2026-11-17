@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../../core/services/school_api_service.dart';
+import '../../../core/session/session_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/widgets/modern_card.dart';
@@ -222,6 +224,14 @@ class _StaffingTablesScreenState extends State<StaffingTablesScreen> {
     final totalVacant = _summary?['total_vacant'] ?? _allStaffUnits.fold<int>(0, (s, u) => s + (u['vacant_count'] as num? ?? 0).toInt());
     final occupancyRate = _summary?['occupancy_rate'] ?? (totalUnits > 0 ? ((totalOccupied / totalUnits) * 100).round() : 0);
 
+    final session = context.watch<SessionController>();
+    final isSuper = session.profile?.isSuper == true;
+    final canCreate = isSuper ||
+        session.can('gopanel.structure.staffing_tables.create') ||
+        session.can('gopanel.staffing_tables.store');
+    final canEdit = isSuper || session.can('gopanel.structure.staffing_tables.update');
+    final canDelete = isSuper || session.can('gopanel.structure.staffing_tables.delete');
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -244,22 +254,25 @@ class _StaffingTablesScreenState extends State<StaffingTablesScreen> {
             tooltip: 'Yenilə',
             onPressed: _loadAll,
           ),
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded, size: 26),
-            tooltip: 'Yeni Ştat Vahidi',
-            onPressed: () => _openFormSheet(),
-          ),
+          if (canCreate)
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline_rounded, size: 26),
+              tooltip: 'Yeni Ştat Vahidi',
+              onPressed: () => _openFormSheet(),
+            ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF203E70),
-        onPressed: () => _openFormSheet(),
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Yeni Ştat Vahidi',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
+      floatingActionButton: canCreate
+          ? FloatingActionButton.extended(
+              backgroundColor: const Color(0xFF203E70),
+              onPressed: () => _openFormSheet(),
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const Text(
+                'Yeni Ştat Vahidi',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: _loadAll,
         child: Column(
@@ -448,7 +461,7 @@ class _StaffingTablesScreenState extends State<StaffingTablesScreen> {
                           separatorBuilder: (context, index) => const SizedBox(height: 12),
                           itemBuilder: (ctx, index) {
                             final unit = _filteredStaffUnits[index];
-                            return _buildStaffUnitCard(unit, isDark);
+                            return _buildStaffUnitCard(unit, isDark, canEdit: canEdit, canDelete: canDelete);
                           },
                         ),
             ),
@@ -538,7 +551,7 @@ class _StaffingTablesScreenState extends State<StaffingTablesScreen> {
     );
   }
 
-  Widget _buildStaffUnitCard(Map<String, dynamic> unit, bool isDark) {
+  Widget _buildStaffUnitCard(Map<String, dynamic> unit, bool isDark, {required bool canEdit, required bool canDelete}) {
     final code = unit['code'] ?? '';
     final filial = unit['filial_name'] ?? '-';
     final structure = unit['structure_title'] ?? '-';
@@ -790,22 +803,24 @@ class _StaffingTablesScreenState extends State<StaffingTablesScreen> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
-                      tooltip: 'Düzəliş et',
-                      onPressed: () => _openFormSheet(item: unit),
-                    ),
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
-                      tooltip: 'Sil',
-                      onPressed: () => _confirmDelete(unit),
-                    ),
+                    if (canEdit)
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
+                        tooltip: 'Düzəliş et',
+                        onPressed: () => _openFormSheet(item: unit),
+                      ),
+                    if (canDelete)
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
+                        tooltip: 'Sil',
+                        onPressed: () => _confirmDelete(unit),
+                      ),
                   ],
                 ),
               ],

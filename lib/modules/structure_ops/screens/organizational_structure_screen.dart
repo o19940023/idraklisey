@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/services/school_api_service.dart';
+import '../../../core/session/session_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/widgets/modern_card.dart';
@@ -276,6 +278,13 @@ class _OrganizationalStructureScreenState extends State<OrganizationalStructureS
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final session = context.watch<SessionController>();
+    final isSuper = session.profile?.isSuper == true;
+    final canCreate = isSuper ||
+        session.can('gopanel.structure.structures.create') ||
+        session.can('gopanel.structure.structures.store');
+    final canEdit = isSuper || session.can('gopanel.structure.structures.update');
+    final canDelete = isSuper || session.can('gopanel.structure.structures.delete');
 
     return Scaffold(
       backgroundColor: AppColors.getBackground(context),
@@ -302,11 +311,12 @@ class _OrganizationalStructureScreenState extends State<OrganizationalStructureS
             tooltip: 'Yenilə',
             onPressed: _loadData,
           ),
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white),
-            tooltip: 'Yeni Struktur',
-            onPressed: () => _openStructureFormDialog(),
-          ),
+          if (canCreate)
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white),
+              tooltip: 'Yeni Struktur',
+              onPressed: () => _openStructureFormDialog(),
+            ),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -336,25 +346,27 @@ class _OrganizationalStructureScreenState extends State<OrganizationalStructureS
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildListView(isDark),
+                _buildListView(isDark, canEdit: canEdit, canDelete: canDelete),
                 _buildTreeView(isDark),
                 _buildOverviewView(isDark),
               ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppPalette.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Yeni Struktur', style: TextStyle(fontWeight: FontWeight.bold)),
-        onPressed: () => _openStructureFormDialog(),
-      ),
+      floatingActionButton: canCreate
+          ? FloatingActionButton.extended(
+              backgroundColor: AppPalette.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Yeni Struktur', style: TextStyle(fontWeight: FontWeight.bold)),
+              onPressed: () => _openStructureFormDialog(),
+            )
+          : null,
     );
   }
 
   // =================================================================
   // TAB 1: LIST VIEW (DATATABLE CARDS)
   // =================================================================
-  Widget _buildListView(bool isDark) {
+  Widget _buildListView(bool isDark, {required bool canEdit, required bool canDelete}) {
     return Column(
       children: [
         // Search & Filter header
@@ -469,6 +481,11 @@ class _OrganizationalStructureScreenState extends State<OrganizationalStructureS
   }
 
   Widget _buildStructureCard(Map<String, dynamic> item, bool isDark) {
+    final session = context.watch<SessionController>();
+    final isSuper = session.profile?.isSuper == true;
+    final canEdit = isSuper || session.can('gopanel.structure.structures.update');
+    final canDelete = isSuper || session.can('gopanel.structure.structures.delete');
+
     final title = item['title'] ?? 'Adsız Struktur';
     final code = item['code'] ?? '';
     final typeLabel = item['type_label'] ?? item['type_of_structure'] ?? 'Bölmə';
@@ -700,24 +717,26 @@ class _OrganizationalStructureScreenState extends State<OrganizationalStructureS
                       ),
 
                       // Edit Button
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.edit_outlined, size: 17, color: Colors.blue),
-                        tooltip: 'Düzəliş et',
-                        onPressed: () => _openStructureFormDialog(structure: item),
-                      ),
+                      if (canEdit)
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.edit_outlined, size: 17, color: Colors.blue),
+                          tooltip: 'Düzəliş et',
+                          onPressed: () => _openStructureFormDialog(structure: item),
+                        ),
 
                       // Delete Button
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.delete_outline_rounded, size: 17, color: Colors.red),
-                        tooltip: 'Sil',
-                        onPressed: () => _confirmDelete(item),
-                      ),
+                      if (canDelete)
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.delete_outline_rounded, size: 17, color: Colors.red),
+                          tooltip: 'Sil',
+                          onPressed: () => _confirmDelete(item),
+                        ),
                     ],
                   ),
                 ],

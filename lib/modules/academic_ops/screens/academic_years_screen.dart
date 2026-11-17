@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/services/school_api_service.dart';
+import '../../../core/session/session_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/widgets/modern_card.dart';
@@ -127,16 +129,23 @@ class _AcademicYearsScreenState extends State<AcademicYearsScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    final session = context.watch<SessionController>();
+    final isSuper = session.profile?.isSuper == true;
+    final canCreate = isSuper || session.can('gopanel.academic.foundations.years.create');
+    final canEdit = isSuper || session.can('gopanel.academic.foundations.years.update');
+    final canDelete = isSuper || session.can('gopanel.academic.foundations.years.delete');
 
     return Scaffold(
       backgroundColor: palette.bgBase,
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: palette.brandRoyal,
-        foregroundColor: Colors.white,
-        onPressed: () => _showForm(),
-        icon: const Icon(Icons.add_rounded, size: 19),
-        label: const Text('Tədris ili əlavə et', style: TextStyle(fontWeight: FontWeight.w800)),
-      ),
+      floatingActionButton: canCreate
+          ? FloatingActionButton.extended(
+              backgroundColor: palette.brandRoyal,
+              foregroundColor: Colors.white,
+              onPressed: () => _showForm(),
+              icon: const Icon(Icons.add_rounded, size: 19),
+              label: const Text('Tədris ili əlavə et', style: TextStyle(fontWeight: FontWeight.w800)),
+            )
+          : null,
       appBar: AppBar(
         backgroundColor: palette.brandNavy,
         foregroundColor: Colors.white,
@@ -164,7 +173,7 @@ class _AcademicYearsScreenState extends State<AcademicYearsScreen> {
                         return ModernCard(
                           margin: const EdgeInsets.symmetric(vertical: 6),
                           padding: const EdgeInsets.all(14),
-                          onTap: () => _showForm(year: y),
+                          onTap: canEdit ? () => _showForm(year: y) : null,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -184,12 +193,17 @@ class _AcademicYearsScreenState extends State<AcademicYearsScreen> {
                                 const SizedBox(width: 8),
                                 Text(admissionOpen ? 'Qəbul açıqdır' : 'Qəbul bağlıdır', style: TextStyle(color: palette.textTertiary, fontSize: 12)),
                               ]),
-                              const SizedBox(height: 10),
-                              Row(children: [
-                                Expanded(child: OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: palette.brandRoyal, padding: const EdgeInsets.symmetric(vertical: 9), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: () => _showForm(year: y), icon: const Icon(Icons.edit_rounded, size: 16), label: const Text('Düzəliş et', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
-                                const SizedBox(width: 8),
-                                Expanded(child: OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, padding: const EdgeInsets.symmetric(vertical: 9), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: () => _delete(y), icon: const Icon(Icons.delete_rounded, size: 16), label: const Text('Sil', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
-                              ]),
+                              if (canEdit || canDelete) ...[
+                                const SizedBox(height: 10),
+                                Row(children: [
+                                  if (canEdit)
+                                    Expanded(child: OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: palette.brandRoyal, padding: const EdgeInsets.symmetric(vertical: 9), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: () => _showForm(year: y), icon: const Icon(Icons.edit_rounded, size: 16), label: const Text('Düzəliş et', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
+                                  if (canEdit && canDelete)
+                                    const SizedBox(width: 8),
+                                  if (canDelete)
+                                    Expanded(child: OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, padding: const EdgeInsets.symmetric(vertical: 9), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: () => _delete(y), icon: const Icon(Icons.delete_rounded, size: 16), label: const Text('Sil', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
+                                ]),
+                              ],
                             ],
                           ),
                         );

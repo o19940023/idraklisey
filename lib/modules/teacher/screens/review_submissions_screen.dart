@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../../core/session/session_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../providers/app_state.dart';
@@ -22,6 +23,10 @@ class _ReviewSubmissionsScreenState extends State<ReviewSubmissionsScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final session = context.watch<SessionController>();
+    final isSuper = session.profile?.isSuper == true;
+    final isTeacher = appState.currentUser?.role == UserRole.teacher;
+    final canCreateAssignment = isSuper || isTeacher || session.can('gopanel.academic.ejournal.assignments.create');
     final allAssignments = appState.currentTeacherAssignments;
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
 
@@ -253,17 +258,19 @@ class _ReviewSubmissionsScreenState extends State<ReviewSubmissionsScreen> {
             ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CreateAssignmentScreen()),
-          );
-        },
-        backgroundColor: AppColors.primaryAccent,
-        icon: const Icon(Icons.add_task_rounded, color: Colors.white),
-        label: const Text('Yeni Tapşırıq Ver', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-      ),
+      floatingActionButton: canCreateAssignment
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CreateAssignmentScreen()),
+                );
+              },
+              backgroundColor: AppColors.primaryAccent,
+              icon: const Icon(Icons.add_task_rounded, color: Colors.white),
+              label: const Text('Yeni Tapşırıq Ver', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+            )
+          : null,
     );
   }
 

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/session/session_controller.dart';
 import '../../../core/services/school_api_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
@@ -314,7 +316,7 @@ class _StudentApplicationsScreenState extends State<StudentApplicationsScreen> {
     );
   }
 
-  Future<void> _showActions(Map<String, dynamic> a) async {
+  Future<void> _showActions(Map<String, dynamic> a, {required bool canEdit, required bool canDelete, required bool canContract}) async {
     final palette = AppPalette.of(context);
     final hasContract = a['hasContract'] == true;
     await showModalBottomSheet(
@@ -377,34 +379,43 @@ class _StudentApplicationsScreenState extends State<StudentApplicationsScreen> {
                     Navigator.pop(ctx);
                     _showDetail(a);
                   }),
-                  _actionTile(ctx, 'İmtahan: ${_stageLabel('exam', a['examStatus'])}', Icons.school_rounded, _stageColor(a['examStatus']), () {
-                    Navigator.pop(ctx);
-                    _updateStage(a, 'exam');
-                  }),
-                  _actionTile(ctx, 'Psixoloq: ${_stageLabel('psychology', a['psychologyStatus'])}', Icons.psychology_rounded, _stageColor(a['psychologyStatus']), () {
-                    Navigator.pop(ctx);
-                    _updateStage(a, 'psychology');
-                  }),
-                  _actionTile(ctx, 'Tibb: ${_stageLabel('medical', a['medicalStatus'])}', Icons.medical_services_rounded, _stageColor(a['medicalStatus']), () {
-                    Navigator.pop(ctx);
-                    _updateStage(a, 'medical');
-                  }),
-                  _actionTile(ctx, hasContract ? 'Müqaviləyə bax' : 'Müqavilə yarat', Icons.receipt_long_rounded, AppColors.emerald, () {
-                    Navigator.pop(ctx);
-                    _createContract(a);
-                  }),
-                  _actionTile(ctx, 'İmtina et', Icons.block_rounded, AppColors.danger, () {
-                    Navigator.pop(ctx);
-                    _reject(a);
-                  }),
-                  _actionTile(ctx, 'Düzəliş et', Icons.edit_rounded, palette.brandAzure, () {
-                    Navigator.pop(ctx);
-                    _editStudent(a);
-                  }),
-                  _actionTile(ctx, 'Sil', Icons.delete_rounded, AppColors.danger, () {
-                    Navigator.pop(ctx);
-                    _deleteStudent(a);
-                  }),
+                  if (canEdit) ...[
+                    _actionTile(ctx, 'İmtahan: ${_stageLabel('exam', a['examStatus'])}', Icons.school_rounded, _stageColor(a['examStatus']), () {
+                      Navigator.pop(ctx);
+                      _updateStage(a, 'exam');
+                    }),
+                    _actionTile(ctx, 'Psixoloq: ${_stageLabel('psychology', a['psychologyStatus'])}', Icons.psychology_rounded, _stageColor(a['psychologyStatus']), () {
+                      Navigator.pop(ctx);
+                      _updateStage(a, 'psychology');
+                    }),
+                    _actionTile(ctx, 'Tibb: ${_stageLabel('medical', a['medicalStatus'])}', Icons.medical_services_rounded, _stageColor(a['medicalStatus']), () {
+                      Navigator.pop(ctx);
+                      _updateStage(a, 'medical');
+                    }),
+                  ],
+                  if (canContract || hasContract)
+                    _actionTile(ctx, hasContract ? 'Müqaviləyə bax' : 'Müqavilə yarat', Icons.receipt_long_rounded, AppColors.emerald, () {
+                      Navigator.pop(ctx);
+                      _createContract(a);
+                    }),
+                  if (canDelete) ...[
+                    _actionTile(ctx, 'İmtina et', Icons.block_rounded, AppColors.danger, () {
+                      Navigator.pop(ctx);
+                      _reject(a);
+                    }),
+                  ],
+                  if (canEdit) ...[
+                    _actionTile(ctx, 'Düzəliş et', Icons.edit_rounded, palette.brandAzure, () {
+                      Navigator.pop(ctx);
+                      _editStudent(a);
+                    }),
+                  ],
+                  if (canDelete) ...[
+                    _actionTile(ctx, 'Sil', Icons.delete_rounded, AppColors.danger, () {
+                      Navigator.pop(ctx);
+                      _deleteStudent(a);
+                    }),
+                  ],
                 ],
               ),
             ],
@@ -611,6 +622,12 @@ class _StudentApplicationsScreenState extends State<StudentApplicationsScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    final session = context.watch<SessionController>();
+    final isSuper = session.profile?.isSuper == true;
+    final canCreate = isSuper || session.can('gopanel.exams.student_first_time_applications.create') || session.can('gopanel.academic.students.create') || session.can('gopanel.academic.students.admissions');
+    final canEdit = isSuper || session.can('gopanel.exams.student_first_time_applications.update') || session.can('gopanel.academic.students.update');
+    final canDelete = isSuper || session.can('gopanel.exams.student_first_time_applications.delete') || session.can('gopanel.academic.students.delete');
+    final canContract = isSuper || session.can('gopanel.finance.student_contracts.create') || session.can('gopanel.finance.student_contracts.view');
     final items = _filtered;
 
     return Scaffold(
@@ -624,14 +641,16 @@ class _StudentApplicationsScreenState extends State<StudentApplicationsScreen> {
           IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _loadData, tooltip: 'Yenilə'),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: palette.brandRoyal,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        onPressed: _openAddForm,
-        icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
-        label: const Text('Əlavə et', style: TextStyle(fontWeight: FontWeight.w800)),
-      ),
+      floatingActionButton: canCreate
+          ? FloatingActionButton.extended(
+              backgroundColor: palette.brandRoyal,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              onPressed: _openAddForm,
+              icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+              label: const Text('Əlavə et', style: TextStyle(fontWeight: FontWeight.w800)),
+            )
+          : null,
       body: Column(
         children: [
           // Header Tab Filters Bar (Clean solid styling with NO invisible white bugs)
@@ -801,7 +820,13 @@ class _StudentApplicationsScreenState extends State<StudentApplicationsScreen> {
                             separatorBuilder: (_, _) => const SizedBox(height: 10),
                             itemBuilder: (context, i) {
                               final a = items[i];
-                              return _buildStudentCard(a, palette);
+                              return _buildStudentCard(
+                                a,
+                                palette,
+                                canEdit: canEdit,
+                                canDelete: canDelete,
+                                canContract: canContract,
+                              );
                             },
                           ),
                   ),
@@ -811,7 +836,13 @@ class _StudentApplicationsScreenState extends State<StudentApplicationsScreen> {
     );
   }
 
-  Widget _buildStudentCard(Map<String, dynamic> a, AppPalette palette) {
+  Widget _buildStudentCard(
+    Map<String, dynamic> a,
+    AppPalette palette, {
+    required bool canEdit,
+    required bool canDelete,
+    required bool canContract,
+  }) {
     final hasContract = a['hasContract'] == true;
     final parent = (a['parents'] as List?)?.firstOrNull as Map?;
     final studentName = a['name']?.toString() ?? 'Şagird';
@@ -960,26 +991,27 @@ class _StudentApplicationsScreenState extends State<StudentApplicationsScreen> {
           // Action Buttons: Contract + Details
           Row(
             children: [
-              Expanded(
-                flex: 3,
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: hasContract ? palette.brandNavy : palette.brandRoyal,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: () => _createContract(a),
-                  icon: Icon(
-                    hasContract ? Icons.receipt_long_rounded : Icons.post_add_rounded,
-                    size: 17,
-                  ),
-                  label: Text(
-                    hasContract ? 'Müqaviləyə bax' : 'Müqavilə yarat',
-                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900),
+              if (hasContract || canContract)
+                Expanded(
+                  flex: 3,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: hasContract ? palette.brandNavy : palette.brandRoyal,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => _createContract(a),
+                    icon: Icon(
+                      hasContract ? Icons.receipt_long_rounded : Icons.post_add_rounded,
+                      size: 17,
+                    ),
+                    label: Text(
+                      hasContract ? 'Müqaviləyə bax' : 'Müqavilə yarat',
+                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
+              if (hasContract || canContract) const SizedBox(width: 8),
               Expanded(
                 flex: 2,
                 child: OutlinedButton.icon(
@@ -989,7 +1021,7 @@ class _StudentApplicationsScreenState extends State<StudentApplicationsScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  onPressed: () => _showActions(a),
+                  onPressed: () => _showActions(a, canEdit: canEdit, canDelete: canDelete, canContract: canContract),
                   icon: const Icon(Icons.more_horiz_rounded, size: 17),
                   label: const Text('Ətraflı', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800)),
                 ),

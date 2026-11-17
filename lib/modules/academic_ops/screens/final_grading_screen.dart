@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/session/session_controller.dart';
 import '../../../core/services/school_api_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
@@ -200,17 +202,22 @@ class _FinalGradingScreenState extends State<FinalGradingScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    final session = context.watch<SessionController>();
+    final isSuper = session.profile?.isSuper == true;
+    final canManage = isSuper || session.can('gopanel.academic.ejournal.grading.final') || session.can('gopanel.academic.ejournal.grading.update');
     final items = _filtered;
 
     return Scaffold(
       backgroundColor: palette.bgBase,
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: palette.brandRoyal,
-        foregroundColor: Colors.white,
-        onPressed: () => _showForm(),
-        icon: const Icon(Icons.add_rounded, size: 19),
-        label: const Text('Qiymət əlavə et', style: TextStyle(fontWeight: FontWeight.w800)),
-      ),
+      floatingActionButton: canManage
+          ? FloatingActionButton.extended(
+              backgroundColor: palette.brandRoyal,
+              foregroundColor: Colors.white,
+              onPressed: () => _showForm(),
+              icon: const Icon(Icons.add_rounded, size: 19),
+              label: const Text('Qiymət əlavə et', style: TextStyle(fontWeight: FontWeight.w800)),
+            )
+          : null,
       appBar: AppBar(
         backgroundColor: palette.brandNavy,
         foregroundColor: Colors.white,
@@ -254,7 +261,7 @@ class _FinalGradingScreenState extends State<FinalGradingScreen> {
                       for (final g in items) ...[
                         ModernCard(
                           padding: const EdgeInsets.all(14),
-                          onTap: () => _showForm(grade: g),
+                          onTap: canManage ? () => _showForm(grade: g) : null,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -270,12 +277,14 @@ class _FinalGradingScreenState extends State<FinalGradingScreen> {
                               Text('${g['className']} • ${g['subjectName']}', style: TextStyle(fontSize: 12, color: palette.textSecondary)),
                               const SizedBox(height: 4),
                               Text('Növ: ${g['type']} • Tarix: ${g['date']}', style: TextStyle(fontSize: 11, color: palette.textTertiary)),
-                              const SizedBox(height: 10),
-                              Row(children: [
-                                Expanded(child: OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: palette.brandRoyal, padding: const EdgeInsets.symmetric(vertical: 9), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: () => _showForm(grade: g), icon: const Icon(Icons.edit_rounded, size: 16), label: const Text('Düzəliş et', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
-                                const SizedBox(width: 8),
-                                Expanded(child: OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, padding: const EdgeInsets.symmetric(vertical: 9), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: () => _delete(g), icon: const Icon(Icons.delete_rounded, size: 16), label: const Text('Sil', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
-                              ]),
+                              if (canManage) ...[
+                                const SizedBox(height: 10),
+                                Row(children: [
+                                  Expanded(child: OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: palette.brandRoyal, padding: const EdgeInsets.symmetric(vertical: 9), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: () => _showForm(grade: g), icon: const Icon(Icons.edit_rounded, size: 16), label: const Text('Düzəliş et', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, padding: const EdgeInsets.symmetric(vertical: 9), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: () => _delete(g), icon: const Icon(Icons.delete_rounded, size: 16), label: const Text('Sil', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
+                                ]),
+                              ],
                             ],
                           ),
                         ),

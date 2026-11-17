@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/session/session_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/app_state.dart';
 import '../../../data/models/timetable_model.dart';
@@ -47,27 +48,36 @@ class _ManageTimetableScreenState extends State<ManageTimetableScreen> {
     );
 
     final isMyClaimedClass = appState.currentTeacherClasses.contains(_selectedClass);
+    final session = context.watch<SessionController>();
+    final isSuper = session.profile?.isSuper == true;
+    final isTeacher = appState.currentUser?.role == UserRole.teacher;
+    final canManageSchedule = isSuper || isTeacher || session.can('gopanel.academic.schedules.manage');
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(        backgroundColor: AppColors.primary,
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text('Dərs Cədvəli İdarəsi & Siniflər', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add_business_rounded),
-            tooltip: 'Sinif Sahiplən',
-            onPressed: () => _showClaimClassDialog(context, appState),
-          ),
-        ],),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddLessonDialog(context, appState),
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: const Text('Dərs Əlavə Et', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          if (canManageSchedule)
+            IconButton(
+              icon: const Icon(Icons.add_business_rounded),
+              tooltip: 'Sinif Sahiplən',
+              onPressed: () => _showClaimClassDialog(context, appState),
+            ),
+        ],
       ),
+      floatingActionButton: canManageSchedule
+          ? FloatingActionButton.extended(
+              onPressed: () => _showAddLessonDialog(context, appState),
+              backgroundColor: AppColors.primary,
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: const Text('Dərs Əlavə Et', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            )
+          : null,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

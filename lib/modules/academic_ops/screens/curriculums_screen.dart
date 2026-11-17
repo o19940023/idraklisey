@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/session/session_controller.dart';
 import '../../../core/services/school_api_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
@@ -166,17 +168,24 @@ class _CurriculumsScreenState extends State<CurriculumsScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    final session = context.watch<SessionController>();
+    final isSuper = session.profile?.isSuper == true;
+    final canCreate = isSuper || session.can('gopanel.academic.ejournal.curriculums.create') || session.can('gopanel.academic.operations.curriculums.create');
+    final canEdit = isSuper || session.can('gopanel.academic.ejournal.curriculums.update') || session.can('gopanel.academic.operations.curriculums.update');
+    final canDelete = isSuper || session.can('gopanel.academic.ejournal.curriculums.delete') || session.can('gopanel.academic.operations.curriculums.delete');
     final items = _filtered;
 
     return Scaffold(
       backgroundColor: palette.bgBase,
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: palette.brandRoyal,
-        foregroundColor: Colors.white,
-        onPressed: () => _showForm(),
-        icon: const Icon(Icons.add_rounded, size: 19),
-        label: const Text('Kurikulum əlavə et', style: TextStyle(fontWeight: FontWeight.w800)),
-      ),
+      floatingActionButton: canCreate
+          ? FloatingActionButton.extended(
+              backgroundColor: palette.brandRoyal,
+              foregroundColor: Colors.white,
+              onPressed: () => _showForm(),
+              icon: const Icon(Icons.add_rounded, size: 19),
+              label: const Text('Kurikulum əlavə et', style: TextStyle(fontWeight: FontWeight.w800)),
+            )
+          : null,
       appBar: AppBar(
         backgroundColor: palette.brandNavy,
         foregroundColor: Colors.white,
@@ -212,7 +221,7 @@ class _CurriculumsScreenState extends State<CurriculumsScreen> {
                       for (final c in items) ...[
                         ModernCard(
                           padding: const EdgeInsets.all(14),
-                          onTap: () => _showForm(curriculum: c),
+                          onTap: canEdit ? () => _showForm(curriculum: c) : null,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -224,12 +233,17 @@ class _CurriculumsScreenState extends State<CurriculumsScreen> {
                               Text('${c['className']} • ${c['program'] ?? ''}', style: TextStyle(fontSize: 12, color: palette.textSecondary)),
                               const SizedBox(height: 4),
                               Text('Mövzular: ${c['topicsCount']} • Ümumi saat: ${c['totalHours']}', style: TextStyle(fontSize: 11.5, color: palette.textTertiary)),
-                              const SizedBox(height: 10),
-                              Row(children: [
-                                Expanded(child: OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: palette.brandRoyal, padding: const EdgeInsets.symmetric(vertical: 9), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: () => _showForm(curriculum: c), icon: const Icon(Icons.edit_rounded, size: 16), label: const Text('Düzəliş et', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
-                                const SizedBox(width: 8),
-                                Expanded(child: OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, padding: const EdgeInsets.symmetric(vertical: 9), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: () => _delete(c), icon: const Icon(Icons.delete_rounded, size: 16), label: const Text('Sil', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
-                              ]),
+                              if (canEdit || canDelete) ...[
+                                const SizedBox(height: 10),
+                                Row(children: [
+                                  if (canEdit)
+                                    Expanded(child: OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: palette.brandRoyal, padding: const EdgeInsets.symmetric(vertical: 9), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: () => _showForm(curriculum: c), icon: const Icon(Icons.edit_rounded, size: 16), label: const Text('Düzəliş et', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
+                                  if (canEdit && canDelete)
+                                    const SizedBox(width: 8),
+                                  if (canDelete)
+                                    Expanded(child: OutlinedButton.icon(style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, padding: const EdgeInsets.symmetric(vertical: 9), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))), onPressed: () => _delete(c), icon: const Icon(Icons.delete_rounded, size: 16), label: const Text('Sil', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
+                                ]),
+                              ],
                             ],
                           ),
                         ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../../core/services/school_api_service.dart';
+import '../../../core/session/session_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/widgets/modern_card.dart';
@@ -243,6 +245,12 @@ class _PositionsScreenState extends State<PositionsScreen> {
     final servantsCount = _allPositions.where((p) => (p['worker_type'] ?? '') == 'SERVANT').length;
     final workersCount = _allPositions.where((p) => (p['worker_type'] ?? '') == 'WORKER').length;
 
+    final session = context.watch<SessionController>();
+    final isSuper = session.profile?.isSuper == true;
+    final canCreate = isSuper || session.can('gopanel.structure.positions.create');
+    final canEdit = isSuper || session.can('gopanel.structure.positions.update');
+    final canDelete = isSuper || session.can('gopanel.structure.positions.delete');
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -265,22 +273,25 @@ class _PositionsScreenState extends State<PositionsScreen> {
             tooltip: 'Yenilə',
             onPressed: _loadPositions,
           ),
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded, size: 26),
-            tooltip: 'Yeni Vəzifə',
-            onPressed: () => _openPositionForm(),
-          ),
+          if (canCreate)
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline_rounded, size: 26),
+              tooltip: 'Yeni Vəzifə',
+              onPressed: () => _openPositionForm(),
+            ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF203E70),
-        onPressed: () => _openPositionForm(),
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Yeni Vəzifə',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
+      floatingActionButton: canCreate
+          ? FloatingActionButton.extended(
+              backgroundColor: const Color(0xFF203E70),
+              onPressed: () => _openPositionForm(),
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const Text(
+                'Yeni Vəzifə',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: _loadPositions,
         child: Column(
@@ -431,7 +442,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
                           separatorBuilder: (context, index) => const SizedBox(height: 12),
                           itemBuilder: (ctx, index) {
                             final pos = _filteredPositions[index];
-                            return _buildPositionCard(pos, isDark);
+                            return _buildPositionCard(pos, isDark, canEdit: canEdit, canDelete: canDelete);
                           },
                         ),
             ),
@@ -521,7 +532,7 @@ class _PositionsScreenState extends State<PositionsScreen> {
     );
   }
 
-  Widget _buildPositionCard(Map<String, dynamic> pos, bool isDark) {
+  Widget _buildPositionCard(Map<String, dynamic> pos, bool isDark, {required bool canEdit, required bool canDelete}) {
     final title = pos['title'] ?? '-';
     final code = pos['code'] ?? '';
     final desc = pos['description'] ?? '';
@@ -761,22 +772,24 @@ class _PositionsScreenState extends State<PositionsScreen> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
-                      tooltip: 'Düzəliş et',
-                      onPressed: () => _openPositionForm(position: pos),
-                    ),
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
-                      tooltip: 'Sil',
-                      onPressed: () => _confirmDelete(pos),
-                    ),
+                    if (canEdit)
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.blue),
+                        tooltip: 'Düzəliş et',
+                        onPressed: () => _openPositionForm(position: pos),
+                      ),
+                    if (canDelete)
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
+                        tooltip: 'Sil',
+                        onPressed: () => _confirmDelete(pos),
+                      ),
                   ],
                 ),
               ],

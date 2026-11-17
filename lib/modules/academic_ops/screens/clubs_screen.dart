@@ -101,6 +101,30 @@ class _ClubsScreenState extends State<ClubsScreen>
 
   bool get _isStaff => !_isStudent && !_isParent;
 
+  bool get _canCreateClub {
+    final session = context.read<SessionController>();
+    if (session.profile?.isSuper == true) return true;
+    return session.can('gopanel.academic.clubs.create');
+  }
+
+  bool get _canEditClub {
+    final session = context.read<SessionController>();
+    if (session.profile?.isSuper == true) return true;
+    return session.can('gopanel.academic.clubs.update');
+  }
+
+  bool get _canDeleteClub {
+    final session = context.read<SessionController>();
+    if (session.profile?.isSuper == true) return true;
+    return session.can('gopanel.academic.clubs.delete');
+  }
+
+  bool get _canEnrollClub {
+    final session = context.read<SessionController>();
+    if (session.profile?.isSuper == true) return true;
+    return session.can('gopanel.academic.clubs.enroll');
+  }
+
   Future<void> _load({String? overrideStudentId}) async {
     if (!mounted) return;
     setState(() => _isLoading = true);
@@ -1362,31 +1386,34 @@ class _ClubsScreenState extends State<ClubsScreen>
                         icon: const Icon(Icons.calendar_month_rounded, size: 17),
                         label: const Text('Cədvəl'),
                       ),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _openEnrollStudentModal(club);
-                        },
-                        icon: const Icon(Icons.person_add_alt_1_rounded, size: 17),
-                        label: const Text('Şagird əlavə et'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _openEditClubModal(club);
-                        },
-                        icon: const Icon(Icons.edit_rounded, size: 17),
-                        label: const Text('Düzəliş et'),
-                      ),
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _deleteClub(club);
-                        },
-                        icon: const Icon(Icons.delete_outline_rounded, size: 17),
-                        label: const Text('Sil'),
-                      ),
+                      if (_canEnrollClub)
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _openEnrollStudentModal(club);
+                          },
+                          icon: const Icon(Icons.person_add_alt_1_rounded, size: 17),
+                          label: const Text('Şagird əlavə et'),
+                        ),
+                      if (_canEditClub)
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _openEditClubModal(club);
+                          },
+                          icon: const Icon(Icons.edit_rounded, size: 17),
+                          label: const Text('Düzəliş et'),
+                        ),
+                      if (_canDeleteClub)
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _deleteClub(club);
+                          },
+                          icon: const Icon(Icons.delete_outline_rounded, size: 17),
+                          label: const Text('Sil'),
+                        ),
                     ],
                   ),
                 ],
@@ -2121,32 +2148,37 @@ class _ClubsScreenState extends State<ClubsScreen>
                         ),
                       ),
                       const SizedBox(width: 6),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      if (_canEnrollClub) ...[
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            onPressed: () => _openEnrollStudentModal(club),
+                            icon: const Icon(Icons.person_add_alt_1_rounded, size: 15),
+                            label: const Text('Şagird +', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                           ),
-                          onPressed: () => _openEnrollStudentModal(club),
-                          icon: const Icon(Icons.person_add_alt_1_rounded, size: 15),
-                          label: const Text('Şagird +', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      IconButton.outlined(
-                        visualDensity: VisualDensity.compact,
-                        tooltip: 'Düzəliş et',
-                        onPressed: () => _openEditClubModal(club),
-                        icon: const Icon(Icons.edit_rounded, size: 16),
-                      ),
-                      const SizedBox(width: 4),
-                      IconButton.outlined(
-                        visualDensity: VisualDensity.compact,
-                        tooltip: 'Sil',
-                        style: IconButton.styleFrom(foregroundColor: AppColors.danger),
-                        onPressed: () => _deleteClub(club),
-                        icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                      ),
+                        const SizedBox(width: 6),
+                      ],
+                      if (_canEditClub) ...[
+                        IconButton.outlined(
+                          visualDensity: VisualDensity.compact,
+                          tooltip: 'Düzəliş et',
+                          onPressed: () => _openEditClubModal(club),
+                          icon: const Icon(Icons.edit_rounded, size: 16),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      if (_canDeleteClub)
+                        IconButton.outlined(
+                          visualDensity: VisualDensity.compact,
+                          tooltip: 'Sil',
+                          style: IconButton.styleFrom(foregroundColor: AppColors.danger),
+                          onPressed: () => _deleteClub(club),
+                          icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                        ),
                     ],
                   )
                 else if (myStatus == 'active')
@@ -2581,7 +2613,7 @@ class _ClubsScreenState extends State<ClubsScreen>
 
     return Scaffold(
       backgroundColor: palette.bgBase,
-      floatingActionButton: _isStaff && _staffTabIndex == 0
+      floatingActionButton: _isStaff && _canCreateClub && _staffTabIndex == 0
           ? FloatingActionButton.extended(
               backgroundColor: palette.brandRoyal,
               foregroundColor: Colors.white,

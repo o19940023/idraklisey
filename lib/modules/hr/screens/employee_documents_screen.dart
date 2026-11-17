@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/session/session_controller.dart';
 import '../../../core/services/school_api_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_palette.dart';
@@ -544,6 +546,11 @@ class _EmployeeDocumentsScreenState extends State<EmployeeDocumentsScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
+    final session = context.watch<SessionController>();
+    final isSuper = session.profile?.isSuper == true;
+    final canCreate = isSuper || session.can('gopanel.hr.documents.create');
+    final canDelete = isSuper || session.can('gopanel.hr.documents.delete');
+
     final documents = _filteredDocuments;
     final isSingleEmployee = widget.employeeId != null && widget.employeeId!.isNotEmpty;
     final titleText = isSingleEmployee ? '${widget.employeeName ?? 'Əməkdaş'} — Sənədlər' : 'Əməkdaş Sənədləri';
@@ -567,21 +574,24 @@ class _EmployeeDocumentsScreenState extends State<EmployeeDocumentsScreen> {
             onPressed: _loadDocuments,
             icon: const Icon(Icons.sync_rounded),
           ),
-          IconButton(
-            tooltip: 'Yeni Sənəd',
-            onPressed: _openCreateDocumentModal,
-            icon: const Icon(Icons.add_circle_outline_rounded),
-          ),
+          if (canCreate)
+            IconButton(
+              tooltip: 'Yeni Sənəd',
+              onPressed: _openCreateDocumentModal,
+              icon: const Icon(Icons.add_circle_outline_rounded),
+            ),
         ],
         elevation: 0,
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: palette.brandRoyal,
-        foregroundColor: Colors.white,
-        onPressed: _openCreateDocumentModal,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Yeni Sənəd', style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
+      floatingActionButton: canCreate
+          ? FloatingActionButton.extended(
+              backgroundColor: palette.brandRoyal,
+              foregroundColor: Colors.white,
+              onPressed: _openCreateDocumentModal,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Yeni Sənəd', style: TextStyle(fontWeight: FontWeight.bold)),
+            )
+          : null,
       body: ResponsiveCenter(
         child: Column(
           children: [
@@ -912,28 +922,30 @@ class _EmployeeDocumentsScreenState extends State<EmployeeDocumentsScreen> {
                                         ),
                                       ),
 
-                                      const SizedBox(width: 6),
+                                      if (canDelete) ...[
+                                        const SizedBox(width: 6),
 
-                                      // Sil Düyməsi
-                                      InkWell(
-                                        onTap: () => _confirmDeleteDocument(doc),
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.danger.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.delete_outline_rounded, size: 14, color: AppColors.danger),
-                                              SizedBox(width: 4),
-                                              Text('Sil', style: TextStyle(color: AppColors.danger, fontSize: 11.5, fontWeight: FontWeight.bold)),
-                                            ],
+                                        // Sil Düyməsi
+                                        InkWell(
+                                          onTap: () => _confirmDeleteDocument(doc),
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.danger.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.delete_outline_rounded, size: 14, color: AppColors.danger),
+                                                SizedBox(width: 4),
+                                                Text('Sil', style: TextStyle(color: AppColors.danger, fontSize: 11.5, fontWeight: FontWeight.bold)),
+                                              ],
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                      ],
                                     ],
                                   ),
                                 ],
