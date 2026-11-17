@@ -235,9 +235,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         loc: loc,
                       ),
                     ),
-                    if (appState.hasPermission('add_users')) ...[
+                    if (appState.isSuperAdmin ||
+                        appState.hasPermission('gopanel.hr.employees.create') ||
+                        appState.hasPermission('add_employees') ||
+                        appState.hasPermission('gopanel.academic.students.create') ||
+                        appState.hasPermission('add_students') ||
+                        appState.hasPermission('gopanel.notifications.create') ||
+                        appState.hasPermission('notifications')) ...[
                       const SizedBox(height: 12),
-                      _entrance(context, 1, _buildQuickActions(context)),
+                      _entrance(context, 1, _buildQuickActions(context, appState)),
                     ],
                     const SizedBox(height: 18),
                     _entrance(
@@ -953,12 +959,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
+  Widget _buildQuickActions(BuildContext context, AppState appState) {
     final palette = AppPalette.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final isSuper = appState.isSuperAdmin;
 
-    final actions = <(String, IconData, Color, VoidCallback)>[
-      (
+    final actions = <(String, IconData, Color, VoidCallback)>[];
+
+    if (isSuper ||
+        appState.hasPermission('gopanel.hr.employees.create') ||
+        appState.hasPermission('add_employees')) {
+      actions.add((
         'Yeni əməkdaş',
         Icons.person_add_alt_1_rounded,
         palette.brandRoyal,
@@ -966,8 +977,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           context,
           appRoute(builder: (_) => const EmployeeStoreScreen()),
         ),
-      ),
-      (
+      ));
+    }
+
+    if (isSuper ||
+        appState.hasPermission('gopanel.academic.students.create') ||
+        appState.hasPermission('add_students')) {
+      actions.add((
         'Şagird qeydi',
         Icons.school_rounded,
         palette.brandAzure,
@@ -975,8 +991,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           context,
           appRoute(builder: (_) => const StudentRegistrationScreen()),
         ),
-      ),
-      (
+      ));
+    }
+
+    if (isSuper ||
+        appState.hasPermission('gopanel.notifications.create') ||
+        appState.hasPermission('notifications')) {
+      actions.add((
         'Toplu elan',
         Icons.campaign_rounded,
         colorScheme.error,
@@ -984,8 +1005,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           context: context,
           builder: (_) => const SendNotificationDialog(),
         ),
-      ),
-    ];
+      ));
+    }
+
+    if (actions.isEmpty) return const SizedBox.shrink();
 
     return Row(
       children: [

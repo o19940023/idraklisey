@@ -68,8 +68,13 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final palette = AppPalette.of(context);
-    final canAdd = appState.hasPermission('add_students');
-    final canEdit = appState.hasPermission('edit_students');
+    final isSuper = appState.isSuperAdmin;
+    final canAdd = isSuper ||
+        appState.hasPermission('gopanel.academic.students.create') ||
+        appState.hasPermission('add_students');
+    final canEdit = isSuper ||
+        appState.hasPermission('gopanel.academic.students.update') ||
+        appState.hasPermission('edit_students');
 
     final allStudents = appState.students.toList();
     final scopedStudents = _scope == 'current'
@@ -585,7 +590,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: EdgeInsets.zero,
       borderRadius: 18,
-      onTap: () => _openStudent(context, student),
+      onTap: () => _openStudent(context, student, canEdit: canEdit),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(13, 12, 6, 12),
         child: Row(
@@ -728,14 +733,14 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     );
   }
 
-  void _openStudent(BuildContext context, StudentProfile student) {
+  void _openStudent(BuildContext context, StudentProfile student, {required bool canEdit}) {
     Navigator.push(
       context,
       appRoute(
         builder: (_) => TeacherStudentDetailScreen(
           student: student,
           adminMode: true,
-          onEdit: (current) => _openFullEdit(context, current),
+          onEdit: canEdit ? (current) => _openFullEdit(context, current) : null,
         ),
       ),
     );

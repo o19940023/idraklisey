@@ -221,16 +221,16 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     final appState = context.watch<AppState>();
 
     // Role-based permissions
-    final isSuper = appState.isSuperAdmin || appState.isAdmin;
+    final isSuper = appState.isSuperAdmin;
     final canCreate = isSuper ||
         appState.hasPermission('gopanel.hr.employees.create') ||
-        appState.hasPermission('add_users');
+        appState.hasPermission('add_employees');
     final canEdit = isSuper ||
         appState.hasPermission('gopanel.hr.employees.update') ||
-        appState.hasPermission('edit_users');
+        appState.hasPermission('edit_employees');
     final canDelete = isSuper ||
         appState.hasPermission('gopanel.hr.employees.delete') ||
-        appState.hasPermission('delete_users');
+        appState.hasPermission('delete_employees');
     final canViewSalary = isSuper ||
         appState.hasPermission('salary_calculator') ||
         appState.hasPermission('manage_payroll') ||

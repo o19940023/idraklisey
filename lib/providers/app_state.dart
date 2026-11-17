@@ -817,6 +817,9 @@ class AppState extends ChangeNotifier {
       // 2. İnsan resursları
       'organizational_structure' => hasAnySpatie(['gopanel.structure.structures.view', 'gopanel.structure.positions.view', 'gopanel.structure.staffing_tables.view']),
       'view_employees' || 'employees' || 'manage_employees' => hasAnySpatie(['gopanel.hr.employees.view']),
+      'add_employees' => hasAnySpatie(['gopanel.hr.employees.create']),
+      'edit_employees' => hasAnySpatie(['gopanel.hr.employees.update']),
+      'delete_employees' => hasAnySpatie(['gopanel.hr.employees.delete']),
       'view_contracts' || 'contracts' || 'manage_contracts' => hasAnySpatie(['gopanel.hr.contracts.view', 'gopanel.contracts.view']),
       'employee_documents' => hasAnySpatie(['gopanel.hr.documents.view']),
       'employee_attendance' => hasAnySpatie(['gopanel.hr.attendances.view']),
@@ -860,6 +863,9 @@ class AppState extends ChangeNotifier {
       // 11. Sistem & loqlar
       'view_settings' || 'notifications' => hasAnySpatie(['gopanel.notifications.view', 'gopanel.dashboard_banners.view', 'gopanel.settings.site.view']),
       'view_users' || 'users' => hasAnySpatie(['gopanel.admins.view']),
+      'add_users' => hasAnySpatie(['gopanel.admins.create', 'gopanel.admins.store']),
+      'edit_users' => hasAnySpatie(['gopanel.admins.update']),
+      'delete_users' => hasAnySpatie(['gopanel.admins.delete']),
       'view_roles' || 'roles' || 'manage_roles' => hasAnySpatie(['gopanel.roles.view']),
       'activity_logs' => hasAnySpatie(['gopanel.activity.history.view', 'gopanel.activity.logs.view']),
 

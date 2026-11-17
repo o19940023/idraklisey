@@ -393,15 +393,13 @@ class _RoomsScreenState extends State<RoomsScreen> {
   Widget build(BuildContext context) {
     final palette = AppPalette.of(context);
     final appState = context.watch<AppState>();
-    final canManage = appState.isPrimaryAdmin ||
-        appState.isAdmin ||
-        appState.isSuperAdmin ||
-        appState.currentUser?.role == UserRole.admin ||
-        appState.hasPermission('rooms') ||
-        appState.hasPermission('gopanel.academic.foundations.rooms.view') ||
+    final canManage = appState.isSuperAdmin ||
+        appState.hasPermission('gopanel.academic.foundations.rooms.create') ||
         appState.hasPermission('gopanel.academic.foundations.rooms.store') ||
         appState.hasPermission('gopanel.academic.foundations.rooms.update') ||
-        appState.hasPermission('gopanel.academic.rooms.store');
+        appState.hasPermission('gopanel.academic.foundations.rooms.delete') ||
+        appState.hasPermission('gopanel.academic.rooms.store') ||
+        appState.hasPermission('manage_rooms');
     final rooms = _filteredRooms;
     final types = _types;
 
