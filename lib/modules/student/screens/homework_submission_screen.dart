@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/widgets/status_badge.dart';
+import '../../../core/widgets/rich_html_view.dart';
 import '../../../providers/app_state.dart';
 import '../../../data/models/assignment_model.dart';
-import '../../../services/cloudinary_service.dart';
+import '../../../services/server_upload_service.dart';
 import '../../../l10n/app_localizations.dart';
 
 class HomeworkSubmissionScreen extends StatefulWidget {
@@ -67,13 +69,35 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
     );
   }
 
+  Future<void> _openAttachment(String rawUrl, {String? fileName}) async {
+    if (rawUrl.isEmpty) return;
+    final fullUrl = rawUrl.startsWith('http')
+        ? rawUrl
+        : 'https://new.idrak.edu.az/${rawUrl.startsWith('/') ? rawUrl.substring(1) : rawUrl}';
+    try {
+      final uri = Uri.parse(fullUrl);
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${fileName ?? "Fayl"} açıla bilmədi ($fullUrl)')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fayl açıla bilmədi: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _captureFromCamera() async {
     setState(() => _isCapturing = true);
-    final url = await CloudinaryService.pickAndUploadFromCamera(
-      folder: 'idrak/homework',
-      imageQuality: 80,
+    final url = await ServerUploadService.pickAndUploadFromCamera(
+      imageQuality: 85,
       maxWidth: 1600,
       maxHeight: 1600,
+      modelType: 'assignment_submission',
     );
     if (mounted) {
       setState(() => _isCapturing = false);
@@ -81,7 +105,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
         setState(() => _capturedPages.add(url));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${_capturedPages.length}-ci dəftər səhifəsi yükləndi!'),
+            content: Text('${_capturedPages.length}-ci dəftər səhifəsi serverə yükləndi!'),
             backgroundColor: AppColors.success,
             duration: const Duration(seconds: 2),
           ),
@@ -92,9 +116,8 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
 
   Future<void> _pickFromGallery() async {
     setState(() => _isCapturing = true);
-    final urls = await CloudinaryService.pickMultipleAndUpload(
-      folder: 'idrak/homework',
-      imageQuality: 80,
+    final urls = await ServerUploadService.pickMultipleAndUpload(
+      imageQuality: 85,
       maxWidth: 1600,
     );
     if (mounted) {
@@ -105,7 +128,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
       if (urls.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${urls.length} səhifə qalereyadan yükləndi!'),
+            content: Text('${urls.length} fayl serverə yükləndi!'),
             backgroundColor: AppColors.success,
             duration: const Duration(seconds: 2),
           ),
@@ -238,11 +261,8 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    widget.assignment.instructions.isNotEmpty
-                        ? widget.assignment.instructions
-                        : 'Tapşırıq təlimatı qeyd olunmayıb.',
-                    style: TextStyle(fontSize: 13, color: AppColors.textPrimary, height: 1.4),
+                  RichHtmlView(
+                    html: widget.assignment.instructions,
                   ),
 
                   // Multiple Teacher Attachments Support
@@ -307,13 +327,11 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                                 if (isImage && url.isNotEmpty) {
                                   _showImageDialog(context, url, name);
                                 } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('$name açıldı.')),
-                                  );
+                                  _openAttachment(url, fileName: name);
                                 }
                               },
-                              icon: Icon(isImage ? Icons.fullscreen_rounded : Icons.visibility_outlined, size: 15),
-                              label: Text(isImage ? 'Bax' : loc.view, style: const TextStyle(fontSize: 12)),
+                              icon: Icon(isImage ? Icons.fullscreen_rounded : Icons.open_in_new_rounded, size: 15),
+                              label: Text(isImage ? 'Bax' : 'Aç / Endir', style: const TextStyle(fontSize: 12)),
                             ),
                           ],
                         ),
@@ -345,13 +363,9 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                             ),
                           ),
                           TextButton.icon(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('${widget.assignment.attachmentDocUrl} açıldı.')),
-                              );
-                            },
-                            icon: const Icon(Icons.visibility_outlined, size: 15),
-                            label: Text(loc.view, style: const TextStyle(fontSize: 12)),
+                            onPressed: () => _openAttachment(widget.assignment.attachmentDocUrl!, fileName: 'Dərs vəsaiti'),
+                            icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                            label: const Text('Aç / Endir', style: TextStyle(fontSize: 12)),
                           ),
                         ],
                       ),

@@ -12,6 +12,7 @@ import '../../../core/utils/navigation_utils.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/responsive.dart';
+import '../../../core/widgets/rich_html_view.dart';
 import '../../../data/models/assignment_model.dart';
 import '../../../data/models/student_model.dart';
 import '../../../l10n/app_localizations.dart';
@@ -1623,5 +1624,5 @@ class _AssignmentCard extends StatelessWidget {
 }
 
 String _stripHtml(String text) {
-  return text.replaceAll(RegExp(r'<[^>]*>|&nbsp;'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+  return RichHtmlView.stripToPlain(text);
 }

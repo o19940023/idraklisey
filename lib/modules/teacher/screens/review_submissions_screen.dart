@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/session/session_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
+import '../../../core/widgets/rich_html_view.dart';
 import '../../../providers/app_state.dart';
 import '../../../core/utils/navigation_utils.dart';
 import '../../../data/models/assignment_model.dart';
@@ -436,7 +437,7 @@ class _ReviewSubmissionsScreenState extends State<ReviewSubmissionsScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  a.instructions,
+                  RichHtmlView.stripToPlain(a.instructions),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
