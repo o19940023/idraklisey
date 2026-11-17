@@ -122,6 +122,8 @@ class ApiClient {
     _onUnauthorized = handler;
   }
 
+  Future<String?> getToken() => _token();
+
   Future<String?> _token() => _storage.read(key: _tokenKey);
 
   Future<void> saveToken(String token) => _storage.write(key: _tokenKey, value: token);

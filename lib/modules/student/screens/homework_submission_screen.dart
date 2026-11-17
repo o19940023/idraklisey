@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/widgets/status_badge.dart';
@@ -9,7 +8,43 @@ import '../../../core/widgets/rich_html_view.dart';
 import '../../../providers/app_state.dart';
 import '../../../data/models/assignment_model.dart';
 import '../../../services/server_upload_service.dart';
+import '../../../services/file_download_service.dart';
 import '../../../l10n/app_localizations.dart';
+
+class SubmissionFileItem {
+  final String url;
+  final String name;
+  final bool isImage;
+  final int? size;
+
+  SubmissionFileItem({
+    required this.url,
+    required this.name,
+    required this.isImage,
+    this.size,
+  });
+
+  static bool checkIsImage(String pathOrUrl) {
+    final lower = pathOrUrl.toLowerCase();
+    return lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.webp') ||
+        lower.endsWith('.gif') ||
+        lower.endsWith('.bmp');
+  }
+
+  factory SubmissionFileItem.fromUrl(String url, {String? defaultName}) {
+    final clean = url.split('?').first;
+    String name = defaultName ?? clean.split('/').last;
+    if (name.isEmpty) name = 'Fayl';
+    return SubmissionFileItem(
+      url: url,
+      name: name,
+      isImage: checkIsImage(clean),
+    );
+  }
+}
 
 class HomeworkSubmissionScreen extends StatefulWidget {
   final HomeworkAssignment assignment;
@@ -22,9 +57,9 @@ class HomeworkSubmissionScreen extends StatefulWidget {
 
 class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
   final TextEditingController _noteController = TextEditingController();
-  final List<String> _capturedPages = [];
+  final List<SubmissionFileItem> _attachedFiles = [];
   bool _isSubmitting = false;
-  bool _isCapturing = false;
+  bool _isUploading = false;
   bool _isEditingSubmission = false;
 
   @override
@@ -71,28 +106,59 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
 
   Future<void> _openAttachment(String rawUrl, {String? fileName}) async {
     if (rawUrl.isEmpty) return;
-    final fullUrl = rawUrl.startsWith('http')
-        ? rawUrl
-        : 'https://new.idrak.edu.az/${rawUrl.startsWith('/') ? rawUrl.substring(1) : rawUrl}';
+
+    final isImage = SubmissionFileItem.checkIsImage(rawUrl);
+    if (isImage) {
+      final fullUrl = rawUrl.startsWith('http')
+          ? rawUrl
+          : 'https://new.idrak.edu.az/${rawUrl.startsWith('/') ? rawUrl.substring(1) : rawUrl}';
+      _showImageDialog(context, fullUrl, fileName ?? 'Fayl');
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '${fileName ?? "Fayl"} endirilir və açılır...',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+
     try {
-      final uri = Uri.parse(fullUrl);
-      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (!launched && mounted) {
+      final ok = await FileDownloadService.downloadAndOpen(rawUrl, fileName: fileName);
+      if (!ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${fileName ?? "Fayl"} açıla bilmədi ($fullUrl)')),
+          SnackBar(
+            content: Text('${fileName ?? "Fayl"} açıla bilmədi.'),
+            backgroundColor: AppColors.danger,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fayl açıla bilmədi: $e')),
+          SnackBar(content: Text('Xəta: $e'), backgroundColor: AppColors.danger),
         );
       }
     }
   }
 
   Future<void> _captureFromCamera() async {
-    setState(() => _isCapturing = true);
+    setState(() => _isUploading = true);
     final url = await ServerUploadService.pickAndUploadFromCamera(
       imageQuality: 85,
       maxWidth: 1600,
@@ -100,12 +166,46 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
       modelType: 'assignment_submission',
     );
     if (mounted) {
-      setState(() => _isCapturing = false);
+      setState(() => _isUploading = false);
       if (url != null) {
-        setState(() => _capturedPages.add(url));
+        final item = SubmissionFileItem(
+          url: url,
+          name: '${_attachedFiles.length + 1}-ci dəftər səhifəsi.jpg',
+          isImage: true,
+        );
+        setState(() => _attachedFiles.add(item));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto uğurla serverə yükləndi!'),
+            backgroundColor: AppColors.success,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    setState(() => _isUploading = true);
+    final urls = await ServerUploadService.pickMultipleAndUpload(
+      imageQuality: 85,
+      maxWidth: 1600,
+    );
+    if (mounted) {
+      setState(() {
+        _isUploading = false;
+        for (int i = 0; i < urls.length; i++) {
+          _attachedFiles.add(SubmissionFileItem(
+            url: urls[i],
+            name: '${_attachedFiles.length + 1}-ci şəkil.jpg',
+            isImage: true,
+          ));
+        }
+      });
+      if (urls.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${_capturedPages.length}-ci dəftər səhifəsi serverə yükləndi!'),
+            content: Text('${urls.length} şəkil uğurla serverə yükləndi!'),
             backgroundColor: AppColors.success,
             duration: const Duration(seconds: 2),
           ),
@@ -114,21 +214,27 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
     }
   }
 
-  Future<void> _pickFromGallery() async {
-    setState(() => _isCapturing = true);
-    final urls = await ServerUploadService.pickMultipleAndUpload(
-      imageQuality: 85,
-      maxWidth: 1600,
+  Future<void> _pickDocuments() async {
+    setState(() => _isUploading = true);
+    final docs = await ServerUploadService.pickDocumentsAndUpload(
+      modelType: 'assignment_submission',
     );
     if (mounted) {
       setState(() {
-        _isCapturing = false;
-        _capturedPages.addAll(urls);
+        _isUploading = false;
+        for (final doc in docs) {
+          _attachedFiles.add(SubmissionFileItem(
+            url: doc['url'],
+            name: doc['name'] ?? 'Sənəd',
+            isImage: doc['is_image'] == true,
+            size: doc['size'],
+          ));
+        }
       });
-      if (urls.isNotEmpty) {
+      if (docs.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${urls.length} fayl serverə yükləndi!'),
+            content: Text('${docs.length} sənəd uğurla serverə yükləndi!'),
             backgroundColor: AppColors.success,
             duration: const Duration(seconds: 2),
           ),
@@ -284,11 +390,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                     ...widget.assignment.attachments.map((att) {
                       final name = att['name']?.toString() ?? 'Fayl';
                       final url = att['url']?.toString() ?? '';
-                      final isImage = att['is_image'] == true ||
-                          name.endsWith('.png') ||
-                          name.endsWith('.jpg') ||
-                          name.endsWith('.jpeg') ||
-                          name.endsWith('.webp');
+                      final isImage = att['is_image'] == true || SubmissionFileItem.checkIsImage(name);
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -323,14 +425,8 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                               ),
                             ),
                             TextButton.icon(
-                              onPressed: () {
-                                if (isImage && url.isNotEmpty) {
-                                  _showImageDialog(context, url, name);
-                                } else {
-                                  _openAttachment(url, fileName: name);
-                                }
-                              },
-                              icon: Icon(isImage ? Icons.fullscreen_rounded : Icons.open_in_new_rounded, size: 15),
+                              onPressed: () => _openAttachment(url, fileName: name),
+                              icon: Icon(isImage ? Icons.fullscreen_rounded : Icons.file_download_outlined, size: 15),
                               label: Text(isImage ? 'Bax' : 'Aç / Endir', style: const TextStyle(fontSize: 12)),
                             ),
                           ],
@@ -364,7 +460,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                           ),
                           TextButton.icon(
                             onPressed: () => _openAttachment(widget.assignment.attachmentDocUrl!, fileName: 'Dərs vəsaiti'),
-                            icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                            icon: const Icon(Icons.file_download_outlined, size: 15),
                             label: const Text('Aç / Endir', style: TextStyle(fontSize: 12)),
                           ),
                         ],
@@ -395,7 +491,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (isGraded) ...[
-                      // High-end Teacher Evaluation Banner (Google Classroom style)
+                      // Teacher Evaluation Banner
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
@@ -423,9 +519,9 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
+                                  const Text(
                                     'MÜƏLLİM QİYMƏTLƏNDİRMƏSİ',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: Color(0xFF1A73E8),
                                       fontWeight: FontWeight.w800,
                                       fontSize: 11,
@@ -495,8 +591,10 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                               setState(() {
                                 _isEditingSubmission = true;
                                 _noteController.text = mySubmission.studentNote ?? '';
-                                _capturedPages.clear();
-                                _capturedPages.addAll(mySubmission.scannedImages);
+                                _attachedFiles.clear();
+                                for (final imgUrl in mySubmission.scannedImages) {
+                                  _attachedFiles.add(SubmissionFileItem.fromUrl(imgUrl));
+                                }
                               });
                             },
                             icon: const Icon(Icons.edit_rounded, size: 14),
@@ -518,42 +616,63 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                       ),
                     ],
 
+                    // Already submitted files list
                     if (mySubmission.scannedImages.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Text('Təhvil verilmiş fayllar / səhifələr (${mySubmission.scannedImages.length}):',
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Təhvil verilmiş fayllar (${mySubmission.scannedImages.length}):',
+                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                      ),
                       const SizedBox(height: 8),
-                      SizedBox(
-                        height: 90,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: mySubmission.scannedImages.length,
-                          itemBuilder: (context, idx) {
-                            final imgUrl = mySubmission.scannedImages[idx];
-                            return GestureDetector(
-                              onTap: () => _showImageDialog(context, imgUrl, 'Səhifə ${idx + 1}'),
-                              child: Container(
-                                width: 75,
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: AppColors.cardBorder),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(9),
-                                  child: Image.network(
-                                    imgUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => const Center(
-                                      child: Icon(Icons.insert_drive_file_rounded, color: AppColors.primaryAccent),
+                      ...mySubmission.scannedImages.asMap().entries.map((entry) {
+                        final idx = entry.key;
+                        final fileUrl = entry.value;
+                        final isImg = SubmissionFileItem.checkIsImage(fileUrl);
+                        final cleanName = fileUrl.split('?').first.split('/').last;
+                        final displayName = cleanName.isNotEmpty ? cleanName : 'Fayl ${idx + 1}';
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8F9FA),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.cardBorder),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isImg ? Icons.image_rounded : Icons.picture_as_pdf_rounded,
+                                color: isImg ? AppColors.primaryAccent : Colors.red,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      displayName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                                     ),
-                                  ),
+                                    Text(
+                                      isImg ? 'Dəftər səhifəsi / Şəkil' : 'Yüklənmiş sənəd',
+                                      style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
+                              TextButton.icon(
+                                onPressed: () => _openAttachment(fileUrl, fileName: displayName),
+                                icon: Icon(isImg ? Icons.fullscreen_rounded : Icons.file_download_outlined, size: 15),
+                                label: Text(isImg ? 'Bax' : 'Aç / Endir', style: const TextStyle(fontSize: 11.5)),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                     ],
 
                     if (!isGraded) ...[
@@ -616,7 +735,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                 ),
               ),
             ] else ...[
-              // Submission Section (Camera, Gallery, Written answer)
+              // Submission Section (Camera, Gallery, Document Upload, Written answer)
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.all(16),
@@ -641,7 +760,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Cavabınızı mətn şəklində yaza və ya dəftərinizin şəkillərini əlavə edərək təhvil verə bilərsiniz.',
+                      'Cavabınızı yazın, dəftərinizin şəkillərini çəkin və ya PDF / sənəd fayllarınızı əlavə edin.',
                       style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: 14),
@@ -658,72 +777,82 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Scanned Pages Gallery
-                    if (_capturedPages.isNotEmpty) ...[
-                      SizedBox(
-                        height: 100,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _capturedPages.length,
-                          itemBuilder: (context, index) {
-                            return Stack(
+                    // Attached Files List Preview (both photos and documents)
+                    if (_attachedFiles.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8F9FA),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE8EAED)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Container(
-                                  width: 80,
-                                  margin: const EdgeInsets.only(right: 10),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: AppColors.primaryAccent, width: 1.5),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(10.5),
-                                    child: Image.network(_capturedPages[index], fit: BoxFit.cover),
-                                  ),
+                                Text(
+                                  'Yüklənmiş fayllar (${_attachedFiles.length}):',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                 ),
-                                Positioned(
-                                  top: 4,
-                                  left: 4,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black87,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'Səh ${index + 1}',
-                                      style: const TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 2,
-                                  right: 12,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _capturedPages.removeAt(index);
-                                      });
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.all(2),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.red,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(Icons.close, color: Colors.white, size: 12),
-                                    ),
-                                  ),
+                                Text(
+                                  'Silmək üçün ✕ vurun',
+                                  style: TextStyle(fontSize: 10.5, color: AppColors.textSecondary),
                                 ),
                               ],
-                            );
-                          },
+                            ),
+                            const SizedBox(height: 8),
+                            ..._attachedFiles.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final item = entry.value;
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.cardBorder),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      item.isImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded,
+                                      color: item.isImage ? AppColors.primaryAccent : Colors.red,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () => _openAttachment(item.url, fileName: item.name),
+                                        child: Text(
+                                          item.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close_rounded, color: Colors.red, size: 18),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: () {
+                                        setState(() => _attachedFiles.removeAt(index));
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 12),
                     ],
 
-                    // Camera & Gallery Buttons
-                    if (_isCapturing)
+                    // Upload Action Buttons (Camera, Gallery, Document Upload)
+                    if (_isUploading)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         child: Center(
@@ -731,7 +860,7 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                             children: [
                               const CircularProgressIndicator(color: AppColors.primaryAccent, strokeWidth: 2),
                               const SizedBox(height: 8),
-                              Text(loc.loading, style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+                              Text('Fayl serverə yüklənir...', style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
                             ],
                           ),
                         ),
@@ -742,24 +871,39 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                               ),
                               onPressed: _captureFromCamera,
-                              icon: const Icon(Icons.photo_camera_outlined, size: 16),
-                              label: Text(_capturedPages.isEmpty ? 'Kamera ilə Çək' : '+ Səhifə Çək', style: const TextStyle(fontSize: 11.5)),
+                              icon: const Icon(Icons.photo_camera_outlined, size: 15),
+                              label: const Text('Kamera', style: TextStyle(fontSize: 11)),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                               ),
                               onPressed: _pickFromGallery,
-                              icon: const Icon(Icons.photo_library_outlined, size: 16),
-                              label: const Text('Qalereyadan Seç', style: TextStyle(fontSize: 11.5)),
+                              icon: const Icon(Icons.photo_library_outlined, size: 15),
+                              label: const Text('Qalereya', style: TextStyle(fontSize: 11)),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryAccent.withValues(alpha: 0.12),
+                                foregroundColor: AppColors.primaryAccent,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
+                              onPressed: _pickDocuments,
+                              icon: const Icon(Icons.upload_file_rounded, size: 15),
+                              label: const Text('Sənəd / PDF', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],
@@ -777,31 +921,37 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
-                        onPressed: (_capturedPages.isEmpty && _noteController.text.trim().isEmpty) || _isSubmitting
+                        onPressed: (_attachedFiles.isEmpty && _noteController.text.trim().isEmpty) || _isSubmitting
                             ? null
                             : () async {
+                                final messenger = ScaffoldMessenger.of(context);
+                                final navigator = Navigator.of(context);
+                                final savedMsg = loc.successfullySaved;
+                                final errorMsg = loc.error;
+
                                 setState(() => _isSubmitting = true);
+                                final fileUrls = _attachedFiles.map((a) => a.url).toList();
                                 final ok = await appState.submitHomework(
                                   assignmentId: widget.assignment.id,
                                   studentId: currentStudent.id,
                                   studentName: currentStudent.fullName,
-                                  images: _capturedPages,
+                                  images: fileUrls,
                                   note: _noteController.text.trim(),
                                 );
                                 if (!mounted) return;
                                 setState(() => _isSubmitting = false);
                                 if (ok) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     SnackBar(
-                                      content: Text(loc.successfullySaved),
+                                      content: Text(savedMsg),
                                       backgroundColor: AppColors.success,
                                     ),
                                   );
-                                  Navigator.pop(context);
+                                  navigator.pop();
                                 } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     SnackBar(
-                                      content: Text(loc.error),
+                                      content: Text(errorMsg),
                                       backgroundColor: AppColors.danger,
                                     ),
                                   );
