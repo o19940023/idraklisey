@@ -100,22 +100,9 @@ class ServerUploadService {
     int? modelId,
   }) async {
     try {
+      // Type.any istifadə edirik ki, Android/iOS-də heç bir fayl növü bloklanmasın və hər cür sənəd seçilə bilsin
       final List<PlatformFile> files = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: [
-          'pdf',
-          'doc',
-          'docx',
-          'xls',
-          'xlsx',
-          'ppt',
-          'pptx',
-          'txt',
-          'zip',
-          'jpg',
-          'jpeg',
-          'png'
-        ],
+        type: FileType.any,
       );
 
       if (files.isEmpty) return [];
@@ -130,7 +117,7 @@ class ServerUploadService {
       return uploadedList;
     } catch (e) {
       debugPrint('ServerUploadService: Sənəd seçmə/yükləmə xətası: $e');
-      return [];
+      rethrow;
     }
   }
 

@@ -216,27 +216,45 @@ class _HomeworkSubmissionScreenState extends State<HomeworkSubmissionScreen> {
 
   Future<void> _pickDocuments() async {
     setState(() => _isUploading = true);
-    final docs = await ServerUploadService.pickDocumentsAndUpload(
-      modelType: 'assignment_submission',
-    );
-    if (mounted) {
-      setState(() {
-        _isUploading = false;
-        for (final doc in docs) {
-          _attachedFiles.add(SubmissionFileItem(
-            url: doc['url'],
-            name: doc['name'] ?? 'Sənəd',
-            isImage: doc['is_image'] == true,
-            size: doc['size'],
-          ));
+    try {
+      final docs = await ServerUploadService.pickDocumentsAndUpload(
+        modelType: 'assignment_submission',
+      );
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+          for (final doc in docs) {
+            _attachedFiles.add(SubmissionFileItem(
+              url: doc['url'],
+              name: doc['name'] ?? 'Sənəd',
+              isImage: doc['is_image'] == true,
+              size: doc['size'],
+            ));
+          }
+        });
+        if (docs.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${docs.length} sənəd uğurla əlavə edildi!'),
+              backgroundColor: AppColors.success,
+              duration: const Duration(seconds: 2),
+            ),
+          );
         }
-      });
-      if (docs.isNotEmpty) {
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploading = false);
+        final isMissing = e.toString().contains('MissingPluginException');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${docs.length} sənəd uğurla serverə yükləndi!'),
-            backgroundColor: AppColors.success,
-            duration: const Duration(seconds: 2),
+            content: Text(
+              isMissing
+                  ? 'Fayl seçici üçün tətbiqi yenidən başladın (tam rebuild tələb olunur).'
+                  : 'Fayl seçilə bilmədi: $e',
+            ),
+            backgroundColor: AppColors.danger,
+            duration: const Duration(seconds: 4),
           ),
         );
       }

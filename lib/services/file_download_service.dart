@@ -18,6 +18,39 @@ class FileDownloadService {
     ),
   );
 
+  /// İdrak serverlərindəki fayl linkini düzgün public storage ünvanına çevirir.
+  /// new.idrak.edu.az/storage/ web login-ə yönləndirdiyi üçün real public fayllar portal.idrak.edu.az/storage/ üzərindən açılır.
+  static String normalizeStorageUrl(String rawUrl) {
+    if (rawUrl.isEmpty) return rawUrl;
+    var url = rawUrl.trim();
+    if (url.startsWith('/')) url = url.substring(1);
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      if (url.contains('new.idrak.edu.az/storage/')) {
+        return url.replaceFirst('new.idrak.edu.az/storage/', 'portal.idrak.edu.az/storage/');
+      }
+      return url;
+    }
+
+    if (url.startsWith('storage/')) {
+      return 'https://portal.idrak.edu.az/$url';
+    }
+    return 'https://portal.idrak.edu.az/storage/$url';
+  }
+
+  static String? _getMimeType(String path) {
+    final lower = path.toLowerCase();
+    if (lower.endsWith('.pdf')) return 'application/pdf';
+    if (lower.endsWith('.doc')) return 'application/msword';
+    if (lower.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    if (lower.endsWith('.xls')) return 'application/vnd.ms-excel';
+    if (lower.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    if (lower.endsWith('.ppt') || lower.endsWith('.pptx')) return 'application/vnd.ms-powerpoint';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (lower.endsWith('.png')) return 'image/png';
+    return null;
+  }
+
   /// Faylı birbaşa tətbiq daxilində endirir və native PDF/sənəd oxuyucu ilə açır
   static Future<bool> downloadAndOpen(
     String rawUrl, {
@@ -25,9 +58,7 @@ class FileDownloadService {
     void Function(int received, int total)? onProgress,
   }) async {
     if (rawUrl.isEmpty) return false;
-    final fullUrl = rawUrl.startsWith('http')
-        ? rawUrl
-        : 'https://new.idrak.edu.az/${rawUrl.startsWith('/') ? rawUrl.substring(1) : rawUrl}';
+    final fullUrl = normalizeStorageUrl(rawUrl);
 
     try {
       if (kIsWeb) {
@@ -51,9 +82,9 @@ class FileDownloadService {
       final savePath = '${dir.path}/$cleanName';
       final file = File(savePath);
 
-      // Əgər fayl artıq mövcuddursa və ölçüsü > 0-dırsa, birbaşa aç
-      if (await file.exists() && await file.length() > 0) {
-        final openResult = await OpenFilex.open(savePath);
+      // Əgər fayl artıq mövcuddursa və ölçüsü > 500 baytdırsa, birbaşa aç
+      if (await file.exists() && await file.length() > 500) {
+        final openResult = await OpenFilex.open(savePath, type: _getMimeType(savePath));
         if (openResult.type == ResultType.done) {
           return true;
         }
@@ -80,11 +111,11 @@ class FileDownloadService {
       );
 
       if (await file.exists() && await file.length() > 0) {
-        final openResult = await OpenFilex.open(savePath);
+        final openResult = await OpenFilex.open(savePath, type: _getMimeType(savePath));
         if (openResult.type == ResultType.done) {
           return true;
         }
-        // Native açılmadısa xarici tətbiq / brauzer ilə yoxla
+        // Native tətbiq olmadıqda brauzerdə birbaşa portal url-i aç (login-ə yönlənmir!)
         return await launchUrl(Uri.parse(fullUrl), mode: LaunchMode.externalApplication);
       } else {
         throw Exception('Endirilmiş fayl boşdur və ya yaradılmadı.');
