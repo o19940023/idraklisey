@@ -58,7 +58,7 @@ class _EditRoleDialogState extends State<EditRoleDialog> {
         permissionIds: _selectedPermissions.toList(),
       );
 
-      await appState.firestoreService.updateRole(updatedRole);
+      await appState.saveRoleToBackend(updatedRole, isNew: false);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -89,7 +89,7 @@ class _EditRoleDialogState extends State<EditRoleDialog> {
   @override
   Widget build(BuildContext context) {
     final permissionsByCategory = DefaultPermissions.byCategory;
-    final isSystemRole = widget.role.isDefault;
+    final isSystemRole = widget.role.name.toLowerCase() == 'superadmin';
 
     return Dialog(
       shape: RoundedRectangleBorder(

@@ -14,7 +14,7 @@ class ApiConfig {
   // ========================================
 
   /// Mock data kullanılsın mı? (Gerçek API hazır olunca false yap)
-  static const bool USE_MOCK_DATA = true;
+  static const bool USE_MOCK_DATA = false;
 
   /// Network logları gösterilsin mi?
   static const bool ENABLE_LOGGING = true;
@@ -110,6 +110,9 @@ class ApiConfig {
   static const String INVENTORIZATIONS =
       '/panel/warehouse_actions/inventorizations';
   static const String CANTEEN = '/panel/warehouse_actions/canteen';
+
+  // Keşif (2026-10-23 canlı GET sondajı): IT rolü dashboard menüsünden çıkarıldı
+  static const String WEEKLY_MENU = '/panel/parent/weekly-menu';
 
   // Exams
   static const String EXAM_CATEGORIES = '/panel/exams/exam_categories';

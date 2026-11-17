@@ -5,10 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 import 'core/theme/app_theme.dart';
+import 'core/session/session_controller.dart';
 import 'providers/app_state.dart';
 import 'services/app_update_service.dart';
-import 'modules/auth/screens/video_splash_screen.dart';
+import 'services/push_notification_service.dart';
+import 'core/widgets/offline_banner.dart';
+import 'modules/auth/screens/startup_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,10 +33,20 @@ void main() async {
   // is applied from the very first splash.
   final appState = AppState();
   await appState.loadThemeMode();
-  appState.initFirebaseData();
+  await appState.loadLocale();
 
-  // Yeni versiya yoxlaması (banner üçün) — arxa planda, gecikmə yaratmır
-  final appUpdateService = AppUpdateService();
+  final sessionController = SessionController();
+  // Bulud istifadəçilərinin giriş üçün siyahının sinxronlaşmasını gözlə
+  // (təzə başlanmış app-da əks halda yalnız yerli admin mövcuddur).
+  // ensureDataReady() — paralel ikinci sinxronizasiyanı (data yarışı)
+  // önləyən paylaşılan future qaytarır.
+  unawaited(appState.ensureDataReady());
+
+  // Push bildirişləri (tətbiq bağlı ikən də gəlməsi üçün) — arxa planda
+  unawaited(PushNotificationService.instance.initialize());
+
+  // Yeni versiya yoxlaması (banner üçün) — arxa planda, gecikmə yaratmır.
+  // appUpdateService qlobal nüsxədir (app_update_service.dart-da təyin olunub)
   unawaited(Future.delayed(const Duration(seconds: 3), () {
     appUpdateService.checkForUpdate();
   }));
@@ -41,6 +55,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: appState),
+        ChangeNotifierProvider.value(value: sessionController),
         ChangeNotifierProvider.value(value: appUpdateService),
       ],
       child: const IdrakLiseyiApp(),
@@ -56,12 +71,19 @@ class IdrakLiseyiApp extends StatelessWidget {
     final appState = Provider.of<AppState>(context);
 
     return MaterialApp(
-      title: 'İdrak Liseyi',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appName,
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: appState.locale,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: appState.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: const VideoSplashScreen(),
+      builder: (context, child) => OfflineBanner(
+        isOnline: appState.isOnline,
+        child: child ?? const SizedBox.shrink(),
+      ),
+      home: const StartupGate(),
     );
   }
 }

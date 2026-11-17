@@ -77,7 +77,11 @@ class _CreateTimetableEntryScreenState extends State<CreateTimetableEntryScreen>
       case DateTime.friday:
         return 'Cümə';
       default:
-        return 'Bazar ertəsi';
+        // Şənbə/bazar — həftə içi cədvələ yazıla bilməz; növbəti
+        // həftənin pazartesisinə yönəldilir (köhnə kod sessizcə bu
+        // həftənin pazartesinə yazırdı).
+        final monday = date.add(Duration(days: DateTime.monday - date.weekday + 7));
+        return _getDayNameFromDate(monday);
     }
   }
 
@@ -98,8 +102,7 @@ class _CreateTimetableEntryScreenState extends State<CreateTimetableEntryScreen>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text(
+      appBar: AppBar(        title: const Text(
           'Dərs Cədvəli Yarat',
           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
         ),
@@ -116,8 +119,7 @@ class _CreateTimetableEntryScreenState extends State<CreateTimetableEntryScreen>
             child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
           ),
           onPressed: () => handleBackNavigation(context),
-        ),
-      ),
+        ),),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.all(16),

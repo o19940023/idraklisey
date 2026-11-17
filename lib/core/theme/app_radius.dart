@@ -11,20 +11,26 @@ class AppRadius {
   static const double md = 12.0;
   static const double lg = 16.0;
   static const double xl = 20.0;
+  static const double rXl = 20;
   static const double xxl = 24.0;
   static const double xxxl = 32.0;
   static const double full = 9999.0; // Pill shape
 
   // Common radius presets
-  static const BorderRadius cardRadius = BorderRadius.all(Radius.circular(lg));
-  static const BorderRadius buttonRadius = BorderRadius.all(Radius.circular(md));
-  static const BorderRadius dialogRadius = BorderRadius.all(Radius.circular(xl));
-  static const BorderRadius bottomSheetRadius = BorderRadius.vertical(top: Radius.circular(xxl));
-  static const BorderRadius chipRadius = BorderRadius.all(Radius.circular(sm));
+  static const BorderRadius smRadius = BorderRadius.all(Radius.circular(sm));
+  static const BorderRadius mdRadius = BorderRadius.all(Radius.circular(md));
+  static const BorderRadius lgRadius = BorderRadius.all(Radius.circular(lg));
+  static const BorderRadius cardRadius = BorderRadius.all(Radius.circular(xl));
+  static const BorderRadius tileRadius = BorderRadius.all(Radius.circular(16));
+  static const BorderRadius inputRadius = BorderRadius.all(Radius.circular(12));
+  static const BorderRadius buttonRadius = BorderRadius.all(Radius.circular(lg));
+  static const BorderRadius dialogRadius = BorderRadius.all(Radius.circular(xxl));
+  static const BorderRadius bottomSheetRadius = BorderRadius.vertical(top: Radius.circular(28));
+  static const BorderRadius chipRadius = BorderRadius.all(Radius.circular(10));
   static const BorderRadius pillRadius = BorderRadius.all(Radius.circular(full));
 
   // Component-specific
   static const double avatar = full; // Always circular
-  static const double badge = sm;
-  static const double inputField = md;
+  static const double badge = 10;
+  static const double inputField = 12;
 }

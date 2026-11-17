@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
-import '../../services/cloudinary_service.dart';
+import '../../services/server_upload_service.dart';
 
 /// Yenidən istifadə olunan profil foto seçimi widget-i.
-/// Kamera və ya qalereyadan foto seçir, Cloudinary-yə yükləyir.
+/// Kamera və ya qalereyadan foto seçir, İdrak serverinə yükləyir.
 class ProfilePhotoPicker extends StatefulWidget {
   final String? initialPhotoUrl;
   final ValueChanged<String> onPhotoUploaded;
+  final VoidCallback? onPhotoRemoved;
   final double size;
-  final String folder;
+  final String? modelType;
+  final int? modelId;
 
   const ProfilePhotoPicker({
     super.key,
     this.initialPhotoUrl,
     required this.onPhotoUploaded,
+    this.onPhotoRemoved,
     this.size = 100,
-    this.folder = 'idrak/profiles',
+    String folder = 'idrak/profiles',
+    this.modelType,
+    this.modelId,
   });
 
   @override
@@ -125,6 +130,7 @@ class _ProfilePhotoPickerState extends State<ProfilePhotoPicker>
 
     if (source == ImageSourceOption.remove) {
       setState(() => _photoUrl = null);
+      widget.onPhotoRemoved?.call();
       return;
     }
 
@@ -132,12 +138,14 @@ class _ProfilePhotoPickerState extends State<ProfilePhotoPicker>
 
     String? uploadedUrl;
     if (source == ImageSourceOption.camera) {
-      uploadedUrl = await CloudinaryService.pickAndUploadFromCamera(
-        folder: widget.folder,
+      uploadedUrl = await ServerUploadService.pickAndUploadFromCamera(
+        modelType: widget.modelType,
+        modelId: widget.modelId,
       );
     } else {
-      uploadedUrl = await CloudinaryService.pickAndUploadFromGallery(
-        folder: widget.folder,
+      uploadedUrl = await ServerUploadService.pickAndUploadFromGallery(
+        modelType: widget.modelType,
+        modelId: widget.modelId,
       );
     }
 

@@ -52,7 +52,7 @@ class _CreateRoleDialogState extends State<CreateRoleDialog> {
         createdAt: DateTime.now(),
       );
 
-      await appState.firestoreService.saveRole(newRole);
+      await appState.saveRoleToBackend(newRole, isNew: true);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

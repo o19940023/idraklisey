@@ -1,722 +1,237 @@
-// Rol və Səlahiyyət Modeli
-// Sistemdə istifadəçi rollarını və səlahiyyətlərini idarə edir
-
-class Permission {
-  final String id;
-  final String name;
-  final String description;
-  final String category;
-
-  const Permission({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.category,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'description': description,
-    'category': category,
-  };
-
-  factory Permission.fromJson(Map<String, dynamic> json) => Permission(
-    id: json['id'] ?? '',
-    name: json['name'] ?? '',
-    description: json['description'] ?? '',
-    category: json['category'] ?? '',
-  );
-}
-
-class Role {
-  final String id;
-  final String name;
-  final String description;
-  final List<String> permissionIds; // Permission ID siyahısı
-  final bool isDefault; // Sistem default rolu?
-  final bool isDeletable; // Silinə bilər?
-  final DateTime createdAt;
-
-  Role({
-    required this.id,
-    required this.name,
-    required this.description,
-    this.permissionIds = const [],
-    this.isDefault = false,
-    this.isDeletable = true,
-    required this.createdAt,
-  });
-
-  Role copyWith({
-    String? name,
-    String? description,
-    List<String>? permissionIds,
-    bool? isDefault,
-    bool? isDeletable,
-  }) {
-    return Role(
-      id: id,
-      name: name ?? this.name,
-      description: description ?? this.description,
-      permissionIds: permissionIds ?? this.permissionIds,
-      isDefault: isDefault ?? this.isDefault,
-      isDeletable: isDeletable ?? this.isDeletable,
-      createdAt: createdAt,
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'description': description,
-    'permissionIds': permissionIds,
-    'isDefault': isDefault,
-    'isDeletable': isDeletable,
-    'createdAt': createdAt.toIso8601String(),
-  };
-
-  factory Role.fromJson(Map<String, dynamic> json) => Role(
-    id: json['id'] ?? '',
-    name: json['name'] ?? '',
-    description: json['description'] ?? '',
-    permissionIds: List<String>.from(json['permissionIds'] ?? []),
-    isDefault: json['isDefault'] ?? false,
-    isDeletable: json['isDeletable'] ?? true,
-    createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-  );
-}
-
-// Default Səlahiyyətlər
-class DefaultPermissions {
-  static const List<Permission> all = [
-    // Şagird İdarəetməsi
-    Permission(
-      id: 'view_students',
-      name: 'Şagird Baxışı',
-      description: 'Şagird siyahısını və detallarını görə bilər',
-      category: 'Şagird İdarəetməsi',
-    ),
-    Permission(
-      id: 'add_students',
-      name: 'Şagird Əlavə Etmə',
-      description: 'Yeni şagird qeydiyyatı yara bilər',
-      category: 'Şagird İdarəetməsi',
-    ),
-    Permission(
-      id: 'edit_students',
-      name: 'Şagird Redaktəsi',
-      description: 'Mövcud şagird məlumatlarını redaktə edə bilər',
-      category: 'Şagird İdarəetməsi',
-    ),
-    Permission(
-      id: 'delete_students',
-      name: 'Şagird Silmə',
-      description: 'Şagird qeydini silə bilər',
-      category: 'Şagird İdarəetməsi',
-    ),
-
-    // Qiymət İdarəetməsi
-    Permission(
-      id: 'view_grades',
-      name: 'Qiymət Baxışı',
-      description: 'Şagird qiymətlərini görə bilər',
-      category: 'Qiymət İdarəetməsi',
-    ),
-    Permission(
-      id: 'add_grades',
-      name: 'Qiymət Daxil Etmə',
-      description: 'Şagirdlərə qiymət daxil edə bilər',
-      category: 'Qiymət İdarəetməsi',
-    ),
-    Permission(
-      id: 'edit_grades',
-      name: 'Qiymət Redaktəsi',
-      description: 'Mövcud qiymətləri redaktə edə bilər',
-      category: 'Qiymət İdarəetməsi',
-    ),
-    Permission(
-      id: 'delete_grades',
-      name: 'Qiymət Silmə',
-      description: 'Daxil edilən qiymətləri silə bilər',
-      category: 'Qiymət İdarəetməsi',
-    ),
-
-    // Davamiyyət İdarəetməsi
-    Permission(
-      id: 'view_attendance',
-      name: 'Davamiyyət Baxışı',
-      description: 'Davamiyyət qeydlərini görə bilər',
-      category: 'Davamiyyət İdarəetməsi',
-    ),
-    Permission(
-      id: 'add_attendance',
-      name: 'Davamiyyət Daxil Etmə',
-      description: 'Davamiyyət qeydi daxil edə bilər',
-      category: 'Davamiyyət İdarəetməsi',
-    ),
-    Permission(
-      id: 'edit_attendance',
-      name: 'Davamiyyət Redaktəsi',
-      description: 'Davamiyyət qeydlərini redaktə edə bilər',
-      category: 'Davamiyyət İdarəetməsi',
-    ),
-    Permission(
-      id: 'delete_attendance',
-      name: 'Davamiyyət Silmə',
-      description: 'Davamiyyət qeydlərini silə bilər',
-      category: 'Davamiyyət İdarəetməsi',
-    ),
-
-    // İstifadəçi İdarəetməsi
-    Permission(
-      id: 'view_users',
-      name: 'İstifadəçi Baxışı',
-      description: 'Sistem istifadəçilərini görə bilər',
-      category: 'İstifadəçi İdarəetməsi',
-    ),
-    Permission(
-      id: 'add_users',
-      name: 'İstifadəçi Əlavə Etmə',
-      description: 'Yeni istifadəçi (işçi) hesabı yara bilər',
-      category: 'İstifadəçi İdarəetməsi',
-    ),
-    Permission(
-      id: 'edit_users',
-      name: 'İstifadəçi Redaktəsi',
-      description: 'İstifadəçi məlumatlarını redaktə edə bilər',
-      category: 'İstifadəçi İdarəetməsi',
-    ),
-    Permission(
-      id: 'delete_users',
-      name: 'İstifadəçi Silmə',
-      description: 'İstifadəçi hesabını silə bilər',
-      category: 'İstifadəçi İdarəetməsi',
-    ),
-
-    // Sinif İdarəetməsi
-    Permission(
-      id: 'view_classes',
-      name: 'Sinif Baxışı',
-      description: 'Sinif siyahısını görə bilər',
-      category: 'Sinif İdarəetməsi',
-    ),
-    Permission(
-      id: 'manage_classes',
-      name: 'Sinif İdarəetməsi',
-      description: 'Sinif yara, redaktə edə, silə bilər',
-      category: 'Sinif İdarəetməsi',
-    ),
-    Permission(
-      id: 'assign_teachers',
-      name: 'Müəllim Təyin Etmə',
-      description: 'Siniflərə müəllim təyin edə bilər',
-      category: 'Sinif İdarəetməsi',
-    ),
-
-    // Dərs Cədvəli İdarəetməsi
-    Permission(
-      id: 'view_timetable',
-      name: 'Dərs Cədvəli Baxışı',
-      description: 'Dərs cədvəlini görə bilər',
-      category: 'Dərs Cədvəli',
-    ),
-    Permission(
-      id: 'manage_timetable',
-      name: 'Dərs Cədvəli İdarəetməsi',
-      description: 'Dərs cədvəli yara və redaktə edə bilər',
-      category: 'Dərs Cədvəli',
-    ),
-
-    // Hesabat və Təhlil
-    Permission(
-      id: 'view_reports',
-      name: 'Hesabat Baxışı',
-      description: 'Sistem hesabatlarını görə bilər',
-      category: 'Hesabatlar',
-    ),
-    Permission(
-      id: 'export_reports',
-      name: 'Hesabat İxracı',
-      description: 'Hesabatları Excel/PDF olaraq yükləyə bilər',
-      category: 'Hesabatlar',
-    ),
-
-    // Tibbi Qeydlər
-    Permission(
-      id: 'view_medical',
-      name: 'Tibbi Qeyd Baxışı',
-      description: 'Şagird sağlamlıq qeydlərini görə bilər',
-      category: 'Səhiyyə',
-    ),
-    Permission(
-      id: 'manage_medical',
-      name: 'Tibbi Qeyd İdarəetməsi',
-      description: 'Sağlamlıq qeydləri əlavə edə və redaktə edə bilər',
-      category: 'Səhiyyə',
-    ),
-
-    // Kitabxana
-    Permission(
-      id: 'view_library',
-      name: 'Kitabxana Baxışı',
-      description: 'Kitabxana kitablarını görə bilər',
-      category: 'Kitabxana',
-    ),
-    Permission(
-      id: 'manage_library',
-      name: 'Kitabxana İdarəetməsi',
-      description: 'Kitab əlavə edə, borc vermə əməliyyatları edə bilər',
-      category: 'Kitabxana',
-    ),
-
-    // Yeməkxana
-    Permission(
-      id: 'view_cafeteria',
-      name: 'Yeməkxana Menyusu Baxışı',
-      description: 'Yeməkxana menyusunu görə bilər',
-      category: 'Yeməkxana',
-    ),
-    Permission(
-      id: 'manage_cafeteria',
-      name: 'Yeməkxana İdarəetməsi',
-      description: 'Yeməkxana menyusunu redaktə edə bilər',
-      category: 'Yeməkxana',
-    ),
-
-    // İnventar (QR Ticket)
-    Permission(
-      id: 'view_inventory',
-      name: 'İnventar Baxışı',
-      description: 'İnventar qeydlərini görə bilər',
-      category: 'İnventar',
-    ),
-    Permission(
-      id: 'manage_inventory',
-      name: 'İnventar İdarəetməsi',
-      description: 'İnventar QR ticket yara və idarə edə bilər',
-      category: 'İnventar',
-    ),
-
-    // Dəstək (Helpdesk)
-    Permission(
-      id: 'view_tickets',
-      name: 'Dəstək Tələbləri Baxışı',
-      description: 'Helpdesk tələblərini görə bilər',
-      category: 'Dəstək',
-    ),
-    Permission(
-      id: 'view_all_tickets',
-      name: 'Bütün Biletləri Görmə',
-      description: 'Yalnız öz biletlərini deyil, hamının biletlərini görə bilər',
-      category: 'Dəstək',
-    ),
-    Permission(
-      id: 'manage_tickets',
-      name: 'Dəstək Tələbləri İdarəetməsi',
-      description: 'Dəstək tələblərini cavablandıra və bağlaya bilər',
-      category: 'Dəstək',
-    ),
-
-    // Sistem Ayarları
-    Permission(
-      id: 'view_settings',
-      name: 'Ayarları Baxış',
-      description: 'Sistem ayarlarını görə bilər',
-      category: 'Sistem',
-    ),
-    Permission(
-      id: 'manage_settings',
-      name: 'Ayarları İdarəetmə',
-      description: 'Sistem ayarlarını dəyişdirə bilər',
-      category: 'Sistem',
-    ),
-
-    // Rol İdarəetməsi
-    Permission(
-      id: 'view_roles',
-      name: 'Rol Baxışı',
-      description: 'Rolları görə bilər',
-      category: 'Rol İdarəetməsi',
-    ),
-    Permission(
-      id: 'manage_roles',
-      name: 'Rol İdarəetməsi',
-      description: 'Rol yara, redaktə edə, silə bilər',
-      category: 'Rol İdarəetməsi',
-    ),
-
-    // ========================================
-    // 🌐 WEB PANEL ÖZELLİKLERİ (API Entegrasyonu)
-    // ⚠️ Bu izinler gerçek API gelince aktif olacak
-    // ========================================
-
-    // Maliyyə (Finance) - Sadəcə Admin
-    Permission(
-      id: 'view_finance',
-      name: 'Maliyyə Baxışı',
-      description: 'Maliyyə məlumatlarını görə bilər',
-      category: 'Maliyyə',
-    ),
-    Permission(
-      id: 'manage_student_invoices',
-      name: 'Tələbə Müqavilələri',
-      description: 'Tələbə müqavilələrini idarə edə bilər',
-      category: 'Maliyyə',
-    ),
-    Permission(
-      id: 'manage_payroll',
-      name: 'Əmək Haqqı Hesablanması',
-      description: 'Əmək haqqı hesablamalarını idarə edə bilər',
-      category: 'Maliyyə',
-    ),
-    Permission(
-      id: 'view_salary_list',
-      name: 'Maaş Siyahısı',
-      description: 'Əməkdaş maaşlarını görə bilər',
-      category: 'Maliyyə',
-    ),
-    Permission(
-      id: 'manage_general_ledger',
-      name: 'Gəlir/Xərc İdarəetməsi',
-      description: 'Ümumi gəlir və xərclərə nəzarət',
-      category: 'Maliyyə',
-    ),
-
-    // Əməkdaş İdarəetməsi (Employee)
-    Permission(
-      id: 'view_employees',
-      name: 'Əməkdaş Baxışı',
-      description: 'Əməkdaş siyahısını görə bilər',
-      category: 'Əməkdaş İdarəetməsi',
-    ),
-    Permission(
-      id: 'manage_employees',
-      name: 'Əməkdaş İdarəetməsi',
-      description: 'Əməkdaş əlavə edə, redaktə edə bilər',
-      category: 'Əməkdaş İdarəetməsi',
-    ),
-    Permission(
-      id: 'view_contracts',
-      name: 'Müqavilə Baxışı',
-      description: 'İş müqavilələrini görə bilər',
-      category: 'Əməkdaş İdarəetməsi',
-    ),
-    Permission(
-      id: 'manage_contracts',
-      name: 'Müqavilə İdarəetməsi',
-      description: 'İş müqavilələrini idarə edə bilər',
-      category: 'Əməkdaş İdarəetməsi',
-    ),
-    Permission(
-      id: 'view_employee_attendance',
-      name: 'İşçi Davamiyyəti',
-      description: 'İşçi davamiyyətini görə bilər',
-      category: 'Əməkdaş İdarəetməsi',
-    ),
-
-    // Anbar (Warehouse)
-    Permission(
-      id: 'view_warehouse',
-      name: 'Anbar Baxışı',
-      description: 'Anbar məlumatlarını görə bilər',
-      category: 'Anbar',
-    ),
-    Permission(
-      id: 'manage_inventorizations',
-      name: 'İnventarizasiya',
-      description: 'Anbar inventarizasiyasını edə bilər',
-      category: 'Anbar',
-    ),
-
-    // İmtahan İdarəetməsi (Exams)
-    Permission(
-      id: 'view_exams',
-      name: 'İmtahan Baxışı',
-      description: 'İmtahan siyahısını görə bilər',
-      category: 'İmtahan',
-    ),
-    Permission(
-      id: 'manage_exams',
-      name: 'İmtahan İdarəetməsi',
-      description: 'İmtahan təşkil edə və idarə edə bilər',
-      category: 'İmtahan',
-    ),
-    Permission(
-      id: 'view_exam_results',
-      name: 'İmtahan Nəticələri',
-      description: 'İmtahan nəticələrini görə bilər',
-      category: 'İmtahan',
-    ),
-    Permission(
-      id: 'enter_exam_results',
-      name: 'Nəticə Daxil Etmə',
-      description: 'İmtahan nəticələrini daxil edə bilər',
-      category: 'İmtahan',
-    ),
-
-    // Struktur İdarəetməsi (Structure) - Sadəcə Admin
-    Permission(
-      id: 'view_structure',
-      name: 'Struktur Baxışı',
-      description: 'Təşkilat strukturunu görə bilər',
-      category: 'Struktur',
-    ),
-    Permission(
-      id: 'manage_companies',
-      name: 'Məktəb İdarəsi',
-      description: 'Məktəb/Şirkət məlumatlarını idarə edə bilər',
-      category: 'Struktur',
-    ),
-    Permission(
-      id: 'manage_filials',
-      name: 'Filial İdarəetməsi',
-      description: 'Filialları idarə edə bilər',
-      category: 'Struktur',
-    ),
-
-    // Statistika
-    Permission(
-      id: 'view_statistics',
-      name: 'Statistika Baxışı',
-      description: 'Sistem statistikalarını görə bilər',
-      category: 'Statistika',
-    ),
-    Permission(
-      id: 'view_quality_control',
-      name: 'Keyfiyyətə Nəzarət',
-      description: 'Keyfiyyət nəzarət hesabatlarını görə bilər',
-      category: 'Statistika',
-    ),
-    Permission(
-      id: 'view_performance_stats',
-      name: 'Performans Statistikası',
-      description: 'Şagird performans statistikasını görə bilər',
-      category: 'Statistika',
-    ),
-
-    // Tapşırıq və Kurikulum
-    Permission(
-      id: 'manage_assignments',
-      name: 'Tapşırıq İdarəetməsi',
-      description: 'Tapşırıq yara və yoxlaya bilər',
-      category: 'Akademik',
-    ),
-    Permission(
-      id: 'manage_curriculum',
-      name: 'Kurikulum İdarəetməsi',
-      description: 'Tədris proqramını idarə edə bilər',
-      category: 'Akademik',
-    ),
-    Permission(
-      id: 'manage_clubs',
-      name: 'Dərnək İdarəetməsi',
-      description: 'Şagird dərnəklərini idarə edə bilər',
-      category: 'Akademik',
-    ),
-
-    // 📱 Mobil Xüsusi Özellikler
-    Permission(
-      id: 'view_digital_id',
-      name: 'Digital ID Kartı',
-      description: 'Şagird digital kimlik kartını görə bilər',
-      category: 'Mobil Xüsusi',
-    ),
-    Permission(
-      id: 'access_meet_idrak',
-      name: 'Meet İdrak Girişi',
-      description: 'Video görüşlərə qoşula bilər',
-      category: 'Mobil Xüsusi',
-    ),
-    Permission(
-      id: 'create_meet_room',
-      name: 'Görüş Otağı Yaratma',
-      description: 'Yeni video görüş otağı yara bilər',
-      category: 'Mobil Xüsusi',
-    ),
-    Permission(
-      id: 'scan_qr_attendance',
-      name: 'QR Davamiyyət Oxutma',
-      description: 'QR kod ilə davamiyyət qeyd edə bilər',
-      category: 'Mobil Xüsusi',
-    ),
-  ];
-
-  // Kateqoriyaya görə qrupla
-  static Map<String, List<Permission>> get byCategory {
-    final Map<String, List<Permission>> grouped = {};
-    for (final permission in all) {
-      if (!grouped.containsKey(permission.category)) {
-        grouped[permission.category] = [];
-      }
-      grouped[permission.category]!.add(permission);
-    }
-    return grouped;
-  }
-}
-
-// Default Rollar (10 Ədəd)
-class DefaultRoles {
-  static List<Role> createAll() {
-    final now = DateTime.now();
-    
-    return [
-      // 1. Admin - Bütün səlahiyyətlər
-      Role(
-        id: 'role-admin',
-        name: 'Admin',
-        description: 'Sistem inzibatçısı - Bütün səlahiyyətlər',
-        permissionIds: DefaultPermissions.all.map((p) => p.id).toList(),
-        isDefault: true,
-        isDeletable: false,
-        createdAt: now,
-      ),
-
-      // 2. Müdür - Admin kimi amma rol idarəetməsi yoxdur
-      Role(
-        id: 'role-mudur',
-        name: 'Müdür',
-        description: 'Məktəb müdürü - Geniş səlahiyyətlər',
-        permissionIds: DefaultPermissions.all
-            .where((p) => !p.id.startsWith('manage_roles'))
-            .map((p) => p.id)
-            .toList(),
-        isDefault: true,
-        isDeletable: false,
-        createdAt: now,
-      ),
-
-      // 3. Müdür Müavini - Orta səviyyə idarəetmə
-      Role(
-        id: 'role-mudur-muavini',
-        name: 'Müdür Müavini',
-        description: 'Müdür köməkçisi - İdarəetmə səlahiyyətləri',
-        permissionIds: [
-          'view_students', 'add_students', 'edit_students',
-          'view_users', 'view_grades', 'view_attendance', 'edit_attendance',
-          'view_classes', 'manage_classes', 'assign_teachers',
-          'view_timetable', 'manage_timetable',
-          'view_reports', 'export_reports',
-          'view_medical', 'view_library', 'view_cafeteria',
-          'view_inventory', 'view_tickets', 'manage_tickets', 'view_all_tickets',
-        ],
-        isDefault: true,
-        isDeletable: false,
-        createdAt: now,
-      ),
-
-      // 4. Müəllim - Tədris səlahiyyətləri
-      Role(
-        id: 'role-ogretmen',
-        name: 'Müəllim',
-        description: 'Müəllim - Qiymət və davamiyyət idarəetməsi',
-        permissionIds: [
-          'view_students',
-          'view_grades', 'add_grades', 'edit_grades',
-          'view_attendance', 'add_attendance', 'edit_attendance',
-          'view_classes',
-          'view_timetable',
-          'view_reports',
-          'view_medical',
-          'view_library',
-          'view_cafeteria',
-        ],
-        isDefault: true,
-        isDeletable: false,
-        createdAt: now,
-      ),
-
-      // 5. IT Çalışanı - Texniki dəstək və sistem
-      Role(
-        id: 'role-it',
-        name: 'IT Çalışanı',
-        description: 'IT işçisi - Texniki dəstək və sistem idarəetməsi',
-        permissionIds: [
-          'view_users', 'add_users', 'edit_users',
-          'view_students', 'view_classes',
-          'view_inventory', 'manage_inventory',
-          'view_tickets', 'manage_tickets', 'view_all_tickets',
-          'view_settings', 'manage_settings',
-          'view_timetable',
-        ],
-        isDefault: true,
-        isDeletable: false,
-        createdAt: now,
-      ),
-
-      // 6. Helpdesk - Dəstək tələbi və inventar idarəetməsi
-      Role(
-        id: 'role-helpdesk',
-        name: 'Helpdesk',
-        description: 'Yardım masası - Dəstək tələbləri və avadanlıq',
-        permissionIds: [
-          'view_tickets', 'manage_tickets', 'view_all_tickets',
-          'view_inventory', 'manage_inventory',
-        ],
-        isDefault: true,
-        isDeletable: false,
-        createdAt: now,
-      ),
-
-      // 7. Psixoloq - Şagird məsləhətçiliyi
-      Role(
-        id: 'role-psikolog',
-        name: 'Psixoloq',
-        description: 'Rəhbər müəllim - Şagird izləməsi',
-        permissionIds: [
-          'view_students',
-          'view_grades',
-          'view_attendance',
-          'view_classes',
-          'view_reports',
-          'view_medical',
-        ],
-        isDefault: true,
-        isDeletable: false,
-        createdAt: now,
-      ),
-
-      // 8. Tibbi Çalışan - Sağlıq qeydləri
-      Role(
-        id: 'role-tibbi',
-        name: 'Tibbi Çalışan',
-        description: 'Səhiyyə işçisi - Tibbi qeyd idarəetməsi',
-        permissionIds: [
-          'view_students',
-          'view_medical', 'manage_medical',
-        ],
-        isDefault: true,
-        isDeletable: false,
-        createdAt: now,
-      ),
-
-      // 9. Kitabxanaçı - Kitabxana əməliyyatları
-      Role(
-        id: 'role-kutuphaneci',
-        name: 'Kitabxanaçı',
-        description: 'Kitabxana işçisi - Kitab idarəetməsi',
-        permissionIds: [
-          'view_students',
-          'view_library', 'manage_library',
-        ],
-        isDefault: true,
-        isDeletable: false,
-        createdAt: now,
-      ),
-
-      // 10. Təhlükəsizlik - Məhdud giriş
-      Role(
-        id: 'role-guvenlik',
-        name: 'Təhlükəsizlik',
-        description: 'Mühafizə işçisi - QR/Barkod oxuma',
-        permissionIds: [
-          'view_students',
-          'view_inventory',
-        ],
-        isDefault: true,
-        isDeletable: false,
-        createdAt: now,
-      ),
-    ];
-  }
-}
+// Rol və Səlahiyyət Modeli (GoPanel Web 1:1 Spatie İcazə Kataloqu ilə)
+
+class Permission {
+  final String id;
+  final String name;
+  final String description;
+  final String category;
+
+  const Permission({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.category,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'description': description,
+    'category': category,
+  };
+
+  factory Permission.fromJson(Map<String, dynamic> json) => Permission(
+    id: json['id']?.toString() ?? '',
+    name: json['name']?.toString() ?? '',
+    description: json['description']?.toString() ?? '',
+    category: json['category']?.toString() ?? 'Sistem İdarəetməsi',
+  );
+}
+
+class Role {
+  final String id;
+  final String name;
+  final String description;
+  final List<String> permissionIds;
+  final bool isDefault;
+  final bool isDeletable;
+  final DateTime createdAt;
+
+  Role({
+    required this.id,
+    required this.name,
+    required this.description,
+    this.permissionIds = const [],
+    this.isDefault = false,
+    this.isDeletable = true,
+    required this.createdAt,
+  });
+
+  Role copyWith({
+    String? name,
+    String? description,
+    List<String>? permissionIds,
+    bool? isDefault,
+    bool? isDeletable,
+  }) {
+    return Role(
+      id: id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      permissionIds: permissionIds ?? this.permissionIds,
+      isDefault: isDefault ?? this.isDefault,
+      isDeletable: isDeletable ?? this.isDeletable,
+      createdAt: createdAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'description': description,
+    'permissionIds': permissionIds,
+    'isDefault': isDefault,
+    'isDeletable': isDeletable,
+    'createdAt': createdAt.toIso8601String(),
+  };
+
+  factory Role.fromJson(Map<String, dynamic> json) => Role(
+    id: json['id']?.toString() ?? '',
+    name: json['name']?.toString() ?? '',
+    description: json['description']?.toString() ?? '',
+    permissionIds: List<String>.from(json['permissionIds'] ?? []),
+    isDefault: json['isDefault'] ?? false,
+    isDeletable: json['isDeletable'] ?? true,
+    createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+  );
+}
+
+class DefaultPermissions {
+  static List<Permission> _dynamicCatalog = [];
+
+  static void setDynamicCatalog(List<Permission> catalog) {
+    if (catalog.isNotEmpty) {
+      _dynamicCatalog = catalog;
+    }
+  }
+
+  static List<Permission> get all =>
+      _dynamicCatalog.isNotEmpty ? _dynamicCatalog : _builtInWebCatalog;
+
+  static const List<Permission> _builtInWebCatalog = [
+    // Şagird və Valideyn (Şagird Əməliyyatları)
+    Permission(id: 'gopanel.academic.students.view', name: 'Şagirdlər — Siyahı və 360 Profil', description: 'gopanel.academic.students.view', category: 'Şagird və Valideyn (Şagird Əməliyyatları)'),
+    Permission(id: 'gopanel.academic.students.create', name: 'Şagirdlər — Yeni şagird yaratmaq', description: 'gopanel.academic.students.create', category: 'Şagird və Valideyn (Şagird Əməliyyatları)'),
+    Permission(id: 'gopanel.academic.students.update', name: 'Şagirdlər — Məlumatları redaktə etmək', description: 'gopanel.academic.students.update', category: 'Şagird və Valideyn (Şagird Əməliyyatları)'),
+    Permission(id: 'gopanel.academic.students.delete', name: 'Şagirdlər — Şagirdi silmək', description: 'gopanel.academic.students.delete', category: 'Şagird və Valideyn (Şagird Əməliyyatları)'),
+    Permission(id: 'gopanel.academic.students.view_password', name: 'Şagirdlər — Giriş və şifrə məlumatlarını görmək', description: 'gopanel.academic.students.view_password', category: 'Şagird və Valideyn (Şagird Əməliyyatları)'),
+    Permission(id: 'gopanel.academic.students.more_info', name: 'Şagirdlər — Daxili qeydlər və tarixçə', description: 'gopanel.academic.students.more_info', category: 'Şagird və Valideyn (Şagird Əməliyyatları)'),
+    Permission(id: 'gopanel.academic.students.manage_relations', name: 'Şagirdlər — Valideyn və qohumluq əlaqələri', description: 'gopanel.academic.students.manage_relations', category: 'Şagird və Valideyn (Şagird Əməliyyatları)'),
+    Permission(id: 'gopanel.finance.student_contracts.view', name: 'Şagird müqavilələri — Müqavilə və təhsil haqqına baxış', description: 'gopanel.finance.student_contracts.view', category: 'Şagird və Valideyn (Şagird Əməliyyatları)'),
+    Permission(id: 'gopanel.finance.student_contracts.create', name: 'Şagird müqavilələri — Yeni müqavilə bağlamaq', description: 'gopanel.finance.student_contracts.create', category: 'Şagird və Valideyn (Şagird Əməliyyatları)'),
+    Permission(id: 'gopanel.academic.transitions.exceptions.view', name: 'Bölmə dəyişiklikləri — Keçid istisnalarına baxış', description: 'gopanel.academic.transitions.exceptions.view', category: 'Şagird və Valideyn (Şagird Əməliyyatları)'),
+    Permission(id: 'gopanel.academic.students.admissions', name: 'Şagird qəbulu — Müraciətlər və qəbul prosesi', description: 'gopanel.academic.students.admissions', category: 'Şagird və Valideyn (Şagird Əməliyyatları)'),
+    Permission(id: 'gopanel.academic.graduations.view', name: 'Məzunlar — Məzuniyyət siyahısına baxış', description: 'gopanel.academic.graduations.view', category: 'Şagird və Valideyn (Şagird Əməliyyatları)'),
+
+    // E-məktəb (Akademik)
+    Permission(id: 'gopanel.academic.students.admissions', name: 'Şagird qəbulu — Baxış və İdarə', description: 'gopanel.academic.students.admissions', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.students.view', name: 'Şagirdlər — Baxış', description: 'gopanel.academic.students.view', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.students.create', name: 'Şagirdlər — Yaratmaq', description: 'gopanel.academic.students.create', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.students.update', name: 'Şagirdlər — Redaktə', description: 'gopanel.academic.students.update', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.students.delete', name: 'Şagirdlər — Silmək', description: 'gopanel.academic.students.delete', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.graduations.view', name: 'Məzunlar — Baxış', description: 'gopanel.academic.graduations.view', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.classes.view', name: 'Siniflər — Baxış', description: 'gopanel.academic.classes.view', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.classes.create', name: 'Siniflər — Yaratmaq', description: 'gopanel.academic.classes.create', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.classes.update', name: 'Siniflər — Redaktə', description: 'gopanel.academic.classes.update', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.schedules.view', name: 'Cədvəl — Baxış', description: 'gopanel.academic.schedules.view', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.schedules.manage', name: 'Cədvəl — İdarəetmə', description: 'gopanel.academic.schedules.manage', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.ejournal.view', name: 'E-Jurnal — Baxış', description: 'gopanel.academic.ejournal.view', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.homeroom.excuses.view', name: 'Üzürlü qayıb sorğuları — Baxış', description: 'gopanel.academic.homeroom.excuses.view', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.homeroom.excuses.approve', name: 'Üzürlü qayıb sorğuları — Təsdiqləmək', description: 'gopanel.academic.homeroom.excuses.approve', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.ejournal.curriculums.view', name: 'Kurikulum — Baxış', description: 'gopanel.academic.ejournal.curriculums.view', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.foundations.subjects.view', name: 'Fənlər — Baxış', description: 'gopanel.academic.foundations.subjects.view', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.clubs.view', name: 'Dərnəklər — Baxış', description: 'gopanel.academic.clubs.view', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.clubs.create', name: 'Dərnəklər — Yaratmaq', description: 'gopanel.academic.clubs.create', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.clubs.update', name: 'Dərnəklər — Redaktə', description: 'gopanel.academic.clubs.update', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.clubs.delete', name: 'Dərnəklər — Silmək', description: 'gopanel.academic.clubs.delete', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.clubs.journal.view', name: 'Dərnək Jurnalı — Baxış', description: 'gopanel.academic.clubs.journal.view', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.foundations.years.view', name: 'Akademik illər — Baxış', description: 'gopanel.academic.foundations.years.view', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.foundations.rooms.view', name: 'Otaqlar — Baxış', description: 'gopanel.academic.foundations.rooms.view', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.foundations.rooms.create', name: 'Otaqlar — Yaratmaq', description: 'gopanel.academic.foundations.rooms.create', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.foundations.rooms.update', name: 'Otaqlar — Redaktə', description: 'gopanel.academic.foundations.rooms.update', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.foundations.rooms.delete', name: 'Otaqlar — Silmək', description: 'gopanel.academic.foundations.rooms.delete', category: 'E-məktəb (Akademik)'),
+    Permission(id: 'gopanel.academic.foundations.time_slots.view', name: 'Zəng cədvəli — Baxış', description: 'gopanel.academic.foundations.time_slots.view', category: 'E-məktəb (Akademik)'),
+
+    // İnsan Resursları (HR)
+    Permission(id: 'gopanel.structure.structures.view', name: 'Təşkilati struktur — Baxış', description: 'gopanel.structure.structures.view', category: 'İnsan Resursları (HR)'),
+    Permission(id: 'gopanel.structure.positions.view', name: 'Vəzifələr — Baxış', description: 'gopanel.structure.positions.view', category: 'İnsan Resursları (HR)'),
+    Permission(id: 'gopanel.hr.employees.view', name: 'Əməkdaşlar — Baxış', description: 'gopanel.hr.employees.view', category: 'İnsan Resursları (HR)'),
+    Permission(id: 'gopanel.hr.employees.create', name: 'Əməkdaşlar — Yaratmaq', description: 'gopanel.hr.employees.create', category: 'İnsan Resursları (HR)'),
+    Permission(id: 'gopanel.hr.employees.update', name: 'Əməkdaşlar — Redaktə', description: 'gopanel.hr.employees.update', category: 'İnsan Resursları (HR)'),
+    Permission(id: 'gopanel.hr.employees.delete', name: 'Əməkdaşlar — Silmək', description: 'gopanel.hr.employees.delete', category: 'İnsan Resursları (HR)'),
+    Permission(id: 'gopanel.hr.contracts.view', name: 'Müqavilələr — Baxış', description: 'gopanel.hr.contracts.view', category: 'İnsan Resursları (HR)'),
+    Permission(id: 'gopanel.hr.contracts.create', name: 'Müqavilələr — Yaratmaq', description: 'gopanel.hr.contracts.create', category: 'İnsan Resursları (HR)'),
+    Permission(id: 'gopanel.hr.documents.view', name: 'İşçi sənədləri — Baxış', description: 'gopanel.hr.documents.view', category: 'İnsan Resursları (HR)'),
+    Permission(id: 'gopanel.hr.attendances.view', name: 'Davamiyyət — Baxış', description: 'gopanel.hr.attendances.view', category: 'İnsan Resursları (HR)'),
+
+    // Maliyyə və Mühasibatlıq
+    Permission(id: 'gopanel.finance.student_contracts.view', name: 'Şagird müqavilələri — Baxış', description: 'gopanel.finance.student_contracts.view', category: 'Maliyyə və Mühasibatlıq'),
+    Permission(id: 'gopanel.finance.payments.view', name: 'Ödənişlər — Baxış', description: 'gopanel.finance.payments.view', category: 'Maliyyə və Mühasibatlıq'),
+    Permission(id: 'gopanel.finance.payroll.view', name: 'Əmək haqqı hesablanması — Baxış', description: 'gopanel.finance.payroll.view', category: 'Maliyyə və Mühasibatlıq'),
+    Permission(id: 'gopanel.finance.ledger.view', name: 'Gəlir/xərc — Baxış', description: 'gopanel.finance.ledger.view', category: 'Maliyyə və Mühasibatlıq'),
+    Permission(id: 'gopanel.finance.dictionary.view', name: 'Maliyyə tənzimləmələri — Baxış', description: 'gopanel.finance.dictionary.view', category: 'Maliyyə və Mühasibatlıq'),
+
+    // Təsərrüfat və İnventar
+    Permission(id: 'gopanel.warehouse.items.view', name: 'Anbar inventarı — Baxış', description: 'gopanel.warehouse.items.view', category: 'Anbar və İnventar'),
+    Permission(id: 'gopanel.warehouse_actions.inventorizations.view', name: 'İnventarizasiya — Baxış', description: 'gopanel.warehouse_actions.inventorizations.view', category: 'Anbar və İnventar'),
+    Permission(id: 'gopanel.canteen.canteens.view', name: 'Yeməkxana — Baxış', description: 'gopanel.canteen.canteens.view', category: 'Yeməkxana'),
+    Permission(id: 'gopanel.canteen.menu.view', name: 'Həftəlik Menyu — Baxış', description: 'gopanel.canteen.menu.view', category: 'Yeməkxana'),
+
+    // Tibb və Psixologiya
+    Permission(id: 'gopanel.medical.medical_results.view', name: 'Tibbi müayinə nəticələri — Baxış', description: 'gopanel.medical.medical_results.view', category: 'Tibbi Əməliyyatlar'),
+    Permission(id: 'gopanel.medical.reference_journals.view', name: 'Tibbi arayış jurnalı — Baxış', description: 'gopanel.medical.reference_journals.view', category: 'Tibbi Əməliyyatlar'),
+    Permission(id: 'gopanel.medical.excuses.view', name: 'Tibbi üzürlü qayıblar — Baxış', description: 'gopanel.medical.excuses.view', category: 'Tibbi Əməliyyatlar'),
+    Permission(id: 'gopanel.psicology.psicology_results.view', name: 'Psixologiya nəticələri — Baxış', description: 'gopanel.psicology.psicology_results.view', category: 'Psixologiya'),
+
+    // İmtahanlar
+    Permission(id: 'gopanel.exams.exam_categories.view', name: 'İmtahan kateqoriyaları — Baxış', description: 'gopanel.exams.exam_categories.view', category: 'İmtahanlar'),
+    Permission(id: 'gopanel.exams.exams.view', name: 'İmtahanlar — Baxış', description: 'gopanel.exams.exams.view', category: 'İmtahanlar'),
+    Permission(id: 'gopanel.exams.results.view', name: 'İmtahan nəticələri — Baxış', description: 'gopanel.exams.results.view', category: 'İmtahanlar'),
+
+    // Dəstək Biletləri
+    Permission(id: 'gopanel.tickets.view', name: 'Dəstək biletləri — Baxış', description: 'gopanel.tickets.view', category: 'Dəstək Biletləri (Helpdesk)'),
+    Permission(id: 'gopanel.tickets.create', name: 'Dəstək bileti — Yaratmaq', description: 'gopanel.tickets.create', category: 'Dəstək Biletləri (Helpdesk)'),
+    Permission(id: 'gopanel.tickets.respond', name: 'Dəstək biletinə — Cavab yazmaq', description: 'gopanel.tickets.respond', category: 'Dəstək Biletləri (Helpdesk)'),
+
+    // Kitabxana
+    Permission(id: 'gopanel.library.books.view', name: 'Kitablar — Baxış', description: 'gopanel.library.books.view', category: 'Kitabxana'),
+    Permission(id: 'gopanel.library.books.create', name: 'Kitablar — Əlavə etmək', description: 'gopanel.library.books.create', category: 'Kitabxana'),
+    Permission(id: 'gopanel.library.books.update', name: 'Kitablar — Redaktə', description: 'gopanel.library.books.update', category: 'Kitabxana'),
+    Permission(id: 'gopanel.library.books.delete', name: 'Kitablar — Silmək', description: 'gopanel.library.books.delete', category: 'Kitabxana'),
+    Permission(id: 'gopanel.library.loans.view', name: 'Kitab icarələri — Baxış', description: 'gopanel.library.loans.view', category: 'Kitabxana'),
+    Permission(id: 'gopanel.library.loans.create', name: 'Kitab icarələri — Yaratmaq', description: 'gopanel.library.loans.create', category: 'Kitabxana'),
+    Permission(id: 'gopanel.library.reservations.view', name: 'Kitab reservasiyaları — Baxış', description: 'gopanel.library.reservations.view', category: 'Kitabxana'),
+    Permission(id: 'gopanel.library.reservations.approve', name: 'Kitab reservasiyaları — Təsdiqləmək', description: 'gopanel.library.reservations.approve', category: 'Kitabxana'),
+
+    // Statistika və Hesabatlar
+    Permission(id: 'gopanel.statistics.quality_control.view', name: 'Keyfiyyətə nəzarət — Baxış', description: 'gopanel.statistics.quality_control.view', category: 'Statistika və Hesabatlar'),
+    Permission(id: 'gopanel.statistics.attendance.view', name: 'Davamiyyət statistikası — Baxış', description: 'gopanel.statistics.attendance.view', category: 'Statistika və Hesabatlar'),
+    Permission(id: 'gopanel.academic.statistics.performance', name: 'Şagird performans statistikası — Baxış', description: 'gopanel.academic.statistics.performance', category: 'Statistika və Hesabatlar'),
+    Permission(id: 'gopanel.academic.teachers.report.view', name: 'İş yükü hesabatı — Baxış', description: 'gopanel.academic.teachers.report.view', category: 'Statistika və Hesabatlar'),
+
+    // Sistem və Loqlar
+    Permission(id: 'gopanel.notifications.view', name: 'Bildirişlər — Baxış', description: 'gopanel.notifications.view', category: 'Bildirişlər'),
+    Permission(id: 'gopanel.notifications.create', name: 'Bildirişlər — Göndərmək', description: 'gopanel.notifications.create', category: 'Bildirişlər'),
+    Permission(id: 'gopanel.admins.view', name: 'Adminlər — Baxış', description: 'gopanel.admins.view', category: 'Sistem İdarəetməsi'),
+    Permission(id: 'gopanel.roles.view', name: 'Vəzifələr (Rollar) — Baxış', description: 'gopanel.roles.view', category: 'Sistem İdarəetməsi'),
+    Permission(id: 'gopanel.roles.create', name: 'Vəzifələr (Rollar) — Yaratmaq', description: 'gopanel.roles.create', category: 'Sistem İdarəetməsi'),
+    Permission(id: 'gopanel.roles.update', name: 'Vəzifələr (Rollar) — Redaktə', description: 'gopanel.roles.update', category: 'Sistem İdarəetməsi'),
+    Permission(id: 'gopanel.roles.delete', name: 'Vəzifələr (Rollar) — Silmək', description: 'gopanel.roles.delete', category: 'Sistem İdarəetməsi'),
+    Permission(id: 'gopanel.activity.logs.view', name: 'Sistem loqları — Baxış', description: 'gopanel.activity.logs.view', category: 'Sistem Loqları'),
+  ];
+
+  static Map<String, List<Permission>> get byCategory {
+    final Map<String, List<Permission>> grouped = {};
+    for (final permission in all) {
+      grouped.putIfAbsent(permission.category, () => []).add(permission);
+    }
+    return grouped;
+  }
+}
+
+class DefaultRoles {
+  static List<Role> createAll() {
+    final now = DateTime.now();
+    return [
+      Role(
+        id: 'SuperAdmin',
+        name: 'SuperAdmin',
+        description: 'Sistem inzibatçısı — Bütün səlahiyyətlər',
+        permissionIds: DefaultPermissions.all.map((p) => p.id).toList(),
+        isDefault: true,
+        isDeletable: false,
+        createdAt: now,
+      ),
+    ];
+  }
+}

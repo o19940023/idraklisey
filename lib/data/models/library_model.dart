@@ -18,6 +18,9 @@ class BookItem {
   final DateTime? returnDeadline;
   final String description;
   final double rating;
+  final String isbn;
+  final String pdfUrl; // Boşdursa kitab hələ rəqəmsal şəkildə mövcud deyil
+  final int totalCopies;
 
   BookItem({
     required this.id,
@@ -33,5 +36,8 @@ class BookItem {
     this.returnDeadline,
     required this.description,
     this.rating = 4.8,
+    this.isbn = '',
+    this.pdfUrl = '',
+    this.totalCopies = 0,
   });
 }

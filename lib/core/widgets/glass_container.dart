@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../theme/app_palette.dart';
 
 /// iPhone-style glassmorphism container
 /// Uses BackdropFilter for real blur effect
@@ -20,7 +21,7 @@ class GlassContainer extends StatelessWidget {
     super.key,
     required this.child,
     this.borderRadius = 20,
-    this.blur = 15,
+    this.blur = 20,
     this.backgroundColor,
     this.borderColor,
     this.borderWidth = 1.5,
@@ -33,45 +34,51 @@ class GlassContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      width: width,
-      height: height,
-      margin: margin,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        boxShadow: boxShadow ??
-            [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
-                blurRadius: 20,
-                spreadRadius: -5,
-                offset: const Offset(0, 10),
+    final palette = AppPalette.of(context);
+
+    return RepaintBoundary(
+      child: Container(
+        width: width,
+        height: height,
+        margin: margin,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: boxShadow ??
+              [
+                BoxShadow(
+                  color: Colors.black.withValues(
+                    alpha: Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.1,
+                  ),
+                  blurRadius: 20,
+                  spreadRadius: -5,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    palette.glassHighlight.withValues(alpha: 0.08),
+                    palette.glassHighlight.withValues(alpha: 0.0),
+                  ],
+                ),
+                color: backgroundColor ?? palette.glassTint,
+                borderRadius: BorderRadius.circular(borderRadius),
+                border: Border.all(
+                  color: borderColor ?? palette.glassBorder,
+                  width: borderWidth,
+                ),
               ),
-            ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Container(
-            decoration: BoxDecoration(
-              color: backgroundColor ??
-                  (isDark
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.white.withOpacity(0.15)),
-              borderRadius: BorderRadius.circular(borderRadius),
-              border: Border.all(
-                color: borderColor ??
-                    (isDark
-                        ? Colors.white.withOpacity(0.1)
-                        : Colors.white.withOpacity(0.3)),
-                width: borderWidth,
-              ),
+              padding: padding,
+              child: child,
             ),
-            padding: padding,
-            child: child,
           ),
         ),
       ),
@@ -94,46 +101,47 @@ class GlassModalSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = AppPalette.of(context);
+    final underside = Theme.of(context).brightness == Brightness.dark
+        ? Colors.black.withValues(alpha: 0.6)
+        : Colors.white.withValues(alpha: 0.7);
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(borderRadius),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 40,
-            spreadRadius: -10,
-            offset: const Offset(0, -10),
+    return RepaintBoundary(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(borderRadius),
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(borderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 40,
+              spreadRadius: -10,
+              offset: const Offset(0, -10),
+            ),
+          ],
         ),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.black.withOpacity(0.6)
-                  : Colors.white.withOpacity(0.7),
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(borderRadius),
-              ),
-              border: Border(
-                top: BorderSide(
-                  color: isDark
-                      ? Colors.white.withOpacity(0.2)
-                      : Colors.white.withOpacity(0.5),
-                  width: 1.5,
+        child: ClipRRect(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(borderRadius),
+          ),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Color.alphaBlend(underside, palette.glassTint),
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(borderRadius),
+                ),
+                border: Border(
+                  top: BorderSide(
+                    color: palette.glassBorder,
+                    width: 1.5,
+                  ),
                 ),
               ),
+              child: child,
             ),
-            child: child,
           ),
         ),
       ),

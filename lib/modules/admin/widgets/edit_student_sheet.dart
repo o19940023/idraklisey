@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/fin_code_formatter.dart';
+import '../../../core/utils/password_hasher.dart';
+import '../../../core/widgets/profile_photo_picker.dart';
 import '../../../data/models/student_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../providers/app_state.dart';
@@ -35,6 +37,11 @@ class _EditStudentFormState extends State<_EditStudentForm> {
   late final TextEditingController _fatherName;
   late final TextEditingController _fin;
   late final TextEditingController _address;
+  late final TextEditingController _regAddress;
+  late final TextEditingController _eyeColor;
+  late final TextEditingController _contractNumber;
+  late final TextEditingController _contractAmount;
+  late String _sector;
   late final TextEditingController _allergies;
   late final TextEditingController _studentPass;
   late final TextEditingController _parentName;
@@ -54,6 +61,7 @@ class _EditStudentFormState extends State<_EditStudentForm> {
   DateTime? _parentBirthDate;
   late String? _selectedClass;
   late String _bloodGroup;
+  late String _photoUrl;
   bool _saving = false;
 
   AppUser? _studentUser;
@@ -70,6 +78,11 @@ class _EditStudentFormState extends State<_EditStudentForm> {
     _fatherName = TextEditingController(text: s.fatherName ?? '');
     _fin = TextEditingController(text: s.finCode ?? '');
     _address = TextEditingController(text: s.address ?? '');
+    _regAddress = TextEditingController(text: s.registrationAddress ?? s.address ?? '');
+    _eyeColor = TextEditingController(text: s.eyeColor ?? '');
+    _contractNumber = TextEditingController(text: s.contractNumber ?? '');
+    _contractAmount = TextEditingController(text: s.contractAmount?.toStringAsFixed(0) ?? '');
+    _sector = (s.sector == 'Rus' || s.sector == 'İngilis' || s.sector == 'Azərbaycan') ? s.sector! : 'Azərbaycan';
     _allergies = TextEditingController(text: (s.allergies ?? []).join(', '));
     _parentName = TextEditingController(text: s.parentName);
     _parentPhone = TextEditingController(text: s.parentPhone);
@@ -78,6 +91,7 @@ class _EditStudentFormState extends State<_EditStudentForm> {
     _birthDate = s.birthDate;
     _selectedClass = s.className;
     _bloodGroup = _bloodGroups.contains(s.bloodGroup) ? s.bloodGroup! : 'Məlumat yoxdur';
+    _photoUrl = s.photoUrl;
 
     final appState = context.read<AppState>();
     for (final u in appState.users) {
@@ -100,6 +114,10 @@ class _EditStudentFormState extends State<_EditStudentForm> {
     _fatherName.dispose();
     _fin.dispose();
     _address.dispose();
+    _regAddress.dispose();
+    _eyeColor.dispose();
+    _contractNumber.dispose();
+    _contractAmount.dispose();
     _allergies.dispose();
     _studentPass.dispose();
     _parentName.dispose();
@@ -124,7 +142,7 @@ class _EditStudentFormState extends State<_EditStudentForm> {
         child: child!,
       ),
     );
-    if (picked != null) setState(() => onPicked(picked));
+    if (mounted && picked != null) setState(() => onPicked(picked));
   }
 
   Future<void> _save() async {
@@ -152,7 +170,13 @@ class _EditStudentFormState extends State<_EditStudentForm> {
       birthDate: _birthDate,
       finCode: _fin.text.trim(),
       address: _address.text.trim(),
+      registrationAddress: _regAddress.text.trim(),
+      sector: _sector,
+      eyeColor: _eyeColor.text.trim(),
+      contractNumber: _contractNumber.text.trim(),
+      contractAmount: double.tryParse(_contractAmount.text.trim()),
       className: _selectedClass ?? widget.student.className,
+      photoUrl: _photoUrl,
       bloodGroup: bloodGroup,
       allergies: allergies,
       parentName: _parentName.text.trim(),
@@ -245,6 +269,55 @@ class _EditStudentFormState extends State<_EditStudentForm> {
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                   children: [
                     _sectionTitle('Şagird', AppColors.primaryAccent),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          ProfilePhotoPicker(
+                            initialPhotoUrl: _photoUrl.trim().isEmpty
+                                ? null
+                                : _photoUrl,
+                            size: 66,
+                            folder: 'idrak/profiles/students',
+                            onPhotoUploaded: (url) =>
+                                setState(() => _photoUrl = url),
+                            onPhotoRemoved: () =>
+                                setState(() => _photoUrl = ''),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Şagird profil fotoşəkli',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Kataloq, profil və rəqəmsal vəsiqədə görünür.',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    height: 1.3,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     _label('Ad *'),
                     _field(_firstName, 'Ad', validator: _req),
                     _label('Soyad *'),
@@ -279,8 +352,27 @@ class _EditStudentFormState extends State<_EditStudentForm> {
                         return null;
                       },
                     ),
-                    _label('Ünvan'),
-                    _field(_address, 'Ünvan'),
+                    _label('Bölmə (Sektor)'),
+                    DropdownButtonFormField<String>(
+                      value: _sector,
+                      decoration: _deco(Icons.language_rounded),
+                      items: const ['Azərbaycan', 'Rus', 'İngilis'].map((sec) => DropdownMenuItem(value: sec, child: Text(sec, style: const TextStyle(fontSize: 13)))).toList(),
+                      onChanged: (v) => setState(() => _sector = v!),
+                    ),
+                    _label('Yaşayış ünvanı'),
+                    _field(_address, 'Yaşayış ünvanı'),
+                    _label('Qeydiyyat ünvanı'),
+                    _field(_regAddress, 'Qeydiyyat ünvanı'),
+                    _label('Göz rəngi'),
+                    _field(_eyeColor, 'Qəhvəyi / Qara / Mavi'),
+                    _label('Müqavilə nömrəsi və İllik məbləğ (AZN)'),
+                    Row(
+                      children: [
+                        Expanded(child: _field(_contractNumber, 'MÜQ-...')),
+                        const SizedBox(width: 8),
+                        Expanded(child: _field(_contractAmount, '6500', keyboard: TextInputType.number)),
+                      ],
+                    ),
                     _label('Sinif'),
                     DropdownButtonFormField<String>(
                       value: classes.contains(_selectedClass) ? _selectedClass : null,
@@ -303,7 +395,7 @@ class _EditStudentFormState extends State<_EditStudentForm> {
                     _label('Alergiyalar (vergüllə)'),
                     _field(_allergies, 'Fıstıq, toz'),
                     _label('Şagird şifrəsi'),
-                    _field(_studentPass, 'Şifrə', validator: (v) => (v ?? '').trim().length < 4 ? 'Ən azı 4 simvol' : null),
+                    _field(_studentPass, 'Şifrə', validator: (v) => PasswordHasher.validate(v, minLength: 6)),
                     const SizedBox(height: 14),
                     _sectionTitle('Valideyn', AppColors.goldDark),
                     _label('Ad Soyad *'),
@@ -333,7 +425,7 @@ class _EditStudentFormState extends State<_EditStudentForm> {
                     _label('Ünvan'),
                     _field(_parentAddress, 'Ünvan'),
                     _label('Valideyn şifrəsi'),
-                    _field(_parentPass, 'Şifrə', validator: (v) => (v ?? '').trim().length < 4 ? 'Ən azı 4 simvol' : null),
+                    _field(_parentPass, 'Şifrə', validator: (v) => PasswordHasher.validate(v, minLength: 6)),
                     const SizedBox(height: 16),
                     SizedBox(
                       height: 50,

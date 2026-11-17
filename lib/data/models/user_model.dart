@@ -36,7 +36,7 @@ class AppUser {
   final String password;
   final String fullName;
   
-  // 🆕 HR məlumatları (işçi yaradılışı üçün)
+  // HR & Dynamic Fields (GoPanel 1:1)
   final String? firstName;     // Ad (ayrıca)
   final String? lastName;      // Soyad (ayrıca)
   final String? fatherName;    // Ata adı
@@ -44,17 +44,37 @@ class AppUser {
   final String? gender;        // Cins: "Kişi" / "Qadın"
   final DateTime? birthDate;   // Doğum tarixi
   final String? address;       // Yaşadığı ünvan
-  final String? citizenship;   // Vətəndaşlıq (sayt modeli: vetandasligi)
-  final String? idCardSerial;  // ŞV seriyası (sayt modeli: sv_seriya)
+  final String? registrationAddress; // Qeydiyyat ünvanı
+  final String? citizenship;   // Vətəndaşlıq (sayt modeli: vetendasligi)
+  final String? idCardSerial;  // ŞV seriyası və nömrəsi
+  final String? idCardNumber;  // ŞV nömrəsi
+  final String? corporatePhone;// Korporativ telefon nömrəsi
+  final String? maritalStatus; // Ailə vəziyyəti (Evli / Subay)
+  final String? bloodGroup;    // Qan qrupu
+  final String? scientificDegree; // Elmi dərəcə
+  final String? honoraryTitle; // Fəxri ad
   final String? educationLevel;// Təhsil dərəcəsi (sayt modeli: tehsil_derecesi)
+  final String? university;    // Təhsil müəssisəsi adı
+  final String? specialty;     // İxtisas
+  final String? eduDocNumber;  // Diplom / Sənəd nömrəsi
+  final String? diplomaNumber; // Diplom nömrəsi alias
   final String? bankName;      // Bank adı (sayt modeli: bank_adi)
+  final String? bankAccount;   // Hesab nömrəsi
+  final String? bankIban;      // Bank IBAN
 
-  // 🆕 İş məlumatları (HR)
+  // İş & Müqavilə məlumatları (HR)
   final String? position;      // Vəzifə adı (məs: "İT üzrə mütəxəssis")
+  final String? department;    // Struktur / Departament
+  final String? filial;        // Filial (məs: "Bakı filialı")
+  final String? sector;        // Bölmə ("Azərbaycan", "Rus", "İngilis")
   final DateTime? hireDate;    // İşə qəbul tarixi
   final double? salary;        // Əmək haqqı (AZN, gross)
+  final double? netSalary;     // Xalis (net) əmək haqqı
+  final String? contractNumber;// Müqavilə nömrəsi
+  final String? contractType;  // 'indefinite' / 'fixed'
   final DateTime? contractStart; // Müqavilə başlanğıc tarixi
   final DateTime? contractEnd;   // Müqavilə bitmə tarixi
+  final List<String> roleNames;  // Bütün Spatie rolları
   
   final UserRole role; // admin, teacher, student, parent
   final String idrakCode; // e.g. "IDR-2025-0492" or "IDR-TCH-102"
@@ -68,7 +88,8 @@ class AppUser {
   final String? linkedStudentId; // For parent to link to their child
   final List<String> linkedStudentIds; // Övladlar: valideynin bütün uşaqları (sayt modeli)
   final TeacherPermissions? teacherPermissions; // For teacher
-  final String? assignedRoleId; // 🆕 Atanan özel rol ID'si (opsiyonel - varsayılan rol yerine)
+  final String? assignedRoleId; // Atanan özel rol ID'si
+  final List<String> directPermissions; // Birbaşa istifadəçiyə verilmiş xüsusi icazələr
   final bool isActive;
   final DateTime createdAt;
 
@@ -77,22 +98,42 @@ class AppUser {
     required this.username,
     required this.password,
     required this.fullName,
-    this.firstName,     // 🆕
-    this.lastName,      // 🆕
-    this.fatherName,    // 🆕
-    this.finCode,       // 🆕
-    this.gender,        // 🆕
-    this.birthDate,     // 🆕
-    this.address,       // 🆕
-    this.citizenship,   // 🆕
-    this.idCardSerial,  // 🆕
-    this.educationLevel,// 🆕
-    this.bankName,      // 🆕
-    this.position,      // 🆕
-    this.hireDate,      // 🆕
-    this.salary,        // 🆕
-    this.contractStart, // 🆕
-    this.contractEnd,   // 🆕
+    this.firstName,
+    this.lastName,
+    this.fatherName,
+    this.finCode,
+    this.gender,
+    this.birthDate,
+    this.address,
+    this.registrationAddress,
+    this.citizenship,
+    this.idCardSerial,
+    this.idCardNumber,
+    this.corporatePhone,
+    this.maritalStatus,
+    this.bloodGroup,
+    this.scientificDegree,
+    this.honoraryTitle,
+    this.educationLevel,
+    this.university,
+    this.specialty,
+    this.eduDocNumber,
+    this.diplomaNumber,
+    this.bankName,
+    this.bankAccount,
+    this.bankIban,
+    this.position,
+    this.department,
+    this.filial,
+    this.sector,
+    this.hireDate,
+    this.salary,
+    this.netSalary,
+    this.contractNumber,
+    this.contractType,
+    this.contractStart,
+    this.contractEnd,
+    this.roleNames = const [],
     required this.role,
     required this.idrakCode,
     this.phone = '',
@@ -105,7 +146,8 @@ class AppUser {
     this.linkedStudentId,
     this.linkedStudentIds = const [],
     this.teacherPermissions,
-    this.assignedRoleId, // 🆕 Opsiyonel rol ID
+    this.assignedRoleId,
+    this.directPermissions = const [],
     this.isActive = true,
     required this.createdAt,
   });
@@ -114,22 +156,42 @@ class AppUser {
     String? username,
     String? password,
     String? fullName,
-    String? firstName,    // 🆕
-    String? lastName,     // 🆕
-    String? fatherName,   // 🆕
-    String? finCode,      // 🆕
-    String? gender,       // 🆕
-    DateTime? birthDate,  // 🆕
-    String? address,      // 🆕
-    String? citizenship,   // 🆕
-    String? idCardSerial,  // 🆕
-    String? educationLevel,// 🆕
-    String? bankName,      // 🆕
-    String? position,     // 🆕
-    DateTime? hireDate,   // 🆕
-    double? salary,       // 🆕
-    DateTime? contractStart, // 🆕
-    DateTime? contractEnd,   // 🆕
+    String? firstName,
+    String? lastName,
+    String? fatherName,
+    String? finCode,
+    String? gender,
+    DateTime? birthDate,
+    String? address,
+    String? registrationAddress,
+    String? citizenship,
+    String? idCardSerial,
+    String? idCardNumber,
+    String? corporatePhone,
+    String? maritalStatus,
+    String? bloodGroup,
+    String? scientificDegree,
+    String? honoraryTitle,
+    String? educationLevel,
+    String? university,
+    String? specialty,
+    String? eduDocNumber,
+    String? diplomaNumber,
+    String? bankName,
+    String? bankAccount,
+    String? bankIban,
+    String? position,
+    String? department,
+    String? filial,
+    String? sector,
+    DateTime? hireDate,
+    double? salary,
+    double? netSalary,
+    String? contractNumber,
+    String? contractType,
+    DateTime? contractStart,
+    DateTime? contractEnd,
+    List<String>? roleNames,
     UserRole? role,
     String? idrakCode,
     String? phone,
@@ -142,7 +204,8 @@ class AppUser {
     String? linkedStudentId,
     List<String>? linkedStudentIds,
     TeacherPermissions? teacherPermissions,
-    String? assignedRoleId, // 🆕
+    String? assignedRoleId,
+    List<String>? directPermissions,
     bool? isActive,
   }) {
     return AppUser(
@@ -150,22 +213,42 @@ class AppUser {
       username: username ?? this.username,
       password: password ?? this.password,
       fullName: fullName ?? this.fullName,
-      firstName: firstName ?? this.firstName,           // 🆕
-      lastName: lastName ?? this.lastName,              // 🆕
-      fatherName: fatherName ?? this.fatherName,        // 🆕
-      finCode: finCode ?? this.finCode,                 // 🆕
-      gender: gender ?? this.gender,                    // 🆕
-      birthDate: birthDate ?? this.birthDate,           // 🆕
-      address: address ?? this.address,                 // 🆕
-      citizenship: citizenship ?? this.citizenship,     // 🆕
-      idCardSerial: idCardSerial ?? this.idCardSerial,  // 🆕
-      educationLevel: educationLevel ?? this.educationLevel, // 🆕
-      bankName: bankName ?? this.bankName,              // 🆕
-      position: position ?? this.position,              // 🆕
-      hireDate: hireDate ?? this.hireDate,              // 🆕
-      salary: salary ?? this.salary,                    // 🆕
-      contractStart: contractStart ?? this.contractStart, // 🆕
-      contractEnd: contractEnd ?? this.contractEnd,     // 🆕
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      fatherName: fatherName ?? this.fatherName,
+      finCode: finCode ?? this.finCode,
+      gender: gender ?? this.gender,
+      birthDate: birthDate ?? this.birthDate,
+      address: address ?? this.address,
+      registrationAddress: registrationAddress ?? this.registrationAddress,
+      citizenship: citizenship ?? this.citizenship,
+      idCardSerial: idCardSerial ?? this.idCardSerial,
+      idCardNumber: idCardNumber ?? this.idCardNumber,
+      corporatePhone: corporatePhone ?? this.corporatePhone,
+      maritalStatus: maritalStatus ?? this.maritalStatus,
+      bloodGroup: bloodGroup ?? this.bloodGroup,
+      scientificDegree: scientificDegree ?? this.scientificDegree,
+      honoraryTitle: honoraryTitle ?? this.honoraryTitle,
+      educationLevel: educationLevel ?? this.educationLevel,
+      university: university ?? this.university,
+      specialty: specialty ?? this.specialty,
+      eduDocNumber: eduDocNumber ?? diplomaNumber ?? this.eduDocNumber,
+      diplomaNumber: diplomaNumber ?? eduDocNumber ?? this.diplomaNumber,
+      bankName: bankName ?? this.bankName,
+      bankAccount: bankAccount ?? this.bankAccount,
+      bankIban: bankIban ?? this.bankIban,
+      position: position ?? this.position,
+      department: department ?? this.department,
+      filial: filial ?? this.filial,
+      sector: sector ?? this.sector,
+      hireDate: hireDate ?? this.hireDate,
+      salary: salary ?? this.salary,
+      netSalary: netSalary ?? this.netSalary,
+      contractNumber: contractNumber ?? this.contractNumber,
+      contractType: contractType ?? this.contractType,
+      contractStart: contractStart ?? this.contractStart,
+      contractEnd: contractEnd ?? this.contractEnd,
+      roleNames: roleNames ?? this.roleNames,
       role: role ?? this.role,
       idrakCode: idrakCode ?? this.idrakCode,
       phone: phone ?? this.phone,
@@ -178,7 +261,8 @@ class AppUser {
       linkedStudentId: linkedStudentId ?? this.linkedStudentId,
       linkedStudentIds: linkedStudentIds ?? this.linkedStudentIds,
       teacherPermissions: teacherPermissions ?? this.teacherPermissions,
-      assignedRoleId: assignedRoleId ?? this.assignedRoleId, // 🆕
+      assignedRoleId: assignedRoleId ?? this.assignedRoleId,
+      directPermissions: directPermissions ?? this.directPermissions,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt,
     );

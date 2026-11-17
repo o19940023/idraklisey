@@ -3,20 +3,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_palette.dart';
 import '../../core/widgets/idrak_logo.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/widgets/animated_button.dart';
 import '../../core/utils/haptic_helper.dart';
+import '../../data/models/user_model.dart';
 import '../../data/models/user_preferences_model.dart';
 import '../../providers/app_state.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/app_update_service.dart';
-import '../auth/screens/login_screen.dart';
+import '../../services/push_notification_service.dart';
 import '../shared/screens/notifications_screen.dart';
 import '../shared/widgets/app_update_banner.dart';
 
 // Admin Screens
 import '../admin/screens/admin_dashboard_screen.dart';
 import '../admin/screens/admin_users_screen.dart';
+import '../admin/screens/staff_dashboard_screen.dart';
 import '../admin/screens/student_management_screen.dart';
 import '../admin/screens/class_management_screen.dart';
 import '../admin/screens/admin_timetable_management_screen.dart';
@@ -47,6 +51,54 @@ import '../teacher/screens/quick_grading_screen.dart';
 import '../teacher/screens/qr_inventory_ticket_screen.dart';
 import '../teacher/screens/review_submissions_screen.dart';
 
+// HR Screens
+import '../hr/screens/employees_screen.dart';
+import '../hr/screens/contracts_screen.dart';
+import '../hr/screens/salary_calculator_screen.dart';
+import '../hr/screens/employee_documents_screen.dart';
+import '../hr/screens/employee_attendance_screen.dart';
+
+// Finance Screens
+import '../finance/screens/student_invoices_screen.dart';
+import '../finance/screens/payroll_screen.dart';
+import '../finance/screens/general_ledger_screen.dart';
+import '../finance/screens/finance_dictionary_screen.dart';
+
+// Exams Screens
+import '../exams/screens/exams_screen.dart';
+import '../exams/screens/exam_results_screen.dart';
+import '../exams/screens/exam_categories_screen.dart';
+import '../exams/screens/student_applications_screen.dart';
+
+// Academic Ops Screens
+import '../academic_ops/screens/curriculums_screen.dart';
+import '../academic_ops/screens/clubs_screen.dart';
+import '../academic_ops/screens/excused_absences_screen.dart';
+import '../academic_ops/screens/graduations_screen.dart';
+import '../academic_ops/screens/academic_years_screen.dart';
+import '../academic_ops/screens/rooms_screen.dart';
+import '../academic_ops/screens/time_slots_screen.dart';
+
+// Library Ops Screens
+import '../library_ops/screens/book_loans_screen.dart';
+import '../library_ops/screens/book_reservations_screen.dart';
+
+// Warehouse Ops Screens
+import '../warehouse_ops/screens/inventorizations_screen.dart';
+import '../warehouse_ops/screens/canteen_supply_screen.dart';
+
+// Statistics Screens
+import '../statistics/screens/quality_control_screen.dart';
+import '../statistics/screens/workload_report_screen.dart';
+import '../statistics/screens/school_attendance_stats_screen.dart';
+// Final Operations Screens
+import '../medical_ops/screens/medical_journal_screen.dart';
+import '../psicology_ops/screens/psychology_evaluation_screen.dart';
+import '../structure_ops/screens/organizational_structure_screen.dart';
+import '../system_logs/screens/activity_logs_screen.dart';
+
+
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -54,8 +106,79 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
+/// Plays a quick fade-and-rise whenever the selected tab changes, while
+/// keeping the [IndexedStack] (and therefore every tab's state) alive.
+class _TabTransition extends StatefulWidget {
+  final int index;
+  final List<Widget> screens;
+
+  const _TabTransition({required this.index, required this.screens});
+
+  @override
+  State<_TabTransition> createState() => _TabTransitionState();
+}
+
+class _TabTransitionState extends State<_TabTransition>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+    value: 1, // fully visible on first build
+  );
+  late final CurvedAnimation _curve = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeOutCubic,
+  );
+
+  @override
+  void didUpdateWidget(_TabTransition oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.index != widget.index) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _curve.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.35, end: 1).animate(_curve),
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.012),
+          end: Offset.zero,
+        ).animate(_curve),
+        child: IndexedStack(index: widget.screens.isEmpty ? 0 : widget.index.clamp(0, widget.screens.length - 1), children: widget.screens),
+      ),
+    );
+  }
+}
+
 class _MainScreenState extends State<MainScreen> {
   bool _isDragHoveredOnDock = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Bildirişə toxunaraq açılan tətbiq (cold-start / arxa plan) —
+    // ilk kadrdan sonra bildirişlər səhifəsinə yönləndir.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final opened = PushNotificationService.instance.consumePendingOpen();
+      if (opened != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+        );
+      }
+    });
+  }
 
   IconData _getIconFromString(String iconName) {
     final iconMap = {
@@ -107,16 +230,102 @@ class _MainScreenState extends State<MainScreen> {
       'notifications_active_rounded': Icons.notifications_active_rounded,
       'assignment_turned_in_outlined': Icons.assignment_turned_in_outlined,
       'assignment_turned_in_rounded': Icons.assignment_turned_in_rounded,
+      'calculate_outlined': Icons.calculate_outlined,
+      'calculate_rounded': Icons.calculate_rounded,
+      'description_outlined': Icons.description_outlined,
+      'description_rounded': Icons.description_rounded,
+      'folder_shared_outlined': Icons.folder_shared_outlined,
+      'folder_shared_rounded': Icons.folder_shared_rounded,
+      'access_time_filled_outlined': Icons.access_time_outlined,
+      'access_time_filled_rounded': Icons.access_time_filled_rounded,
+      'receipt_long_outlined': Icons.receipt_long_outlined,
+      'receipt_long_rounded': Icons.receipt_long_rounded,
+      'payments_outlined': Icons.payments_outlined,
+      'payments_rounded': Icons.payments_rounded,
+      'account_balance_wallet_outlined': Icons.account_balance_wallet_outlined,
+      'account_balance_wallet_rounded': Icons.account_balance_wallet_rounded,
+      'quiz_outlined': Icons.quiz_outlined,
+      'quiz_rounded': Icons.quiz_rounded,
+      'grade_outlined': Icons.grade_outlined,
+      'grade_rounded': Icons.grade_rounded,
+      'category_outlined': Icons.category_outlined,
+      'category_rounded': Icons.category_rounded,
+      'how_to_reg_outlined': Icons.how_to_reg_outlined,
+      'how_to_reg_rounded': Icons.how_to_reg_rounded,
+      'auto_stories_outlined': Icons.auto_stories_outlined,
+      'auto_stories_rounded': Icons.auto_stories_rounded,
+      'sports_soccer_outlined': Icons.sports_soccer_outlined,
+      'sports_soccer_rounded': Icons.sports_soccer_rounded,
+      'event_busy_outlined': Icons.event_busy_outlined,
+      'event_busy_rounded': Icons.event_busy_rounded,
+      'date_range_outlined': Icons.date_range_outlined,
+      'date_range_rounded': Icons.date_range_rounded,
+      'domain_outlined': Icons.domain_outlined,
+      'domain_rounded': Icons.domain_rounded,
+      'schedule_outlined': Icons.schedule_outlined,
+      'schedule_rounded': Icons.schedule_rounded,
+      'library_books_outlined': Icons.library_books_outlined,
+      'library_books_rounded': Icons.library_books_rounded,
+      'bookmarks_outlined': Icons.bookmarks_outlined,
+      'bookmarks_rounded': Icons.bookmarks_rounded,
+      'inventory_2_outlined': Icons.inventory_2_outlined,
+      'inventory_2_rounded': Icons.inventory_2_rounded,
+      'restaurant_outlined': Icons.restaurant_outlined,
+      'restaurant_rounded': Icons.restaurant_rounded,
+      'verified_user_outlined': Icons.verified_user_outlined,
+      'verified_user_rounded': Icons.verified_user_rounded,
+      'table_chart_outlined': Icons.table_chart_outlined,
+      'table_chart_rounded': Icons.table_chart_rounded,
+      'co_present_outlined': Icons.co_present_outlined,
+      'co_present_rounded': Icons.co_present_rounded,
+      'medical_services_outlined': Icons.medical_services_outlined,
+      'medical_services_rounded': Icons.medical_services_rounded,
+      'account_tree_outlined': Icons.account_tree_outlined,
+      'account_tree_rounded': Icons.account_tree_rounded,
+      'security_outlined': Icons.security_outlined,
+      'security_rounded': Icons.security_rounded,
     };
     return iconMap[iconName] ?? Icons.dashboard_outlined;
   }
 
-  Widget _getScreenForNavItem(String navId, UserRole role) {
+  String _adminPermissionForNav(String navId) {
+    switch (navId) {
+      case 'users':
+        return 'view_users';
+      case 'tickets':
+        return 'view_tickets';
+      case 'analytics':
+        return 'view_reports';
+      case 'library':
+        return 'view_library';
+      case 'inventory':
+        return 'view_inventory';
+      case 'settings':
+        return 'view_settings';
+      default:
+        return navId;
+    }
+  }
+
+  Widget _getScreenForNavItem(String navId, UserRole role, AppState appState) {
+    // Alt menyu filtrlənsə də, birbaşa naviqasiya/keçid ehtimalına qarşı
+    // admin panellərində ikinci qat icazə yoxlaması.
+    if (role == UserRole.admin &&
+        navId != 'dashboard' &&
+        !appState.hasPermission(_adminPermissionForNav(navId))) {
+      return const StaffDashboardScreen();
+    }
+
+    final isStaff =
+        appState.currentUser?.role == UserRole.admin &&
+        !appState.isPrimaryAdmin;
     switch (role) {
       case UserRole.admin:
         switch (navId) {
           case 'dashboard':
-            return const AdminDashboardScreen();
+            return isStaff
+                ? const StaffDashboardScreen()
+                : const AdminDashboardScreen();
           case 'view_students':
             return const StudentManagementScreen();
           case 'view_classes':
@@ -140,8 +349,75 @@ class _MainScreenState extends State<MainScreen> {
             return const NotificationsScreen();
           case 'view_inventory':
             return const QrInventoryManagementScreen();
+          case 'view_employees':
+            return const EmployeesScreen();
+          case 'view_contracts':
+            return const ContractsScreen();
+          case 'salary_calculator':
+            return const SalaryCalculatorScreen();
+          case 'employee_documents':
+            return const EmployeeDocumentsScreen();
+          case 'employee_attendance':
+            return const EmployeeAttendanceScreen();
+          case 'student_invoices':
+            return const StudentInvoicesScreen();
+          case 'payroll':
+            return const PayrollScreen();
+          case 'general_ledger':
+            return const GeneralLedgerScreen();
+          case 'finance_dictionary':
+            return const FinanceDictionaryScreen();
+          case 'view_exams':
+            return const ExamsScreen();
+          case 'exam_results':
+            return const ExamResultsScreen();
+          case 'exam_categories':
+            return const ExamCategoriesScreen();
+          case 'student_applications':
+            return const StudentApplicationsScreen();
+          case 'curriculums':
+            return const CurriculumsScreen();
+          case 'clubs':
+            return const ClubsScreen();
+          case 'excused_absences':
+            return const ExcusedAbsencesScreen();
+          case 'graduations':
+            return const GraduationsScreen();
+          case 'academic_years':
+            return const AcademicYearsScreen();
+          case 'rooms':
+            return const RoomsScreen();
+          case 'time_slots':
+            return const TimeSlotsScreen();
+          case 'book_loans':
+            return const BookLoansScreen();
+          case 'book_reservations':
+            return const BookReservationsScreen();
+          case 'warehouse_inventory':
+            return const InventorizationsScreen();
+          case 'canteen_supply':
+            return const CanteenSupplyScreen();
+          case 'quality_control':
+            return const QualityControlScreen();
+          case 'workload_report':
+            return const WorkloadReportScreen();
+          case 'school_attendance_stats':
+            return const SchoolAttendanceStatsScreen();
+          case 'medical_journal':
+            return const MedicalJournalScreen();
+          case 'psychology_evaluation':
+            return const PsychologyEvaluationScreen();
+          case 'organizational_structure':
+            return const OrganizationalStructureScreen();
+          case 'activity_logs':
+            return const ActivityLogsScreen();
+          case 'view_library':
+          case 'library':
+            return const LibraryScreen();
           default:
-            return const AdminDashboardScreen();
+            return isStaff
+                ? const StaffDashboardScreen()
+                : const AdminDashboardScreen();
         }
 
       case UserRole.teacher:
@@ -203,6 +479,15 @@ class _MainScreenState extends State<MainScreen> {
           case 'student_cafeteria':
           case 'cafeteria':
             return const CafeteriaMenuScreen();
+          case 'student_attendance':
+          case 'attendance':
+            return const AttendanceCalendarScreen();
+          case 'student_clubs':
+          case 'clubs':
+            return const ClubsScreen();
+          case 'student_excuses':
+          case 'excused_absences':
+            return const ExcusedAbsencesScreen();
           default:
             return const StudentDashboardScreen();
         }
@@ -229,6 +514,21 @@ class _MainScreenState extends State<MainScreen> {
           case 'parent_cafeteria':
           case 'cafeteria':
             return const CafeteriaMenuScreen();
+          case 'parent_assignments':
+          case 'assignments':
+            return const AssignmentsTimelineScreen();
+          case 'parent_excuses':
+          case 'excused_absences':
+            return const ExcusedAbsencesScreen();
+          case 'parent_clubs':
+          case 'clubs':
+            return const ClubsScreen();
+          case 'parent_library':
+          case 'library':
+            return const LibraryScreen();
+          case 'parent_invoices':
+          case 'student_invoices':
+            return const StudentInvoicesScreen();
           default:
             return const ParentDashboardScreen();
         }
@@ -237,6 +537,7 @@ class _MainScreenState extends State<MainScreen> {
 
   void _showCustomizeNavSheet(BuildContext context, AppState appState) {
     final availableModules = appState.getAvailableModulesForRole();
+    final loc = AppLocalizations.of(context);
 
     showModalBottomSheet(
       context: context,
@@ -250,7 +551,7 @@ class _MainScreenState extends State<MainScreen> {
             return GlassModalSheet(
               borderRadius: 28,
               blur: 25,
-              child: Container(
+              child: SizedBox(
                 height: MediaQuery.of(context).size.height * 0.78,
                 child: Column(
                   children: [
@@ -278,7 +579,7 @@ class _MainScreenState extends State<MainScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Alt Menyu və Sürətli Tablar',
+                                loc.bottomNavCustomizeTitle,
                                 style: TextStyle(
                                   fontSize: 16.5,
                                   fontWeight: FontWeight.w900,
@@ -287,7 +588,7 @@ class _MainScreenState extends State<MainScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Aşağıda görünəcək düymələri seçin və sıralayın',
+                                loc.bottomNavCustomizeSubtitle,
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   color: AppColors.textSecondary,
@@ -307,9 +608,9 @@ class _MainScreenState extends State<MainScreen> {
                                 horizontal: 16,
                                 vertical: 8,
                               ),
-                              child: const Text(
-                                'Sıfırla',
-                                style: TextStyle(
+                              child: Text(
+                                loc.reset,
+                                style: const TextStyle(
                                   color: AppColors.primaryAccent,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 12.5,
@@ -351,7 +652,7 @@ class _MainScreenState extends State<MainScreen> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    'Aktiv tablar: ${activeNav.length} / 5 (Dəyişmək üçün modulları seçin)',
+                                    '${loc.activeTabs}: ${activeNav.length} / 5',
                                     style: const TextStyle(
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w600,
@@ -365,7 +666,7 @@ class _MainScreenState extends State<MainScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            'Mövcud Bütün Modullar',
+                            loc.allAvailableModules,
                             style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w800,
@@ -421,7 +722,7 @@ class _MainScreenState extends State<MainScreen> {
                                       ),
                                     ),
                                     title: Text(
-                                      module.title,
+                                      module.getLocalizedTitle(loc),
                                       style: TextStyle(
                                         fontSize: 13.5,
                                         fontWeight: isPinned
@@ -433,7 +734,7 @@ class _MainScreenState extends State<MainScreen> {
                                       ),
                                     ),
                                     subtitle: Text(
-                                      module.subtitle,
+                                      module.getLocalizedSubtitle(loc),
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: AppColors.textMuted,
@@ -461,13 +762,15 @@ class _MainScreenState extends State<MainScreen> {
                                             ScaffoldMessenger.of(
                                               context,
                                             ).showSnackBar(
-                                              const SnackBar(
+                                              SnackBar(
                                                 content: Text(
-                                                  'Maksimum 5 alt menyu tabı seçilə bilər.',
+                                                  loc.maxNavLimitReached,
                                                 ),
                                                 backgroundColor:
                                                     AppColors.warning,
-                                                duration: Duration(seconds: 2),
+                                                duration: const Duration(
+                                                  seconds: 2,
+                                                ),
                                               ),
                                             );
                                           }
@@ -501,9 +804,9 @@ class _MainScreenState extends State<MainScreen> {
                               ),
                               elevation: 0,
                             ),
-                            child: const Text(
-                              'Tamamla',
-                              style: TextStyle(
+                            child: Text(
+                              loc.done,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w800,
                                 fontSize: 14,
@@ -527,44 +830,30 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final updateService = Provider.of<AppUpdateService>(context);
+    final loc = AppLocalizations.of(context);
 
-    if (!appState.isAuthenticated) {
-      return const LoginScreen();
-    }
-
-    // iOS FIX: currentUser null ise loading göster (beyaz ekran donma fix)
+    // currentUser null ise və ya sinxronlaşma gedirsə loading göstər
     if (appState.currentUser == null) {
       return Scaffold(
         backgroundColor: const Color(0xFF0F172A),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              CircularProgressIndicator(color: Color(0xFF6C5CE7)),
-              SizedBox(height: 20),
-              Text(
-                'Yuklenir...',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+            children: [
+              const IdrakLogo(size: 72, showText: false, isLightText: true),
+              const SizedBox(height: 24),
+              const SizedBox(
+                width: 26,
+                height: 26,
+                child: CircularProgressIndicator(
+                  color: Color(0xFF2563EB),
+                  strokeWidth: 2.4,
+                ),
               ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // iOS FIX: currentUser null ise loading göster (beyaz ekran donma fix)
-    if (appState.currentUser == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF0F172A),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              CircularProgressIndicator(color: Color(0xFF6C5CE7)),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Text(
-                'Yuklenir...',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                loc.loading,
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
             ],
           ),
@@ -580,10 +869,13 @@ class _MainScreenState extends State<MainScreen> {
 
     final screens = orderedNavItems.isNotEmpty
         ? orderedNavItems
-              .map((navItem) => _getScreenForNavItem(navItem.id, currentRole))
+              .map(
+                (navItem) =>
+                    _getScreenForNavItem(navItem.id, currentRole, appState),
+              )
               .toList()
         // Fallback
-        : <Widget>[_getScreenForNavItem('dashboard', currentRole)];
+        : <Widget>[_getScreenForNavItem('dashboard', currentRole, appState)];
 
     final activeTabIndex = appState.currentTabIndex >= screens.length
         ? 0
@@ -599,127 +891,14 @@ class _MainScreenState extends State<MainScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          toolbarHeight: 56,
-          backgroundColor: isDark ? AppColors.darkSurface : AppColors.primary,
-          elevation: 0,
-          leading: const Padding(
-            padding: EdgeInsets.only(left: 12),
-            child: Center(child: IdrakLogo(size: 32)),
-          ),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'İDRAK LİSEYİ',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.0,
-                ),
-              ),
-              Text(
-                currentUser.fullName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.primaryAccent,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            // Alt menyunu fərdiləşdir düyməsi
-            IconButton(
-              icon: const Icon(
-                Icons.tune_rounded,
-                color: Colors.white70,
-                size: 20,
-              ),
-              tooltip: 'Alt Menyunu Fərdiləşdir',
-              onPressed: () => _showCustomizeNavSheet(context, appState),
-            ),
-            IconButton(
-              icon: Icon(
-                appState.isDarkMode
-                    ? Icons.light_mode_rounded
-                    : Icons.dark_mode_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
-              tooltip: appState.isDarkMode ? 'Açıq rejim' : 'Tünd rejim',
-              onPressed: () => appState.toggleTheme(),
-            ),
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.notifications_none_rounded,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                  tooltip: 'Bildirişlər & Elanlar',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const NotificationsScreen(),
-                      ),
-                    );
-                  },
-                ),
-                if (appState.unreadNotificationCount > 0)
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: AppColors.danger,
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 15,
-                        minHeight: 15,
-                      ),
-                      child: Text(
-                        '${appState.unreadNotificationCount}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8.5,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            IconButton(
-              icon: const Icon(
-                Icons.logout_rounded,
-                color: Colors.white70,
-                size: 20,
-              ),
-              tooltip: 'Hesabdan Çıxış',
-              onPressed: () => appState.logout(),
-            ),
-            const SizedBox(width: 4),
-          ],
-        ),
         body: Stack(
           children: [
-            IndexedStack(index: activeTabIndex, children: screens),
-            // 🆕 Yeni versiya banner-i — tətbiq işləməyə davam edir,
-            // amma banner mağazadan yenilənənə qədər hər açılışda göstərilir.
+            _TabTransition(index: activeTabIndex, screens: screens),
+            // 🆕 Yeni versiya banner-i — alt tarəfdə, aşağı menyunun üstündə;
+            // mağazadan yenilənənə qədər hər açılışda göstərilir.
             if (updateService.updateAvailable)
               Positioned(
-                top: 8,
+                bottom: 100,
                 left: 16,
                 right: 16,
                 child: AppUpdateBanner(updateService: updateService),
@@ -727,15 +906,24 @@ class _MainScreenState extends State<MainScreen> {
           ],
         ),
         // 🆕 iOS Liquid Glass Sürüşən / Üzən Alt Menyu Dok Hədəfi (Dock DragTarget)
-        bottomNavigationBar: _buildBottomNavBar(appState, isDark),
+        bottomNavigationBar: _buildBottomNavBar(appState, isDark, loc),
       ),
     );
   }
 
   /// Build iPhone-style liquid glass bottom navigation with drag-drop support
-  Widget _buildBottomNavBar(AppState appState, bool isDark) {
+  Widget _buildBottomNavBar(
+    AppState appState,
+    bool isDark,
+    AppLocalizations loc,
+  ) {
     final orderedNavItems = appState.orderedNavigationItems;
     final activeTabIndex = appState.currentTabIndex;
+    final palette = AppPalette.of(context);
+    final idleColor = isDark
+        ? Colors.white.withValues(alpha: 0.64)
+        : palette.brandNavy.withValues(alpha: 0.58);
+    final activeColor = isDark ? Colors.white : palette.brandRoyal;
 
     return Padding(
       padding: const EdgeInsets.only(left: 14, right: 14, bottom: 6),
@@ -771,7 +959,9 @@ class _MainScreenState extends State<MainScreen> {
                         size: 20,
                       ),
                       const SizedBox(width: 10),
-                      Text('✓ "${module.title}" alt menyuya bərkidildi!'),
+                      Text(
+                        '✓ "${module.getLocalizedTitle(loc)}" ${loc.pinnedToBottomNav}',
+                      ),
                     ],
                   ),
                   backgroundColor: AppColors.success,
@@ -787,9 +977,7 @@ class _MainScreenState extends State<MainScreen> {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text(
-                    'Bu modul artıq alt menyudadır və ya limit (5 tab) dolub.',
-                  ),
+                  content: Text(loc.maxNavLimitReached),
                   backgroundColor: AppColors.warning,
                   duration: const Duration(seconds: 2),
                   behavior: SnackBarBehavior.floating,
@@ -803,213 +991,309 @@ class _MainScreenState extends State<MainScreen> {
         },
         builder: (context, candidateData, rejectedData) {
           // Custom iPhone-style liquid glass bottom navigation
-          return ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      isDark
-                          ? const Color(0xFF10172A).withValues(alpha: 0.75)
-                          : Colors.black.withValues(alpha: 0.65),
-                      isDark
-                          ? const Color(0xFF0F172A).withValues(alpha: 0.70)
-                          : Colors.black.withValues(alpha: 0.60),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: _isDragHoveredOnDock
-                        ? AppColors.primaryAccent
-                        : Colors.white.withValues(alpha: 0.5),
-                    width: _isDragHoveredOnDock ? 2.2 : 1.0,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                    if (_isDragHoveredOnDock)
-                      BoxShadow(
-                        color: AppColors.primaryAccent.withAlpha(120),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      ),
-                  ],
+          return Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.42 : 0.10),
+                  blurRadius: 30,
+                  spreadRadius: -6,
+                  offset: const Offset(0, 14),
                 ),
-                child: Stack(
-                  children: [
-                    // iOS Liquid Glass top highlight line
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        child: FractionallySizedBox(
-                          widthFactor: 0.55,
-                          child: Container(
-                            height: 1,
+                BoxShadow(
+                  color: palette.brandRoyal.withValues(
+                    alpha: isDark ? 0.10 : 0.14,
+                  ),
+                  blurRadius: 24,
+                  spreadRadius: -10,
+                  offset: const Offset(0, 4),
+                ),
+                if (_isDragHoveredOnDock)
+                  BoxShadow(
+                    color: AppColors.primaryAccent.withAlpha(120),
+                    blurRadius: 24,
+                    spreadRadius: 1,
+                  ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isDark
+                          ? const [Color(0xE60B1224), Color(0xCC0D1628)]
+                          : [
+                              Colors.white.withValues(alpha: 0.86),
+                              const Color(0xFFEAF1FF).withValues(alpha: 0.66),
+                            ],
+                    ),
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: _isDragHoveredOnDock
+                          ? AppColors.primaryAccent
+                          : isDark
+                          ? Colors.white.withValues(alpha: 0.20)
+                          : Colors.white.withValues(alpha: 0.94),
+                      width: _isDragHoveredOnDock ? 2.0 : 1.0,
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: DecoratedBox(
                             decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(28),
                               gradient: LinearGradient(
-                                colors: [
-                                  Colors.transparent,
-                                  Colors.white.withValues(alpha: 0.85),
-                                  Colors.transparent,
-                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                stops: const [0, 0.52, 1],
+                                colors: isDark
+                                    ? [
+                                        Colors.white.withValues(alpha: 0.06),
+                                        Colors.transparent,
+                                        palette.brandRoyal.withValues(
+                                          alpha: 0.08,
+                                        ),
+                                      ]
+                                    : [
+                                        Colors.white.withValues(alpha: 0.34),
+                                        Colors.transparent,
+                                        palette.brandAzure.withValues(
+                                          alpha: 0.10,
+                                        ),
+                                      ],
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Drag hover indicator
-                        if (_isDragHoveredOnDock)
-                          Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: 4),
-                            padding: const EdgeInsets.symmetric(vertical: 5),
-                            decoration: BoxDecoration(
-                              gradient: AppColors.accentGradient,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.push_pin_rounded,
-                                  color: Colors.white,
-                                  size: 13,
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            painter: _LiquidGlassRimPainter(isDark: isDark),
+                          ),
+                        ),
+                      ),
+                      // iOS Liquid Glass top highlight line
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: FractionallySizedBox(
+                            widthFactor: 0.55,
+                            child: Container(
+                              height: 1,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.white.withValues(alpha: 0.85),
+                                    Colors.transparent,
+                                  ],
                                 ),
-                                SizedBox(width: 6),
-                                Text(
-                                  '📌 Alt menyuya bərkitmək üçün buraxın',
-                                  style: TextStyle(
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Drag hover indicator
+                          if (_isDragHoveredOnDock)
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 4),
+                              padding: const EdgeInsets.symmetric(vertical: 5),
+                              decoration: BoxDecoration(
+                                gradient: AppColors.accentGradient,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.push_pin_rounded,
                                     color: Colors.white,
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w900,
+                                    size: 13,
                                   ),
-                                ),
-                              ],
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Alt menyuya bərkitmək üçün buraxın',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        // Navigation items
-                        if (orderedNavItems.isNotEmpty)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: List.generate(orderedNavItems.length, (
-                              index,
-                            ) {
-                              final item = orderedNavItems[index];
-                              final isSelected = activeTabIndex == index;
-                              final iconData = isSelected
-                                  ? _getIconFromString(item.activeIcon)
-                                  : _getIconFromString(item.icon);
+                          // Navigation items
+                          if (orderedNavItems.isNotEmpty)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: List.generate(orderedNavItems.length, (
+                                index,
+                              ) {
+                                final item = orderedNavItems[index];
+                                final isSelected = activeTabIndex == index;
+                                final iconData = isSelected
+                                    ? _getIconFromString(item.activeIcon)
+                                    : _getIconFromString(item.icon);
 
-                              return Expanded(
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: () {
-                                    HapticHelper.light();
-                                    appState.setCurrentTabIndex(index);
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 2,
-                                      horizontal: 2,
-                                    ),
-                                    child: AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 220,
-                                      ),
-                                      curve: Curves.easeOutCubic,
+                                return Expanded(
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () {
+                                      HapticHelper.light();
+                                      appState.setCurrentTabIndex(index);
+                                    },
+                                    child: Padding(
                                       padding: const EdgeInsets.symmetric(
-                                        vertical: 6,
+                                        vertical: 2,
+                                        horizontal: 2,
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? AppColors.primaryAccent.withAlpha(
-                                                isDark ? 35 : 22,
-                                              )
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(18),
-                                        border: isSelected
-                                            ? Border.all(
-                                                color: AppColors.primaryAccent
-                                                    .withAlpha(
-                                                      isDark ? 70 : 45,
-                                                    ),
-                                                width: 1.0,
-                                              )
-                                            : null,
-                                      ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          AnimatedScale(
-                                            scale: isSelected ? 1.15 : 1.0,
-                                            duration: const Duration(
-                                              milliseconds: 200,
-                                            ),
-                                            child: Icon(
-                                              iconData,
-                                              size: 20,
-                                              color: isSelected
-                                                  ? AppColors.primaryAccent
-                                                  : Colors.white.withValues(
-                                                      alpha: 0.85,
-                                                    ),
-                                            ),
+                                      child: AnimatedContainer(
+                                        duration: const Duration(
+                                          milliseconds: 240,
+                                        ),
+                                        curve: Curves.easeOutCubic,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 7,
+                                          horizontal: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          gradient: isSelected
+                                              ? LinearGradient(
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                  colors: isDark
+                                                      ? [
+                                                          Colors.white
+                                                              .withValues(
+                                                                alpha: 0.18,
+                                                              ),
+                                                          Colors.white
+                                                              .withValues(
+                                                                alpha: 0.05,
+                                                              ),
+                                                        ]
+                                                      : [
+                                                          palette.brandRoyal
+                                                              .withValues(
+                                                                alpha: 0.14,
+                                                              ),
+                                                          palette.brandAzure
+                                                              .withValues(
+                                                                alpha: 0.10,
+                                                              ),
+                                                        ],
+                                                )
+                                              : null,
+                                          borderRadius: BorderRadius.circular(
+                                            18,
                                           ),
-                                          const SizedBox(height: 3),
-                                          AnimatedDefaultTextStyle(
-                                            duration: const Duration(
-                                              milliseconds: 200,
+                                          border: isSelected
+                                              ? Border.all(
+                                                  color: isDark
+                                                      ? Colors.white.withValues(
+                                                          alpha: 0.24,
+                                                        )
+                                                      : palette.brandRoyal
+                                                            .withValues(
+                                                              alpha: 0.20,
+                                                            ),
+                                                  width: 1.0,
+                                                )
+                                              : null,
+                                          boxShadow: isSelected
+                                              ? [
+                                                  BoxShadow(
+                                                    color:
+                                                        (isDark
+                                                                ? Colors.black
+                                                                : palette
+                                                                      .brandRoyal)
+                                                            .withValues(
+                                                              alpha: isDark
+                                                                  ? 0.18
+                                                                  : 0.10,
+                                                            ),
+                                                    blurRadius: 14,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ]
+                                              : null,
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            AnimatedScale(
+                                              scale: isSelected ? 1.10 : 1.0,
+                                              duration: const Duration(
+                                                milliseconds: 200,
+                                              ),
+                                              child: Icon(
+                                                iconData,
+                                                size: 20.5,
+                                                color: isSelected
+                                                    ? activeColor
+                                                    : idleColor,
+                                              ),
                                             ),
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: isSelected
-                                                  ? FontWeight.w900
-                                                  : FontWeight.w500,
-                                              color: isSelected
-                                                  ? AppColors.primaryAccent
-                                                  : Colors.white.withValues(
-                                                      alpha: 0.85,
-                                                    ),
-                                              letterSpacing: isSelected
-                                                  ? -0.2
-                                                  : 0,
+                                            const SizedBox(height: 3),
+                                            AnimatedDefaultTextStyle(
+                                              duration: const Duration(
+                                                milliseconds: 200,
+                                              ),
+                                              style: TextStyle(
+                                                fontSize: 9.5,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.w800
+                                                    : FontWeight.w600,
+                                                color: isSelected
+                                                    ? activeColor
+                                                    : idleColor,
+                                                letterSpacing: isSelected
+                                                    ? -0.15
+                                                    : 0,
+                                              ),
+                                              child: Text(
+                                                item.getLocalizedLabel(loc),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
                                             ),
-                                            child: Text(
-                                              item.label,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              );
-                            }),
-                          ),
-                      ],
-                    ),
-                  ],
+                                );
+                              }),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1018,4 +1302,60 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
   }
+}
+
+class _LiquidGlassRimPainter extends CustomPainter {
+  const _LiquidGlassRimPainter({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(
+      rect.deflate(0.7),
+      const Radius.circular(27.3),
+    );
+    final warm = isDark ? const Color(0x66FF6B8A) : const Color(0x59FF6B8A);
+    final cool = isDark ? const Color(0x6638BDF8) : const Color(0x5938BDF8);
+
+    final rim = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.25
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        stops: const [0, 0.26, 0.50, 0.74, 1],
+        colors: [
+          warm,
+          Colors.transparent,
+          Colors.white.withValues(alpha: isDark ? 0.42 : 0.90),
+          Colors.transparent,
+          cool,
+        ],
+      ).createShader(rect);
+    canvas.drawRRect(rrect, rim);
+
+    final bloom = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.6
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.5)
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        stops: const [0, 0.28, 0.52, 0.76, 1],
+        colors: [
+          warm.withValues(alpha: 0.26),
+          Colors.transparent,
+          Colors.transparent,
+          Colors.transparent,
+          cool.withValues(alpha: 0.26),
+        ],
+      ).createShader(rect);
+    canvas.drawRRect(rrect, bloom);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LiquidGlassRimPainter oldDelegate) =>
+      oldDelegate.isDark != isDark;
 }

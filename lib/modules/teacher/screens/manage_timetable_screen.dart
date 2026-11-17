@@ -13,7 +13,7 @@ class ManageTimetableScreen extends StatefulWidget {
 }
 
 class _ManageTimetableScreenState extends State<ManageTimetableScreen> {
-  String _selectedClass = '9B';
+  String _selectedClass = '';
   int _selectedDayIndex = 0;
 
   final List<String> _daysList = [
@@ -50,16 +50,18 @@ class _ManageTimetableScreenState extends State<ManageTimetableScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Dərs Cədvəli İdarəsi & Siniflər'),
+      appBar: AppBar(        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('Dərs Cədvəli İdarəsi & Siniflər', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_business_rounded),
             tooltip: 'Sinif Sahiplən',
             onPressed: () => _showClaimClassDialog(context, appState),
           ),
-        ],
-      ),
+        ],),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddLessonDialog(context, appState),
         backgroundColor: AppColors.primary,

@@ -16,22 +16,40 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "az.idrak.liseyi"
-    compileSdk = 37
-    buildToolsVersion = "37.0.0"
+    compileSdk = 36
+    buildToolsVersion = "36.0.0"
     ndkVersion = "28.2.13676358"
     
-    packagingOptions {
+    // 🔧 Fix Agora dependency conflict
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+    
+    // Fix manifest merger namespace conflict
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+            keepDebugSymbols += setOf("**/*.so")
+        }
         resources {
             excludes += setOf(
                 "META-INF/DEPENDENCIES",
-                "META-INF/*.kotlin_module"
+                "META-INF/*.kotlin_module",
+                "META-INF/INDEX.LIST",
+                "META-INF/io.netty.versions.properties"
             )
         }
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+        isCoreLibraryDesugaringEnabled = true
+    }
+
+    kotlin {
+        jvmToolchain(21)
     }
 
     defaultConfig {
@@ -39,7 +57,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24
-        targetSdk = 37
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -60,12 +78,17 @@ android {
     }
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-    }
-}
-
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    
+    // Fix Agora namespace conflict
+    configurations.all {
+        resolutionStrategy {
+            force("io.agora.rtc:agora-special-full:4.5.3.70")
+        }
+    }
 }

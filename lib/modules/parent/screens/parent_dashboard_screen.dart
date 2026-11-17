@@ -1,400 +1,456 @@
+import 'parent_contracts_and_finance_screen.dart';
 import 'package:flutter/material.dart';
+import '../../../core/session/session_controller.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_shadows.dart';
-import '../../../core/widgets/section_header.dart';
-import '../../../core/widgets/idrak_logo.dart';
-import '../../../providers/app_state.dart';
-import 'timetable_matrix_screen.dart';
-import 'grades_analytics_screen.dart';
-import 'attendance_calendar_screen.dart';
-import 'medical_card_screen.dart';
-import 'parent_tickets_screen.dart';
-import '../../student/screens/cafeteria_menu_screen.dart';
-import '../../admin/widgets/reorderable_module_grid.dart';
 
-class ParentDashboardScreen extends StatelessWidget {
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_palette.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/adaptive_route.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/motion.dart';
+import '../../../core/widgets/responsive.dart';
+import '../../../data/models/assignment_model.dart';
+import '../../../data/models/student_model.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../providers/app_state.dart';
+import '../../academic_ops/screens/academic_notes_screen.dart';
+import '../../academic_ops/screens/clubs_screen.dart';
+import '../../academic_ops/screens/excused_absences_screen.dart';
+import '../../admin/widgets/reorderable_module_grid.dart';
+import '../../shared/screens/notifications_hub_screen.dart';
+import '../../shared/screens/notifications_screen.dart';
+import '../../shared/screens/settings_screen.dart';
+import '../../shared/widgets/dashboard_kit.dart';
+import '../../student/screens/assignments_timeline_screen.dart';
+import '../../student/screens/cafeteria_menu_screen.dart';
+import '../../student/screens/library_screen.dart';
+import 'attendance_calendar_screen.dart';
+import 'grades_analytics_screen.dart';
+import 'medical_card_screen.dart';
+import 'timetable_matrix_screen.dart';
+
+class ParentDashboardScreen extends StatefulWidget {
   const ParentDashboardScreen({super.key});
 
   @override
+  State<ParentDashboardScreen> createState() => _ParentDashboardScreenState();
+}
+
+class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
+  bool _isReorderMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AppState>().syncStudentAcademicDataFromApi();
+      }
+    });
+  }
+
+  static String _displayClassName(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return 'Sinif təyin edilməyib';
+    final match = RegExp(r'\(([^)]+)\)').firstMatch(trimmed);
+    if (match != null &&
+        match.group(1) != null &&
+        match.group(1)!.trim().isNotEmpty) {
+      return match.group(1)!.trim();
+    }
+    return trimmed;
+  }
+
+  void _toggleReorder() {
+    setState(() => _isReorderMode = !_isReorderMode);
+    if (!_isReorderMode) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Modul sıralaması saxlanıldı'),
+          backgroundColor: AppColors.success,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _open(BuildContext context, Widget screen) {
+    Navigator.push(context, appRoute(builder: (_) => screen));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final appState = Provider.of<AppState>(context);
+    final appState = context.watch<AppState>();
     final student = appState.student;
-    final isDark = appState.isDarkMode;
-    final parentHeaderBase = isDark
-        ? const Color(0xFF0F172A)
-        : const Color(0xFF132A25);
+    final cleanCls = _displayClassName(student.className);
+    final currentUser = appState.currentUser;
+    final loc = AppLocalizations.of(context);
+    final palette = AppPalette.of(context);
+
+    final todayLessons = appState.getClassLessonsForDate(cleanCls, DateTime.now());
+    final pendingHomeworkCount = appState.assignments.where((a) {
+      final assignedCls = _displayClassName(a.assignedClass ?? '');
+      final matchesClass = assignedCls.isEmpty ||
+          assignedCls == 'Sinif təyin edilməyib' ||
+          assignedCls.toLowerCase() == 'hamısı' ||
+          assignedCls.toLowerCase() == 'bütün siniflər' ||
+          assignedCls.toLowerCase() == cleanCls.toLowerCase();
+      final matchesStudent = a.assignedStudentIds.isEmpty ||
+          a.assignedStudentIds.contains(student.id);
+      return matchesClass &&
+          matchesStudent &&
+          a.getStatusForStudent(student.id) == AssignmentStatus.pending;
+    }).length;
+
+    final childGrades =
+        appState.grades.where((g) => g.studentId == student.id).toList();
+    final lowGrades = childGrades.where((g) => g.percentage < 61).toList();
+    final attendanceLow = student.attendanceRate < 85;
+    final hasAcademicAlert = attendanceLow || lowGrades.isNotEmpty;
+
+    final orderedModules = appState
+        .getOrderedModules()
+        .where((m) => m.id != 'parent_tickets' && m.id != 'tickets')
+        .toList();
+
+    var entranceIndex = 0;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: palette.bgBase,
       body: SafeArea(
         top: false,
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // Keep the original collapsing header animation. Stretching its
-            // background also prevents the scaffold color showing on pull-down.
-            SliverAppBar(
-              expandedHeight: 140,
-              floating: false,
-              pinned: false,
-              stretch: true,
-              // This is a nested header below MainScreen's app bar. It should
-              // collapse fully instead of leaving an empty green toolbar.
-              primary: false,
-              toolbarHeight: 0,
-              collapsedHeight: 0,
-              elevation: 0,
-              backgroundColor: parentHeaderBase,
-              surfaceTintColor: Colors.transparent,
-              flexibleSpace: FlexibleSpaceBar(
-                stretchModes: const [StretchMode.zoomBackground],
-                background: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: isDark
-                          ? [
-                              const Color(0xFF0F172A),
-                              const Color(0xFF064E3B),
-                              parentHeaderBase,
-                            ]
-                          : [
-                              const Color(0xFF132A25),
-                              const Color(0xFF0D5C4B),
-                              parentHeaderBase,
-                            ],
-                    ),
-                  ),
-                  padding: const EdgeInsets.only(
-                    left: 20,
-                    right: 20,
-                    top: 44,
-                    bottom: 12,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(2.5),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFF34D399),
-                              Color(0xFF059669),
-                              Color(0xFF10B981),
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF10B981).withAlpha(80),
-                              blurRadius: 14,
-                              spreadRadius: 1,
-                            ),
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          radius: 26,
-                          backgroundImage: NetworkImage(student.photoUrl),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const IdrakLogo(size: 14),
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFF10B981,
-                                    ).withAlpha(35),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: const Color(
-                                        0xFF34D399,
-                                      ).withAlpha(50),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'VALİDEYN KABİNETİ',
-                                    style: TextStyle(
-                                      color: Color(0xFF34D399),
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 0.9,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              student.fullName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Övladınız: ${student.className} • ${student.studentNumber}',
-                              style: TextStyle(
-                                color: Colors.white.withAlpha(180),
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            DashboardHeroSliver(
+              badge: loc.parentCabinet.toUpperCase(),
+              title: currentUser?.fullName ?? loc.parent,
+              subtitle:
+                  '${loc.parentDashboard} • ${student.fullName}',
+              photoUrl: currentUser?.photoUrl,
+              avatarName: currentUser?.fullName ?? loc.parent,
+              gradient: const [
+                Color(0xFF1B1533),
+                Color(0xFF312E81),
+                Color(0xFF4F46E5),
+              ],
+              accentColor: const Color(0xFFA78BFA),
+              watermarkIcon: Icons.family_restroom_rounded,
+              isOnline: appState.isOnline,
+              notificationCount: appState.unreadNotificationCount,
+              onNotifications: () =>
+                  _open(context, const NotificationsHubScreen()),
+              onSettings: () => _open(context, const SettingsScreen()),
+              isReorderMode: _isReorderMode,
+              onToggleReorder: _toggleReorder,
             ),
-
-            // Övlad keçidi (birdən çox uşaq varsa)
-            if (appState.children.length > 1)
-              SliverToBoxAdapter(
-                child: Container(
-                  color: parentHeaderBase,
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            SliverToBoxAdapter(
+              child: ResponsiveCenter(
+                horizontalPadding: 0,
+                child: Padding(
+                  padding: responsivePadding(context).copyWith(
+                    top: 14,
+                    bottom: 108,
+                  ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.diversity_3_rounded,
-                            color: Color(0xFF34D399),
-                            size: 14,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Övladlarınız (${appState.children.length}) — keçid üçün toxunun:',
-                            style: TextStyle(
-                              color: Colors.white.withAlpha(190),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
+                      if (context.watch<SessionController>().canSwitchGuard) ...[
+                        _entrance(
+                          context,
+                          entranceIndex++,
+                          InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () async {
+                              final ok = await appState.switchGuard(context);
+                              if (!ok && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Rejim dəyişdirilə bilmədi')),
+                                );
+                              }
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF1E3E62), Color(0xFF0B192C)],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.gold.withValues(alpha: 0.5)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.gold.withValues(alpha: 0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.swap_horiz_rounded, color: AppColors.gold, size: 18),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          ' rejiminə qayıt',
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
+                                        ),
+                                        if (context.watch<SessionController>().linkedGuardName != null)
+                                          Text(
+                                            context.watch<SessionController>().linkedGuardName!,
+                                            style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.gold, size: 13),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
+                        ),
+                      ],
+                      if (appState.children.length > 1) ...[
+                        _entrance(
+                          context,
+                          entranceIndex++,
+                          _buildChildSelector(
+                            context,
+                            loc,
+                            appState,
+                            student,
+                            palette,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                      _entrance(
+                        context,
+                        entranceIndex++,
+                        DashboardOverviewCard(
+                          title: 'Övlad icmalı',
+                          icon: Icons.family_restroom_rounded,
+                          accent: palette.brandRoyal,
+                          isOnline: appState.isOnline,
+                          onRefresh: () =>
+                              appState.syncStudentAcademicDataFromApi(),
+                          kpis: [
+                            DashboardKpiData(
+                              label: 'Davamiyyət',
+                              value: '${student.attendanceRate}%',
+                              icon: Icons.check_circle_rounded,
+                              color: AppColors.success,
+                              onTap: () => _open(
+                                  context, const AttendanceCalendarScreen()),
+                            ),
+                            DashboardKpiData(
+                              label: 'GPA',
+                              value: '${student.gpa}',
+                              icon: Icons.star_rounded,
+                              color: palette.brandGold,
+                              onTap: () =>
+                                  _open(context, const GradesAnalyticsScreen()),
+                            ),
+                            DashboardKpiData(
+                              label: 'Gözləyən tapşırıq',
+                              value: '$pendingHomeworkCount',
+                              icon: Icons.assignment_rounded,
+                              color: AppColors.warning,
+                              onTap: () => _open(
+                                  context, const AssignmentsTimelineScreen()),
+                            ),
+                            DashboardKpiData(
+                              label: 'Bugünkü dərs',
+                              value: '${todayLessons.length}',
+                              icon: Icons.schedule_rounded,
+                              color: palette.brandRoyal,
+                              onTap: () =>
+                                  _open(context, const TimetableMatrixScreen()),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 40,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: appState.children.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 8),
-                          itemBuilder: (context, index) {
-                            final child = appState.children[index];
-                            final isActive = child.id == student.id;
-                            return GestureDetector(
-                              onTap: () => appState.setActiveChild(child.id),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: isActive
-                                      ? const LinearGradient(
-                                          colors: [
-                                            Color(0xFF059669),
-                                            Color(0xFF10B981),
-                                          ],
-                                        )
-                                      : null,
-                                  color: !isActive
-                                      ? Colors.white.withAlpha(18)
-                                      : null,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: isActive
-                                        ? const Color(0xFF34D399)
-                                        : Colors.white.withAlpha(40),
-                                    width: isActive ? 1.5 : 1,
-                                  ),
-                                  boxShadow: isActive
-                                      ? [
-                                          BoxShadow(
-                                            color: const Color(
-                                              0xFF10B981,
-                                            ).withAlpha(80),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ]
-                                      : [],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      isActive
-                                          ? Icons.child_care_rounded
-                                          : Icons.child_care_outlined,
-                                      size: 16,
-                                      color: isActive
-                                          ? Colors.white
-                                          : Colors.white70,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '${child.fullName.split(' ').first} • ${child.className}',
-                                      style: TextStyle(
-                                        color: isActive
-                                            ? Colors.white
-                                            : Colors.white.withAlpha(200),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ],
+                      const SizedBox(height: 12),
+                      _entrance(
+                        context,
+                        entranceIndex++,
+                        DashboardQuickActions(
+                          actions: [
+                            DashboardQuickActionData(
+                              label: 'Qiymətlər',
+                              icon: Icons.star_rounded,
+                              color: palette.brandGold,
+                              onTap: () =>
+                                  _open(context, const GradesAnalyticsScreen()),
+                            ),
+                            DashboardQuickActionData(
+                              label: 'Davamiyyət',
+                              icon: Icons.check_circle_rounded,
+                              color: AppColors.success,
+                              onTap: () => _open(
+                                  context, const AttendanceCalendarScreen()),
+                            ),
+                            DashboardQuickActionData(
+                              label: 'Tapşırıqlar',
+                              icon: Icons.assignment_rounded,
+                              color: palette.brandRoyal,
+                              onTap: () => _open(
+                                  context, const AssignmentsTimelineScreen()),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _entrance(
+                        context,
+                        entranceIndex++,
+                        _buildTodaySummary(
+                          context,
+                          loc,
+                          student,
+                          cleanCls,
+                          todayLessons.length,
+                          todayLessons.isEmpty
+                              ? ''
+                              : '${todayLessons.first.subject} (${todayLessons.first.time})',
+                          pendingHomeworkCount,
+                        ),
+                      ),
+                      if (hasAcademicAlert) ...[
+                        const SizedBox(height: 12),
+                        _entrance(
+                          context,
+                          entranceIndex++,
+                          _buildWarningBanner(
+                            context,
+                            loc,
+                            palette,
+                            attendanceLow: attendanceLow,
+                            attendanceRate: student.attendanceRate,
+                            lowGradeCount: lowGrades.length,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      _entrance(
+                        context,
+                        entranceIndex++,
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _buildExcuseCard(
+                                  context,
+                                  palette,
                                 ),
                               ),
-                            );
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildMedicalCard(
+                                  context,
+                                  loc,
+                                  palette,
+                                  student,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _entrance(
+                        context,
+                        entranceIndex++,
+                        DashboardModuleHeader(
+                          title: loc.monitoringModules,
+                          subtitle: 'Cədvəl, qiymətlər, davamiyyət, menyu və ödənişlər',
+                          count: orderedModules.length,
+                          isReorderMode: _isReorderMode,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _entrance(
+                        context,
+                        entranceIndex++,
+                        ReorderableModuleGrid(
+                          modules: orderedModules,
+                          isReorderMode: _isReorderMode,
+                          allowTwoLineTitle: true,
+                          dynamicData: {
+                            'parent_timetable': todayLessons.isEmpty
+                                ? loc.timetableDesc
+                                : 'Bu gün ${todayLessons.length} dərs',
+                            'parent_assignments': pendingHomeworkCount > 0
+                                ? '$pendingHomeworkCount gözləyən tapşırıq'
+                                : 'Gündəlik tapşırıqlar',
+                            'parent_grades': 'GPA: ${student.gpa}',
+                            'parent_attendance':
+                                '${student.attendanceRate}% davamiyyət',
+                            'parent_excuses': 'Arayış və icazə sorğuları',
+                            'parent_cafeteria': loc.cafeteriaDesc,
+                            'parent_clubs': 'Dərsdənkənar dərnəklər',
+                            'parent_library': 'Dərslik və kitablar',
+                            'parent_invoices': 'Müqavilə & Ödəniş Qrafiki',
+                            'parent_medical': loc.medicalCard,
+                          },
+                          onReorder: (newOrder) {
+                            appState.updateModuleOrder(newOrder);
+                          },
+                          onModuleTap: (moduleId, ctx) {
+                            switch (moduleId) {
+                              case 'parent_timetable':
+                                _open(ctx, const TimetableMatrixScreen());
+                                break;
+                              case 'parent_assignments':
+                                _open(ctx, const AssignmentsTimelineScreen());
+                                break;
+                              case 'parent_grades':
+                                _open(ctx, const GradesAnalyticsScreen());
+                                break;
+                              case 'parent_attendance':
+                                _open(ctx, const AttendanceCalendarScreen());
+                                break;
+                              case 'parent_excuses':
+                                _open(ctx, const ExcusedAbsencesScreen());
+                                break;
+                              case 'parent_cafeteria':
+                                _open(ctx, const CafeteriaMenuScreen());
+                                break;
+                              case 'parent_clubs':
+                                _open(ctx, const ClubsScreen());
+                                break;
+                              case 'parent_library':
+                                _open(ctx, const LibraryScreen());
+                                break;
+                              case 'parent_invoices':
+                                _open(ctx, const ParentContractsAndFinanceScreen());
+                                break;
+                              case 'parent_notes':
+                              case 'academic_notes':
+                                _open(ctx, const AcademicNotesScreen());
+                                break;
+                              case 'parent_medical':
+                                _open(ctx, const MedicalCardScreen());
+                                break;
+                            }
                           },
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
-
-            SliverToBoxAdapter(
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 90),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(28),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Quick Stats Bar
-                    Row(
-                      children: [
-                        _buildParentStatCard(
-                          'GPA Balı',
-                          '${student.gpa}',
-                          Icons.star_rounded,
-                          const Color(0xFFF59E0B),
-                        ),
-                        const SizedBox(width: 10),
-                        _buildParentStatCard(
-                          'Davamiyyət',
-                          '${student.attendanceRate}%',
-                          Icons.check_circle_rounded,
-                          const Color(0xFF10B981),
-                        ),
-                        const SizedBox(width: 10),
-                        _buildParentStatCard(
-                          'Qan Qrupu',
-                          student.bloodGroup ?? '—',
-                          Icons.favorite_rounded,
-                          const Color(0xFFEF4444),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    const SectionHeader(
-                      title: 'Nəzarət və İzləmə Modulları',
-                      subtitle:
-                          'Qiymətlər, davamiyyət, tibb və müəllim əlaqəsi',
-                      padding: EdgeInsets.zero,
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // 2-Column Grid for Parent Modules (Sürükle-Bırak)
-                    ReorderableModuleGrid(
-                      modules: appState.getOrderedModules(),
-                      dynamicData: const {
-                        'parent_timetable': 'Gündəlik dərslər',
-                        'parent_grades': 'KSQ / BSQ dinamika',
-                        'parent_attendance': 'Rəqəmsal təqvim',
-                        'parent_medical': 'Allergiya & Peyvənd',
-                        'parent_tickets': 'Məktəb & Psixoloq',
-                        'parent_cafeteria': 'Günün nahar menyusu',
-                      },
-                      onReorder: (newOrder) {
-                        appState.updateModuleOrder(newOrder);
-                      },
-                      onModuleTap: (moduleId, ctx) {
-                        switch (moduleId) {
-                          case 'parent_timetable':
-                            Navigator.push(
-                              ctx,
-                              MaterialPageRoute(
-                                builder: (_) => const TimetableMatrixScreen(),
-                              ),
-                            );
-                            break;
-                          case 'parent_grades':
-                            Navigator.push(
-                              ctx,
-                              MaterialPageRoute(
-                                builder: (_) => const GradesAnalyticsScreen(),
-                              ),
-                            );
-                            break;
-                          case 'parent_attendance':
-                            Navigator.push(
-                              ctx,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const AttendanceCalendarScreen(),
-                              ),
-                            );
-                            break;
-                          case 'parent_medical':
-                            Navigator.push(
-                              ctx,
-                              MaterialPageRoute(
-                                builder: (_) => const MedicalCardScreen(),
-                              ),
-                            );
-                            break;
-                          case 'parent_tickets':
-                            Navigator.push(
-                              ctx,
-                              MaterialPageRoute(
-                                builder: (_) => const ParentTicketsScreen(),
-                              ),
-                            );
-                            break;
-                          case 'parent_cafeteria':
-                            Navigator.push(
-                              ctx,
-                              MaterialPageRoute(
-                                builder: (_) => const CafeteriaMenuScreen(),
-                              ),
-                            );
-                            break;
-                        }
-                      },
-                    ),
-                  ],
                 ),
               ),
             ),
@@ -404,53 +460,469 @@ class ParentDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildParentStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
+  Widget _buildChildSelector(
+    BuildContext context,
+    AppLocalizations loc,
+    AppState appState,
+    StudentProfile student,
+    AppPalette palette,
   ) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.cardBorder.withAlpha(70)),
-          boxShadow: AppShadows.sm,
-        ),
-        child: Column(
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: color.withAlpha(20),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 16),
+            Icon(
+              Icons.diversity_3_rounded,
+              color: palette.brandRoyal,
+              size: 14,
             ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-                color: AppColors.textPrimary,
-                letterSpacing: -0.2,
-              ),
-            ),
-            const SizedBox(height: 1),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 10.5,
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                '${loc.yourChildren} (${appState.children.length})',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.resolve(
+                  context,
+                  AppTypography.label2(context),
+                ),
               ),
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 40,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: appState.children.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final child = appState.children[index];
+              final childCls = _displayClassName(child.className);
+              final isActive = child.id == student.id;
+              return Semantics(
+                button: true,
+                selected: isActive,
+                label: '${child.fullName} • $childCls',
+                child: InkWell(
+                  onTap: () => appState.setActiveChild(child.id),
+                  borderRadius: BorderRadius.circular(14),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: isActive ? palette.brandRoyal : palette.surface2,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isActive
+                            ? palette.brandRoyal
+                            : palette.borderHairline,
+                      ),
+                      boxShadow: isActive
+                          ? [
+                              BoxShadow(
+                                color: palette.brandRoyal.withAlpha(60),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isActive
+                              ? Icons.child_care_rounded
+                              : Icons.child_care_outlined,
+                          size: 16,
+                          color: isActive
+                              ? colorScheme.onPrimary
+                              : colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 6),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 160),
+                          child: Text(
+                            '${child.fullName.split(' ').first} • $childCls',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isActive
+                                  ? colorScheme.onPrimary
+                                  : colorScheme.onSurface,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTodaySummary(
+    BuildContext context,
+    AppLocalizations loc,
+    StudentProfile student,
+    String cleanCls,
+    int todayLessonCount,
+    String firstLessonInfo,
+    int pendingHomeworkCount,
+  ) {
+    final palette = AppPalette.of(context);
+    return AppCard(
+      variant: AppCardVariant.elevated,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            student.fullName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.resolve(
+              context,
+              AppTypography.title1(context),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${loc.classLabel}: $cleanCls • ${loc.today}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.caption1(context),
+          ),
+          const SizedBox(height: 10),
+          Container(height: 1, color: palette.borderHairline),
+          InkWell(
+            onTap: () => _open(context, const TimetableMatrixScreen()),
+            borderRadius: BorderRadius.circular(10),
+            child: _buildSummaryRow(
+              context: context,
+              icon: Icons.calendar_month_rounded,
+              accent: palette.brandRoyal,
+              title: loc.todayLessons,
+              subtitle:
+                  todayLessonCount > 0 ? firstLessonInfo : loc.noLessonsToday,
+              value: '$todayLessonCount',
+            ),
+          ),
+          Container(height: 1, color: palette.borderHairline),
+          InkWell(
+            onTap: () => _open(context, const AssignmentsTimelineScreen()),
+            borderRadius: BorderRadius.circular(10),
+            child: _buildSummaryRow(
+              context: context,
+              icon: pendingHomeworkCount > 0
+                  ? Icons.alarm_rounded
+                  : Icons.check_circle_rounded,
+              accent: pendingHomeworkCount > 0
+                  ? AppColors.warning
+                  : AppColors.success,
+              title: loc.homework,
+              subtitle: pendingHomeworkCount > 0 ? loc.pending : loc.completed,
+              value: '$pendingHomeworkCount',
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildSummaryRow({
+    required BuildContext context,
+    required IconData icon,
+    required Color accent,
+    required String title,
+    String? subtitle,
+    required String value,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.11),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: accent),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.resolve(
+                    context,
+                    AppTypography.title2(context),
+                  ),
+                ),
+                if (subtitle != null && subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption1(context)
+                        .copyWith(color: colorScheme.onSurfaceVariant),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: AppTypography.resolve(
+                context,
+                AppTypography.metricSm(context),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWarningBanner(
+    BuildContext context,
+    AppLocalizations loc,
+    AppPalette palette, {
+    required bool attendanceLow,
+    required int attendanceRate,
+    required int lowGradeCount,
+  }) {
+    return AppCard(
+      variant: AppCardVariant.tonal,
+      color: palette.warningContainer,
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                size: 18,
+                color: AppColors.warning,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  loc.warning,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.resolve(
+                    context,
+                    AppTypography.title2(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          if (attendanceLow)
+            _buildAttentionRow(
+              context: context,
+              icon: Icons.event_busy_rounded,
+              iconColor: AppColors.danger,
+              text: '$attendanceRate% ${loc.attendance}',
+            ),
+          if (lowGradeCount > 0)
+            _buildAttentionRow(
+              context: context,
+              icon: Icons.trending_down_rounded,
+              iconColor: AppColors.warning,
+              text: '$lowGradeCount aşağı qiymət (<61%)',
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAttentionRow({
+    required BuildContext context,
+    required IconData icon,
+    required Color iconColor,
+    required String text,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: iconColor),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.body3(context)
+                  .copyWith(color: colorScheme.onSurface),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExcuseCard(
+    BuildContext context,
+    AppPalette palette,
+  ) {
+    return Semantics(
+      button: true,
+      label: 'Üzrlü Qayıb və Arayış',
+      child: AppCard(
+        variant: AppCardVariant.elevated,
+        onTap: () => _open(context, const ExcusedAbsencesScreen()),
+        padding: const EdgeInsets.all(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 96),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: const Icon(
+                      Icons.event_busy_rounded,
+                      size: 16,
+                      color: AppColors.warning,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Üzrlü Qayıb & Arayış',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.resolve(
+                  context,
+                  AppTypography.title2(context),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Arayış və icazə sorğuları',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.caption1(context),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMedicalCard(
+    BuildContext context,
+    AppLocalizations loc,
+    AppPalette palette,
+    StudentProfile student,
+  ) {
+    final bloodGrp = (student.bloodGroup != null &&
+            student.bloodGroup!.trim().isNotEmpty &&
+            !student.bloodGroup!.toLowerCase().contains('yoxdur') &&
+            !student.bloodGroup!.toLowerCase().contains('məlumat'))
+        ? student.bloodGroup!.trim()
+        : '—';
+    return Semantics(
+      button: true,
+      label: loc.medicalCard,
+      child: AppCard(
+        variant: AppCardVariant.elevated,
+        onTap: () => _open(context, const MedicalCardScreen()),
+        padding: const EdgeInsets.all(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 96),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: palette.brandRoyal.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: const Icon(
+                      Icons.health_and_safety_rounded,
+                      size: 16,
+                      color: AppColors.info,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                loc.medicalCard,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.resolve(
+                  context,
+                  AppTypography.title2(context),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${loc.bloodGroup}: $bloodGrp',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.caption1(context),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _entrance(BuildContext context, int index, Widget child) {
+    if (MediaQuery.disableAnimationsOf(context)) return child;
+    return child
+        .animate()
+        .fadeIn(
+          duration: 420.ms,
+          delay: staggerDelay(index),
+          curve: Curves.easeOutCubic,
+        )
+        .slideY(
+          begin: 0.04,
+          duration: 420.ms,
+          delay: staggerDelay(index),
+          curve: Curves.easeOutCubic,
+        );
   }
 }

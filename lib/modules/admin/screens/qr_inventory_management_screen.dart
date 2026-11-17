@@ -51,6 +51,10 @@ class _QrInventoryManagementScreenState extends State<QrInventoryManagementScree
   }
 
   Future<void> _openItemForm({InventoryItem? existing}) async {
+    if (!Provider.of<AppState>(context, listen: false)
+        .hasPermission('manage_inventory')) {
+      return;
+    }
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -60,6 +64,10 @@ class _QrInventoryManagementScreenState extends State<QrInventoryManagementScree
   }
 
   Future<void> _confirmDelete(InventoryItem item) async {
+    if (!Provider.of<AppState>(context, listen: false)
+        .hasPermission('manage_inventory')) {
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -153,6 +161,7 @@ class _QrInventoryManagementScreenState extends State<QrInventoryManagementScree
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
+    final canManage = appState.hasPermission('manage_inventory');
     final items = appState.inventoryItems;
 
     final filtered = items.where((i) {
@@ -188,21 +197,22 @@ class _QrInventoryManagementScreenState extends State<QrInventoryManagementScree
               onPressed: () => handleBackNavigation(context),
             ),
             actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryAccent,
-                      borderRadius: BorderRadius.circular(10),
+              if (canManage)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: IconButton(
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryAccent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
                     ),
-                    child: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                    tooltip: 'Yeni Avadanlıq',
+                    onPressed: () => _openItemForm(),
                   ),
-                  tooltip: 'Yeni Avadanlıq',
-                  onPressed: () => _openItemForm(),
                 ),
-              ),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
@@ -409,16 +419,18 @@ class _QrInventoryManagementScreenState extends State<QrInventoryManagementScree
                                 icon: const Icon(Icons.qr_code_rounded, size: 16, color: AppColors.primaryAccent),
                                 label: const Text('QR Göstər', style: TextStyle(color: AppColors.primaryAccent, fontSize: 12, fontWeight: FontWeight.w700)),
                               ),
-                              TextButton.icon(
-                                onPressed: () => _openItemForm(existing: item),
-                                icon: const Icon(Icons.edit_rounded, size: 16, color: AppColors.warning),
-                                label: const Text('Redaktə', style: TextStyle(color: AppColors.warning, fontSize: 12, fontWeight: FontWeight.w700)),
-                              ),
-                              TextButton.icon(
-                                onPressed: () => _confirmDelete(item),
-                                icon: const Icon(Icons.delete_rounded, size: 16, color: AppColors.danger),
-                                label: const Text('Sil', style: TextStyle(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.w700)),
-                              ),
+                              if (canManage)
+                                TextButton.icon(
+                                  onPressed: () => _openItemForm(existing: item),
+                                  icon: const Icon(Icons.edit_rounded, size: 16, color: AppColors.warning),
+                                  label: const Text('Redaktə', style: TextStyle(color: AppColors.warning, fontSize: 12, fontWeight: FontWeight.w700)),
+                                ),
+                              if (canManage)
+                                TextButton.icon(
+                                  onPressed: () => _confirmDelete(item),
+                                  icon: const Icon(Icons.delete_rounded, size: 16, color: AppColors.danger),
+                                  label: const Text('Sil', style: TextStyle(color: AppColors.danger, fontSize: 12, fontWeight: FontWeight.w700)),
+                                ),
                             ],
                           ),
                         ],
@@ -431,13 +443,15 @@ class _QrInventoryManagementScreenState extends State<QrInventoryManagementScree
             ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.primaryAccent,
-        foregroundColor: Colors.white,
-        onPressed: () => _openItemForm(),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Yeni Avadanlıq', style: TextStyle(fontWeight: FontWeight.w700)),
-      ),
+      floatingActionButton: canManage
+          ? FloatingActionButton.extended(
+              backgroundColor: AppColors.primaryAccent,
+              foregroundColor: Colors.white,
+              onPressed: () => _openItemForm(),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Yeni Avadanlıq', style: TextStyle(fontWeight: FontWeight.w700)),
+            )
+          : null,
     );
   }
 }

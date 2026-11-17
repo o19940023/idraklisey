@@ -22,10 +22,12 @@ class MedicalCardScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text('${student.fullName} • Tibbi Kart'),
-        elevation: 0,
-      ),
+      appBar: AppBar(        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text('${student.fullName} – Tibbi Kart', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        elevation: 0,),
       floatingActionButton: canManageMedical
           ? FloatingActionButton.extended(
               onPressed: () => _showAddAllergyDialog(context, appState),

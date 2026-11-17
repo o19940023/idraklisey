@@ -1,17 +1,19 @@
 // Email Otomatik Oluşturma Sistemi
-// Azerbaycan karakterlerini Latin'e çevirir ve standart email formatı oluşturur
+// GoPanel Veb və MariaDB standartlarına 100% uyğunlaşdırılmışdır:
+// Şagird: name.surname@student.idrak.edu.az
+// Valideyn / Əməkdaş: name.surname@idrak.edu.az
 
 class EmailGenerator {
-  /// Azerbaycan karakterlerini Latin harflere dönüştürür
+  /// Azərbaycan simvollarını Latın hərflərinə çevirir
   static String _convertAzerbaijaniToLatin(String text) {
     final Map<String, String> charMap = {
-      'ə': 'e', 'Ə': 'E',
-      'ı': 'i', 'I': 'I',
-      'ö': 'o', 'Ö': 'O',
-      'ü': 'u', 'Ü': 'U',
-      'ç': 'c', 'Ç': 'C',
-      'ş': 's', 'Ş': 'S',
-      'ğ': 'g', 'Ğ': 'G',
+      'ə': 'e', 'Ə': 'e',
+      'ı': 'i', 'I': 'i', 'İ': 'i',
+      'ö': 'o', 'Ö': 'o',
+      'ü': 'u', 'Ü': 'u',
+      'ç': 'c', 'Ç': 'c',
+      'ş': 's', 'Ş': 's',
+      'ğ': 'g', 'Ğ': 'g',
     };
 
     String result = text;
@@ -21,64 +23,63 @@ class EmailGenerator {
     return result;
   }
 
-  /// Ad Soyad'dan temiz username oluşturur
-  /// Örnek: "Ayşə Məmmədova" → "ayse.memmedova"
+  /// Ad Soyad-dan təmiz istifadəçi adı (slug) yaradır
+  /// Nümunə: "Zəhra Mövsümova" → "zehra.movsumova"
   static String _generateUsername(String fullName) {
     final cleanName = _convertAzerbaijaniToLatin(fullName)
         .toLowerCase()
         .trim()
-        .replaceAll(RegExp(r'[^a-z\s]'), '') // Özel karakterleri kaldır
-        .replaceAll(RegExp(r'\s+'), '.'); // Boşlukları nokta yap
+        .replaceAll(RegExp(r'[^a-z\s]'), '') // Xüsusi simvolları sil
+        .replaceAll(RegExp(r'\s+'), '.'); // Boşluqları nöqtə et
     
     return cleanName;
   }
 
-  /// Çalışan (Staff) için email oluşturur (unikallıq yoxlamalı)
+  /// Əməkdaş (Staff) üçün email yaradır
   /// Format: firstname.lastname@idrak.edu.az
-  /// Dublikat varsa: firstname.lastname2@idrak.edu.az
-  /// Örnek: "Ali Vəliyev" → "ali.veliyev@idrak.edu.az"
+  /// Təkrar olduqda: firstname.lastname2@idrak.edu.az
   static String generateStaffEmail(String fullName, {List<String> existingEmails = const []}) {
     final username = _generateUsername(fullName);
     String email = '$username@idrak.edu.az';
     
-    // Dublikat yoxlaması
     if (existingEmails.contains(email)) {
       int counter = 2;
-      while (existingEmails.contains('${username}$counter@idrak.edu.az')) {
+      while (existingEmails.contains('$username$counter@idrak.edu.az')) {
         counter++;
       }
-      email = '${username}$counter@idrak.edu.az';
+      email = '$username$counter@idrak.edu.az';
     }
     
     return email;
   }
 
-  /// Öğrenci için email oluşturur (unikallıq yoxlamalı)
-  /// Format: firstname.lastname.sYYYY@idrak.edu.az
-  /// Dublikat varsa: firstname.lastname2.sYYYY@idrak.edu.az
-  /// Örnek: "Ayşə Məmmədova", 2024 → "ayse.memmedova.s2024@idrak.edu.az"
-  static String generateStudentEmail(String fullName, int year, {List<String> existingEmails = const []}) {
+  /// Şagird (Student) üçün rəsmi email yaradır (PC GoPanel və MariaDB ilə 1:1 eyni)
+  /// Format: firstname.lastname@student.idrak.edu.az
+  /// Təkrar olduqda: firstname.lastname2@student.idrak.edu.az
+  /// Nümunə: "Zəhra Mövsümova" → "zehra.movsumova@student.idrak.edu.az"
+  static String generateStudentEmail(
+    String fullName,
+    int year, {
+    List<String> existingEmails = const [],
+  }) {
     final username = _generateUsername(fullName);
-    String email = '$username.s$year@idrak.edu.az';
+    String email = '$username@student.idrak.edu.az';
     
-    // Dublikat yoxlaması
+    // Təkrarlanma yoxlaması
     if (existingEmails.contains(email)) {
       int counter = 2;
-      while (existingEmails.contains('$username$counter.s$year@idrak.edu.az')) {
+      while (existingEmails.contains('$username$counter@student.idrak.edu.az')) {
         counter++;
       }
-      email = '$username$counter.s$year@idrak.edu.az';
+      email = '$username$counter@student.idrak.edu.az';
     }
     
     return email;
   }
 
-  /// FIN kodundan yılı çıkartır (son 4 karakter)
-  /// Örnek: "5VMHK2T" → 2007 (doğum yılı)
-  /// Okula başlama yılı = doğum yılı + 6
+  /// FIN kodundan ili çıxarır
   static int getYearFromFIN(String finCode) {
     if (finCode.length >= 7) {
-      // FIN'in ilk karakteri yüzyıl gösterir
       final firstChar = finCode[0];
       int century = 2000;
       
@@ -88,23 +89,17 @@ class EmailGenerator {
         century = 1900; // 1900-1999
       }
       
-      // 5. ve 6. karakter yaşı gösterir (tersten)
       final birthYearLastTwo = finCode.substring(4, 6);
       final parsedYear = int.tryParse(birthYearLastTwo) ?? 15;
       final birthYear = century + parsedYear;
       
-      // Okula başlama yılı = doğum yılı + 6
-      final schoolStartYear = birthYear + 6;
-      
-      return schoolStartYear;
+      return birthYear + 6;
     }
     
-    // FIN yoksa mevcut yılı kullan
     return DateTime.now().year;
   }
 
-  /// FIN kodundan doğum tarihini parse eder
-  /// Format: XAYmmdd (X=yüzyıl, A=cinsiyet, Y=yıl son 2, mm=ay, dd=gün)
+  /// FIN kodundan doğum tarixini oxuyur
   static DateTime? parseBirthDateFromFIN(String finCode) {
     if (finCode.length != 7) return null;
     
@@ -129,39 +124,36 @@ class EmailGenerator {
     }
   }
 
-  /// Veli için email oluşturur (unikallıq yoxlamalı)
-  /// Format: firstname.lastname.parent@idrak.edu.az
-  /// Dublikat varsa: firstname.lastname2.parent@idrak.edu.az
-  /// Örnek: "Vəli Əliyev" → "veli.eliyev.parent@idrak.edu.az"
+  /// Valideyn (Parent) üçün rəsmi email yaradır (PC GoPanel və MariaDB ilə 1:1 eyni)
+  /// Format: firstname.lastname@idrak.edu.az
+  /// Təkrar olduqda: firstname.lastname2@idrak.edu.az
+  /// Nümunə: "Sevil Hacıyeva" → "sevil.haciyeva@idrak.edu.az"
   static String generateParentEmail(String fullName, {List<String> existingEmails = const []}) {
     final username = _generateUsername(fullName);
-    String email = '$username.parent@idrak.edu.az';
+    String email = '$username@idrak.edu.az';
     
-    // Dublikat yoxlaması
+    // Təkrarlanma yoxlaması
     if (existingEmails.contains(email)) {
       int counter = 2;
-      while (existingEmails.contains('$username$counter.parent@idrak.edu.az')) {
+      while (existingEmails.contains('$username$counter@idrak.edu.az')) {
         counter++;
       }
-      email = '$username$counter.parent@idrak.edu.az';
+      email = '$username$counter@idrak.edu.az';
     }
     
     return email;
   }
 
-  /// Email'den ad soyad çıkartır (ters işlem)
-  /// Örnek: "ayse.memmedova@idrak.edu.az" → "Ayse Memmedova"
+  /// Email-dən ad soyad çıxarır
   static String extractNameFromEmail(String email) {
     final username = email.split('@').first;
     final parts = username.split('.');
     
-    // .s2024 veya .parent gibi sonekleri kaldır
     final nameParts = parts.where((part) => 
       !part.startsWith('s') && 
       part != 'parent'
     ).toList();
     
-    // Her kelimenin ilk harfini büyüt
     final capitalizedParts = nameParts.map((part) {
       if (part.isEmpty) return part;
       return part[0].toUpperCase() + part.substring(1);
@@ -170,49 +162,28 @@ class EmailGenerator {
     return capitalizedParts.join(' ');
   }
 
-  /// Email'in geçerli olup olmadığını kontrol eder
+  /// Email-in İdrak formatında olub-olmadığını yoxlayır
   static bool isValidIdrakEmail(String email) {
     final regex = RegExp(
-      r'^[a-z]+\.[a-z]+(\.(s\d{4}|parent))?@idrak\.edu\.az$',
+      r'^[a-z0-9\._%+-]+@(student\.)?idrak\.edu\.az$',
       caseSensitive: false,
     );
     return regex.hasMatch(email);
   }
 
-  /// Email tipini belirler
+  /// Email tipini müəyyən edir
   static EmailType getEmailType(String email) {
-    if (email.contains('.parent@')) return EmailType.parent;
-    if (email.contains('.s')) return EmailType.student;
-    if (email.contains('@idrak.edu.az')) return EmailType.staff;
+    final lower = email.toLowerCase().trim();
+    if (lower.contains('@student.idrak.edu.az') || lower.contains('.s')) return EmailType.student;
+    if (lower.contains('.parent@')) return EmailType.parent;
+    if (lower.contains('@idrak.edu.az')) return EmailType.staff;
     return EmailType.unknown;
   }
 }
 
 enum EmailType {
   staff,    // firstname.lastname@idrak.edu.az
-  student,  // firstname.lastname.s2024@idrak.edu.az
-  parent,   // firstname.lastname.parent@idrak.edu.az
+  student,  // firstname.lastname@student.idrak.edu.az
+  parent,   // firstname.lastname@idrak.edu.az
   unknown,
 }
-
-// Kullanım Örnekleri:
-// 
-// 1. Çalışan email:
-//    EmailGenerator.generateStaffEmail("Ali Vəliyev")
-//    → "ali.veliyev@idrak.edu.az"
-//
-// 2. Öğrenci email:
-//    EmailGenerator.generateStudentEmail("Ayşə Məmmədova", 2024)
-//    → "ayse.memmedova.s2024@idrak.edu.az"
-//
-// 3. FIN'den yıl:
-//    EmailGenerator.getYearFromFIN("5VMHK2T")
-//    → 2013 (doğum 2007 + 6 yıl)
-//
-// 4. Veli email:
-//    EmailGenerator.generateParentEmail("Vəli Əliyev")
-//    → "veli.eliyev.parent@idrak.edu.az"
-//
-// 5. Email doğrulama:
-//    EmailGenerator.isValidIdrakEmail("ayse.memmedova.s2024@idrak.edu.az")
-//    → true

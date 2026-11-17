@@ -1,29 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_shadows.dart';
-import '../../../core/widgets/status_badge.dart';
+import '../../../core/theme/app_palette.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/adaptive_route.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/app_search_bar.dart';
+import '../../../core/widgets/modern_avatar.dart';
+import '../../../core/widgets/stat_card.dart';
 import '../../../data/models/student_model.dart';
-import '../../../data/models/user_model.dart';
 import '../../../providers/app_state.dart';
-import '../../../core/utils/navigation_utils.dart';
-import '../widgets/edit_student_sheet.dart';
+import '../../teacher/screens/teacher_student_detail_screen.dart';
+import '../widgets/student_operations_sheet.dart';
 import 'student_registration_screen.dart';
 
-/// Şagird İdarəsi: bütün şagirdlərin siyahısı, axtarış, sinif filtri və
-/// üzərinə basıldıqda tam profil (şəxsi məlumatlar + veli məlumatları).
 class StudentManagementScreen extends StatefulWidget {
   const StudentManagementScreen({super.key});
 
   @override
-  State<StudentManagementScreen> createState() => _StudentManagementScreenState();
+  State<StudentManagementScreen> createState() =>
+      _StudentManagementScreenState();
 }
 
 class _StudentManagementScreenState extends State<StudentManagementScreen> {
-  final _searchCtrl = TextEditingController();
-  String? _filterClass;
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _selectedClass = 'Hamısı';
+  String _scope = 'current';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AppState>().syncStudentsFromApi();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -31,221 +44,522 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     super.dispose();
   }
 
+  bool _belongsToClass(String studentClass, String className) {
+    return studentClass.trim().toLowerCase() == className.trim().toLowerCase();
+  }
+
+  void _openRegistration(BuildContext context) {
+    Navigator.push(
+      context,
+      appRoute(builder: (_) => const StudentRegistrationScreen()),
+    );
+  }
+
+  Future<void> _openFullEdit(BuildContext context, StudentProfile student) async {
+    final appState = context.read<AppState>();
+    await Navigator.push(
+      context,
+      appRoute(builder: (_) => StudentRegistrationScreen(studentId: student.id)),
+    );
+    if (mounted) appState.syncStudentsFromApi();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final appState = context.read<AppState>();
-    final students = appState.students;
-    final classes = appState.allDistinctClasses;
-    final dateFormat = DateFormat('dd.MM.yyyy');
+    final appState = context.watch<AppState>();
+    final palette = AppPalette.of(context);
+    final canAdd = appState.hasPermission('add_students');
+    final canEdit = appState.hasPermission('edit_students');
 
-    final q = _searchCtrl.text.toLowerCase().trim();
-    final filtered = students.where((s) {
-      final matchesClass = _filterClass == null || s.className.toLowerCase() == _filterClass!.toLowerCase();
-      final matchesSearch = q.isEmpty ||
-          s.fullName.toLowerCase().contains(q) ||
-          s.studentNumber.toLowerCase().contains(q) ||
-          (s.finCode ?? '').toLowerCase().contains(q) ||
-          (s.email ?? '').toLowerCase().contains(q);
-      return matchesClass && matchesSearch;
-    }).toList()
-      ..sort((a, b) => a.fullName.compareTo(b.fullName));
+    final allStudents = appState.students.toList();
+    final scopedStudents = _scope == 'current'
+        ? allStudents.where((s) => s.isCurrentYear).toList()
+        : allStudents;
+    final students = scopedStudents.toList()
+      ..sort((a, b) {
+        final classCompare =
+            a.className.toLowerCase().compareTo(b.className.toLowerCase());
+        if (classCompare != 0) return classCompare;
+        return a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase());
+      });
+    final classes = scopedStudents
+        .map((s) => s.className)
+        .where((c) => c.isNotEmpty && c != 'Sinif təyin edilməyib')
+        .toSet()
+        .toList()
+      ..sort();
+    final currentCount = allStudents.where((s) => s.isCurrentYear).length;
+    final activeClass =
+        classes.contains(_selectedClass) ? _selectedClass : null;
+    final classStudents = activeClass == null
+        ? students
+        : students
+            .where(
+              (student) => _belongsToClass(student.className, activeClass),
+            )
+            .toList();
+
+    final query = _searchCtrl.text.trim().toLowerCase();
+    final filtered = query.isEmpty
+        ? classStudents
+        : classStudents.where((student) {
+            return student.fullName.toLowerCase().contains(query) ||
+                student.studentNumber.toLowerCase().contains(query) ||
+                (student.finCode ?? '').toLowerCase().contains(query) ||
+                (student.email ?? '').toLowerCase().contains(query) ||
+                student.parentName.toLowerCase().contains(query) ||
+                student.parentPhone.toLowerCase().contains(query);
+          }).toList();
+
+    final subtitle = '${students.length} şagird • ${classes.length} sinif';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: palette.bgBase,
+      floatingActionButton: canAdd
+          ? FloatingActionButton.extended(
+              backgroundColor: palette.brandRoyal,
+              foregroundColor: Colors.white,
+              onPressed: () => _openRegistration(context),
+              icon: const Icon(Icons.person_add_alt_1_rounded, size: 19),
+              label: const Text(
+                'Şagird əlavə et',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            )
+          : null,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          SliverAppBar(
-            expandedHeight: 140,
-            pinned: true,
-            elevation: 0,
-            backgroundColor: AppColors.primary,
-            surfaceTintColor: Colors.transparent,
-            leading: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(20),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Colors.white),
+          _buildHeader(context, palette, subtitle, canAdd),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildOverview(palette, classStudents, classes.length),
+                  const SizedBox(height: 12),
+                  AppSearchBar(
+                    controller: _searchCtrl,
+                    hintText: 'Ad, İdrak kodu, FIN, valideyn və ya telefon...',
+                    onChanged: (_) => setState(() {}),
+                    onClear: () => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildScopeFilters(palette, currentCount, allStudents.length),
+                  if (classes.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _buildClassFilters(
+                      palette,
+                      classes,
+                      students,
+                    ),
+                  ],
+                ],
               ),
-              onPressed: () => handleBackNavigation(context),
             ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryAccent,
-                      borderRadius: BorderRadius.circular(10),
+          ),
+          if (students.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: _buildEmptyState(
+                context,
+                palette,
+                icon: Icons.school_outlined,
+                title: 'Hələ şagird qeydiyyatı yoxdur',
+                message:
+                    'İlk şagirdi əlavə etməklə kataloqu yaratmağa başlayın.',
+                action: canAdd
+                    ? FilledButton.icon(
+                        onPressed: () => _openRegistration(context),
+                        icon: const Icon(
+                          Icons.person_add_alt_1_rounded,
+                          size: 18,
+                        ),
+                        label: const Text('Şagird əlavə et'),
+                      )
+                    : null,
+              ),
+            )
+          else if (filtered.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: _buildEmptyState(
+                context,
+                palette,
+                icon: Icons.search_off_rounded,
+                title: 'Nəticə tapılmadı',
+                message:
+                    'Axtarış və ya sinif filtrinə uyğun şagird tapılmadı.',
+              ),
+            )
+          else ...[
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+              sliver: SliverToBoxAdapter(
+                child: Row(
+                  children: [
+                    Text(
+                      'Şagirdlər',
+                      style: AppTypography.title1(context).copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                    child: const Icon(Icons.person_add_rounded, size: 18, color: Colors.white),
-                  ),
-                  tooltip: 'Yeni Şagird Qeydiyyatı',
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const StudentRegistrationScreen()),
-                  ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: palette.brandRoyal.withValues(alpha: 0.09),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '${filtered.length}',
+                        style: TextStyle(
+                          color: palette.brandRoyal,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      activeClass ?? 'Bütün siniflər',
+                      style: TextStyle(
+                        color: palette.textMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF6C5CE7)],
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _buildStudentCard(
+                    context,
+                    palette,
+                    filtered[index],
+                    canEdit,
+                  ),
+                  childCount: filtered.length,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context,
+    AppPalette palette,
+    String subtitle,
+    bool canAdd,
+  ) {
+    return SliverAppBar(
+      expandedHeight: 132,
+      pinned: true,
+      elevation: 0,
+      backgroundColor: palette.brandNavy,
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: Colors.white,
+      actions: [
+        if (canAdd)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              tooltip: 'Yeni şagird qeydiyyatı',
+              onPressed: () => _openRegistration(context),
+              icon: Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.14),
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      right: -15,
-                      bottom: -15,
-                      child: Icon(Icons.school_rounded, size: 130, color: Colors.white.withAlpha(10)),
-                    ),
-                    SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 44, 20, 16),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                child: const Icon(
+                  Icons.person_add_alt_1_rounded,
+                  size: 18,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: LayoutBuilder(
+          builder: (context, constraints) {
+            final showContent = constraints.maxHeight >= 96;
+            return Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF07152B),
+                    Color(0xFF132C5E),
+                    Color(0xFF2563EB),
+                  ],
+                ),
+              ),
+              child: !showContent
+                  ? const SizedBox.expand()
+                  : Stack(
+                      children: [
+                        Positioned(
+                          right: -34,
+                          top: -40,
+                          child: Container(
+                            width: 150,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: 0.06),
+                            ),
+                          ),
+                        ),
+                        SafeArea(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 44, 20, 16),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withAlpha(20),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(Icons.school_rounded, size: 22, color: Colors.white),
-                                ),
-                                const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                Row(
                                   children: [
-                                    const Text(
-                                      'Şagird İdarəsi',
-                                      style: TextStyle(
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.14),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.school_rounded,
+                                        size: 22,
                                         color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: -0.5,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${students.length} qeydiyyatda olan şagird',
-                                      style: TextStyle(
-                                        color: Colors.white.withAlpha(180),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                    const SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Şagird İdarəsi',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          subtitle,
+                                          style: TextStyle(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.72),
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Axtarış + sinif filtri
-          SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Column(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.cardBorder),
-                      boxShadow: AppShadows.sm,
-                    ),
-                    child: TextField(
-                      controller: _searchCtrl,
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        hintText: 'Ad, FIN, e-poçt və ya İdrak kodu ilə axtar...',
-                        hintStyle: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primaryAccent, size: 20),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: AppColors.primaryAccent, width: 1.5),
-                        ),
-                        suffixIcon: _searchCtrl.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear_rounded, size: 18),
-                                onPressed: () {
-                                  _searchCtrl.clear();
-                                  setState(() {});
-                                },
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    child: Row(
-                      children: [
-                        _buildClassChip('Hamısı (${students.length})', null),
-                        for (final cls in classes) _buildClassChip(cls, cls),
                       ],
                     ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverview(
+    AppPalette palette,
+    List<StudentProfile> students,
+    int classCount,
+  ) {
+    final boysCount = students.where((s) {
+      final g = s.gender?.toLowerCase() ?? '';
+      return g == 'kişi' || g == 'male' || g == 'kisi';
+    }).length;
+    final girlsCount = students.where((s) {
+      final g = s.gender?.toLowerCase() ?? '';
+      return g == 'qadın' || g == 'female' || g == 'qadin';
+    }).length;
+
+    return StatCardRow(
+      columns: 4,
+      spacing: 8,
+      children: [
+        StatCard(
+          value: '${students.length}',
+          label: 'Cəmi',
+          icon: Icons.groups_rounded,
+          color: palette.brandRoyal,
+          compact: true,
+        ),
+        StatCard(
+          value: '$boysCount',
+          label: 'Oğlan',
+          icon: Icons.male_rounded,
+          color: const Color(0xFF0284C7),
+          compact: true,
+        ),
+        StatCard(
+          value: '$girlsCount',
+          label: 'Qız',
+          icon: Icons.female_rounded,
+          color: const Color(0xFFE11D48),
+          compact: true,
+        ),
+        StatCard(
+          value: '$classCount',
+          label: 'Sinif',
+          icon: Icons.class_rounded,
+          color: const Color(0xFF059669),
+          compact: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScopeFilters(AppPalette palette, int currentCount, int archiveCount) {
+    final options = <(String, String)>[
+      ('current', 'Cari aktiv ($currentCount)'),
+      ('archive', 'Ümumi arxiv ($archiveCount)'),
+    ];
+    return Row(
+      children: [
+        for (final (key, label) in options)
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: key == 'current' ? 8 : 0),
+              child: GestureDetector(
+                onTap: () => setState(() {
+                  _scope = key;
+                  _selectedClass = 'Hamısı';
+                }),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: _scope == key ? palette.brandRoyal : palette.surface1,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: _scope == key ? palette.brandRoyal : palette.borderHairline,
+                    ),
                   ),
-                ],
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: _scope == key ? Colors.white : palette.textSecondary,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
+      ],
+    );
+  }
 
-          if (filtered.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryAccent.withAlpha(8),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.person_search_rounded, size: 44, color: AppColors.textMuted),
+  Widget _buildClassFilters(
+    AppPalette palette,
+    List<String> classes,
+    List<StudentProfile> students,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final filters = ['Hamısı', ...classes];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          for (final className in filters)
+            Padding(
+              padding: const EdgeInsets.only(right: 7),
+              child: GestureDetector(
+                onTap: () => setState(() => _selectedClass = className),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _selectedClass == className
+                        ? palette.brandRoyal
+                        : palette.surface1,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: _selectedClass == className
+                          ? palette.brandRoyal
+                          : palette.borderHairline,
                     ),
-                    const SizedBox(height: 14),
-                    Text('Axtarışa uyğun şagird tapılmadı.', style: TextStyle(color: AppColors.textSecondary, fontSize: 14, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _buildStudentCard(context, filtered[index], dateFormat),
-                  childCount: filtered.length,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        className,
+                        style: TextStyle(
+                          color: _selectedClass == className
+                              ? Colors.white
+                              : colorScheme.onSurfaceVariant,
+                          fontSize: 11.5,
+                          fontWeight: _selectedClass == className
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _selectedClass == className
+                              ? Colors.white.withValues(alpha: 0.18)
+                              : palette.surface3,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '${className == 'Hamısı' ? students.length : students.where((student) => _belongsToClass(student.className, className)).length}',
+                          style: TextStyle(
+                            color: _selectedClass == className
+                                ? Colors.white
+                                : palette.textMuted,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -254,434 +568,255 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     );
   }
 
-  Widget _buildClassChip(String label, String? cls) {
-    final isSelected = _filterClass == cls;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: () => setState(() => _filterClass = cls),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primaryAccent : AppColors.surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isSelected ? AppColors.primaryAccent : AppColors.cardBorder,
-              width: isSelected ? 1.5 : 1,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.white : AppColors.textPrimary,
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildStudentCard(
+    BuildContext context,
+    AppPalette palette,
+    StudentProfile student,
+    bool canEdit,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final hasGpa = student.gpa > 0;
+    final hasAttendance = student.attendanceRate > 0;
+    final isWithoutClass = student.className.isEmpty ||
+        student.className == 'Sinif təyin edilməyib' ||
+        student.className == '0-ci sinif';
 
-  Widget _buildStudentCard(BuildContext context, StudentProfile student, DateFormat dateFormat) {
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          onTap: () => _showStudentDetails(context, student, dateFormat),
-          borderRadius: BorderRadius.circular(18),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.cardBorder),
-              boxShadow: AppShadows.sm,
+      padding: EdgeInsets.zero,
+      borderRadius: 18,
+      onTap: () => _openStudent(context, student),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(13, 12, 6, 12),
+        child: Row(
+          children: [
+            ModernAvatar(
+              imageUrl: student.photoUrl,
+              name: student.fullName,
+              size: 54,
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.cardBorder),
-                    image: DecorationImage(
-                      image: NetworkImage(student.photoUrl),
-                      fit: BoxFit.cover,
-                      onError: (_, __) {},
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              student.fullName,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary, letterSpacing: -0.2),
-                            ),
-                          ),
-                          StatusBadge(label: student.className, color: AppColors.primaryAccent, fontSize: 10),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        'ID: ${student.studentNumber}${student.finCode != null ? ' • FIN: ${student.finCode}' : ''}',
-                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
-                      ),
-                      if (student.email != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          student.email!,
+                      Expanded(
+                        child: Text(
+                          student.fullName,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 10.5, color: AppColors.primaryAccent, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                            color: colorScheme.onSurface,
+                          ),
                         ),
-                      ],
-                      const SizedBox(height: 2),
-                      Text(
-                        'Valideyn: ${student.parentName}',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 11, color: AppColors.goldDark, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isWithoutClass
+                              ? AppColors.danger.withValues(alpha: 0.1)
+                              : palette.brandRoyal.withValues(alpha: 0.09),
+                          borderRadius: BorderRadius.circular(7),
+                          border: Border.all(
+                            color: isWithoutClass
+                                ? AppColors.danger.withValues(alpha: 0.3)
+                                : palette.brandRoyal.withValues(alpha: 0.18),
+                          ),
+                        ),
+                        child: Text(
+                          isWithoutClass ? '⚠️ Sinifsiz' : student.className,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isWithoutClass ? AppColors.danger : palette.brandRoyal,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 6),
-                Icon(Icons.chevron_right_rounded, color: AppColors.textMuted, size: 20),
-              ],
+                  const SizedBox(height: 3),
+                  Text(
+                    '${student.studentNumber}${(student.finCode ?? '').isNotEmpty ? ' • FIN ${student.finCode}' : ''}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      _miniStat(
+                        icon: Icons.auto_graph_rounded,
+                        label: hasGpa ? student.gpa.toStringAsFixed(2) : 'Yeni',
+                        color: AppColors.success,
+                      ),
+                      const SizedBox(width: 10),
+                      _miniStat(
+                        icon: Icons.fact_check_rounded,
+                        label: hasAttendance
+                            ? '${student.attendanceRate}%'
+                            : 'Yeni',
+                        color: palette.brandRoyal,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          student.parentName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
+            IconButton(
+              tooltip: 'Əməliyyatlar',
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(
+                minWidth: 36,
+                minHeight: 36,
+              ),
+              padding: EdgeInsets.zero,
+              onPressed: () => StudentOperationsSheet.show(
+                context,
+                student,
+                onRefresh: () {
+                  if (mounted) context.read<AppState>().syncStudentsFromApi();
+                },
+              ),
+              icon: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: palette.brandRoyal.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.more_vert_rounded,
+                  size: 18,
+                  color: palette.brandRoyal,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: palette.textMuted,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void _showStudentDetails(BuildContext context, StudentProfile student, DateFormat dateFormat) {
-    // Valideyn hesabını tap (FIN kodu oradan götürülür) — Övladlar modelinə görə
-    // həm linkedStudentId, həm də linkedStudentIds siyahısı yoxlanılır
-    final appState = context.read<AppState>();
-    AppUser? parentUser;
-    for (final u in appState.users) {
-      if (u.role == UserRole.parent &&
-          (u.linkedStudentId == student.id || u.linkedStudentIds.contains(student.id))) {
-        parentUser = u;
-        break;
-      }
-    }
-
-    // Eyni valideynin digər övladları (qardaş-bacı)
-    final siblingIds = <String>{
-      if (parentUser?.linkedStudentId != null) parentUser!.linkedStudentId!,
-      ...?parentUser?.linkedStudentIds,
-    }.where((id) => id != student.id).toSet();
-    final siblings = appState.students.where((s) => siblingIds.contains(s.id)).toList();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          height: MediaQuery.of(ctx).size.height * 0.86,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: Column(
-            children: [
-              // Tutacaq
-              Container(
-                margin: const EdgeInsets.only(top: 10),
-                width: 42,
-                height: 4.5,
-                decoration: BoxDecoration(color: AppColors.cardBorder, borderRadius: BorderRadius.circular(10)),
-              ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 30),
-                  children: [
-                    // Başlıq
-                    Row(
-                      children: [
-                        Container(
-                          width: 66,
-                          height: 66,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: AppColors.cardBorder),
-                            image: DecorationImage(
-                              image: NetworkImage(student.photoUrl),
-                              fit: BoxFit.cover,
-                              onError: (_, __) {},
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                student.fullName,
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.textPrimary, letterSpacing: -0.4),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  StatusBadge(label: student.className, color: AppColors.primaryAccent, fontSize: 10.5),
-                                  const SizedBox(width: 6),
-                                  StatusBadge(label: 'ID: ${student.studentNumber}', color: AppColors.textSecondary, fontSize: 10),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Redaktə düyməsi (edit_students səlahiyyəti olanlara)
-                        if (appState.hasPermission('edit_students'))
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              showEditStudentSheet(context, student);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryAccent.withAlpha(15),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.primaryAccent.withAlpha(40)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.edit_rounded, size: 15, color: AppColors.primaryAccent),
-                                  const SizedBox(width: 5),
-                                  Text('Redaktə', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primaryAccent)),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // ═══ ƏSAS MƏLUMATLAR (dönər, ən vacib faktlar) ═══
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF1A1B2E), Color(0xFF4437CA), Color(0xFF6C5CE7)],
-                        ),
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: AppShadows.md,
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(child: _heroFact(Icons.school_rounded, 'Sinif', student.className)),
-                              Expanded(child: _heroFact(Icons.pin_rounded, 'FIN Kod', _dv(student.finCode))),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(child: _heroFact(Icons.bloodtype_rounded, 'Qan Qrupu', _dv(student.bloodGroup))),
-                              Expanded(child: _heroFact(Icons.cake_rounded, 'Doğum', student.birthDate != null ? dateFormat.format(student.birthDate!) : _empty)),
-                            ],
-                          ),
-                          Divider(color: Colors.white.withAlpha(40), height: 22),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(7),
-                                decoration: BoxDecoration(color: Colors.white.withAlpha(25), shape: BoxShape.circle),
-                                child: const Icon(Icons.family_restroom_rounded, size: 15, color: Colors.white),
-                              ),
-                              const SizedBox(width: 9),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      student.parentName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900),
-                                    ),
-                                    Text(
-                                      'Valideyn • ${student.parentPhone}',
-                                      style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 10.5, fontWeight: FontWeight.w600),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Şəxsi məlumatlar (bütün sahələr həmişə görünür)
-                    _buildDetailBox(
-                      icon: Icons.badge_rounded,
-                      title: 'Şəxsi Məlumatlar',
-                      color: AppColors.primaryAccent,
-                      rows: [
-                        MapEntry('Ad / Soyad', student.fullName),
-                        MapEntry('Ata adı', _dv(student.fatherName)),
-                        MapEntry('Cins', _dv(student.gender)),
-                        MapEntry('Doğum Tarixi', student.birthDate != null ? dateFormat.format(student.birthDate!) : _empty),
-                        MapEntry('FIN Kod', _dv(student.finCode)),
-                        MapEntry('Ünvan', _dv(student.address)),
-                        MapEntry('E-poçt (Login)', _dv(student.email)),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Veli (bütün sahələr həmişə görünür)
-                    _buildDetailBox(
-                      icon: Icons.family_restroom_rounded,
-                      title: 'Valideyn Məlumatları',
-                      color: AppColors.goldDark,
-                      rows: [
-                        MapEntry('Ad Soyad', student.parentName),
-                        MapEntry('Telefon', student.parentPhone),
-                        MapEntry('FIN Kod', _dv(parentUser?.finCode)),
-                        MapEntry('Doğum Tarixi', parentUser?.birthDate != null ? dateFormat.format(parentUser!.birthDate!) : _empty),
-                        MapEntry('E-poçt (Login)', _dv(student.parentEmail)),
-                        MapEntry('Ünvan', _dv(student.parentAddress)),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Digər övladlar (qardaş-bacı) — Övladlar modeli
-                    if (siblings.isNotEmpty)
-                      _buildDetailBox(
-                        icon: Icons.diversity_3_rounded,
-                        title: 'Digər Övladlar (${siblings.length})',
-                        color: AppColors.success,
-                        rows: [
-                          for (final s in siblings)
-                            MapEntry(s.fullName, '${s.className} • ${s.studentNumber}'),
-                        ],
-                      ),
-                    if (siblings.isNotEmpty) const SizedBox(height: 14),
-
-                    // Səhiyyə + akademik
-                    _buildDetailBox(
-                      icon: Icons.favorite_rounded,
-                      title: 'Səhiyyə və Akademik',
-                      color: AppColors.danger,
-                      rows: [
-                        MapEntry('Qan Qrupu', _dv(student.bloodGroup)),
-                        MapEntry('Alergiyalar', (student.allergies?.isEmpty ?? true) ? 'Yoxdur' : student.allergies!.join(', ')),
-                        MapEntry('GPA', student.gpa.toStringAsFixed(1)),
-                        MapEntry('Davamiyyət', '${student.attendanceRate}%'),
-                        MapEntry('Təhsil İli', student.academicYear),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+  void _openStudent(BuildContext context, StudentProfile student) {
+    Navigator.push(
+      context,
+      appRoute(
+        builder: (_) => TeacherStudentDetailScreen(
+          student: student,
+          adminMode: true,
+          onEdit: (current) => _openFullEdit(context, current),
+        ),
+      ),
     );
   }
 
-  /// Detal kartının ən üstündəki vurğulu əsas fakt
-  Widget _heroFact(IconData icon, String label, String value) {
+  Widget _miniStat({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: const EdgeInsets.all(7),
-          decoration: BoxDecoration(color: Colors.white.withAlpha(22), shape: BoxShape.circle),
-          child: Icon(icon, size: 15, color: Colors.white),
-        ),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: TextStyle(color: Colors.white.withAlpha(170), fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.3)),
-              const SizedBox(height: 1),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900),
-              ),
-            ],
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            color: color,
           ),
         ),
       ],
     );
   }
 
-  /// Detal görüntüsündə boş sahələr üçün fallback mətn
-  static const _empty = 'Daxil edilməyib';
-  String _dv(String? v) => (v == null || v.trim().isEmpty) ? _empty : v;
-
-  Widget _buildDetailBox({
+  Widget _buildEmptyState(
+    BuildContext context,
+    AppPalette palette, {
     required IconData icon,
     required String title,
-    required Color color,
-    required List<MapEntry<String, String>> rows,
+    required String message,
+    Widget? action,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(color: color.withAlpha(15), borderRadius: BorderRadius.circular(10)),
-                child: Icon(icon, size: 16, color: color),
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                color: palette.brandRoyal.withValues(alpha: 0.07),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: palette.brandRoyal.withValues(alpha: 0.12),
+                ),
               ),
-              const SizedBox(width: 10),
-              Text(title, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w900, color: AppColors.textPrimary, letterSpacing: -0.2)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) Divider(color: AppColors.cardBorder.withAlpha(60), height: 14),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 120,
-                  child: Text(rows[i].key, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
-                ),
-                Expanded(
-                  child: Text(
-                    rows[i].value,
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                  ),
-                ),
-              ],
+              child: Icon(icon, size: 34, color: palette.brandRoyal),
             ),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.5,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (action != null) ...[
+              const SizedBox(height: 18),
+              action,
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

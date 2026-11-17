@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_shadows.dart';
-import '../../../providers/app_state.dart';
+import '../../../core/theme/app_palette.dart';
+import '../../../core/utils/navigation_utils.dart';
+import '../../../core/widgets/app_empty_state.dart';
 import '../../../data/models/timetable_model.dart';
+import '../../../providers/app_state.dart';
 
 class TimetableMatrixScreen extends StatefulWidget {
   const TimetableMatrixScreen({super.key});
@@ -12,121 +16,752 @@ class TimetableMatrixScreen extends StatefulWidget {
   State<TimetableMatrixScreen> createState() => _TimetableMatrixScreenState();
 }
 
-class _TimetableMatrixScreenState extends State<TimetableMatrixScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _TimetableMatrixScreenState extends State<TimetableMatrixScreen> {
+  late DateTime _selectedWeekMonday;
   int _selectedDayIndex = 0;
+  bool _showClubs = false;
+
+  final List<String> _dayNames = [
+    'Bazar ertəsi',
+    'Çərşənbə axşamı',
+    'Çərşənbə',
+    'Cümə axşamı',
+    'Cümə',
+  ];
+
+  final List<String> _shortDays = ['B.E', 'Ç.A', 'Ç.', 'C.A', 'C.'];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) {
-        setState(() {
-          _selectedDayIndex = _tabController.index;
-        });
-      }
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    _selectedWeekMonday = today.subtract(Duration(days: now.weekday - 1));
+    _selectedDayIndex =
+        now.weekday >= DateTime.monday && now.weekday <= DateTime.friday
+            ? now.weekday - 1
+            : 0;
+  }
+
+  void _goToPreviousWeek() {
+    setState(() {
+      _selectedWeekMonday =
+          _selectedWeekMonday.subtract(const Duration(days: 7));
     });
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  void _goToNextWeek() {
+    setState(() {
+      _selectedWeekMonday = _selectedWeekMonday.add(const Duration(days: 7));
+    });
+  }
+
+  void _goToToday() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    setState(() {
+      _selectedWeekMonday = today.subtract(Duration(days: now.weekday - 1));
+      _selectedDayIndex =
+          now.weekday >= DateTime.monday && now.weekday <= DateTime.friday
+              ? now.weekday - 1
+              : 0;
+    });
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Yanvar',
+      'Fevral',
+      'Mart',
+      'Aprel',
+      'May',
+      'İyun',
+      'İyul',
+      'Avqust',
+      'Sentyabr',
+      'Oktyabr',
+      'Noyabr',
+      'Dekabr',
+    ];
+    return months[month - 1];
+  }
+
+  String _getShortMonthName(int month) {
+    const months = [
+      'Yan',
+      'Fev',
+      'Mar',
+      'Apr',
+      'May',
+      'İyun',
+      'İyul',
+      'Avq',
+      'Sen',
+      'Okt',
+      'Noy',
+      'Dek',
+    ];
+    return months[month - 1];
+  }
+
+  int? _calculateBreakMinutes(String prevEndTimeStr, String nextStartTimeStr) {
+    try {
+      final prevParts = prevEndTimeStr.trim().split(':');
+      final nextParts = nextStartTimeStr.trim().split(':');
+      if (prevParts.length == 2 && nextParts.length == 2) {
+        final prevMinutes =
+            int.parse(prevParts[0]) * 60 + int.parse(prevParts[1]);
+        final nextMinutes =
+            int.parse(nextParts[0]) * 60 + int.parse(nextParts[1]);
+        final diff = nextMinutes - prevMinutes;
+        return (diff > 0 && diff <= 120) ? diff : null;
+      }
+    } catch (_) {}
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppPalette.of(context);
     final appState = Provider.of<AppState>(context);
-    final days = appState.weeklyTimetable;
-    final currentStudent = appState.student;
-    final className = currentStudent.className.isNotEmpty ? currentStudent.className : '9B';
+    final className = appState.student.className;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text('Dərs Cədvəli ($className)'),
-        elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: false,
-          indicatorColor: AppColors.primaryAccent,
-          indicatorWeight: 3,
-          labelColor: AppColors.primaryAccent,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
-          tabs: days.map((d) => Tab(text: d.shortDay.isNotEmpty ? d.shortDay : d.dayName.substring(0, 3))).toList(),
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDate =
+        _selectedWeekMonday.add(Duration(days: _selectedDayIndex));
+    final weekFriday = _selectedWeekMonday.add(const Duration(days: 4));
+    final thisWeeksMonday = today.subtract(Duration(days: now.weekday - 1));
+    final isCurrentWeek = _selectedWeekMonday.isAtSameMomentAs(thisWeeksMonday);
+    final isViewingToday = selectedDate.isAtSameMomentAs(today);
+    final isHoliday = appState.isDateHoliday(selectedDate);
+    final holidayTitle = appState.getHolidayTitleForDate(selectedDate);
+    final lessons = appState.getClassLessonsForDate(className, selectedDate, showClubs: _showClubs);
+
+    LessonSlot? activeLesson;
+    LessonSlot? nextLesson;
+    if (isViewingToday) {
+      for (final lesson in lessons) {
+        if (!lesson.time.contains(' - ')) continue;
+        final parts = lesson.time.split(' - ');
+        final startParts = parts[0].trim().split(':');
+        final endParts = parts[1].trim().split(':');
+        if (startParts.length != 2 || endParts.length != 2) continue;
+        final start = DateTime(now.year, now.month, now.day,
+            int.parse(startParts[0]), int.parse(startParts[1]));
+        final end = DateTime(now.year, now.month, now.day,
+            int.parse(endParts[0]), int.parse(endParts[1]));
+        if (now.isAfter(start) && now.isBefore(end)) {
+          activeLesson = lesson;
+          break;
+        }
+        if (now.isBefore(start) && nextLesson == null) {
+          nextLesson = lesson;
+        }
+      }
+    }
+
+    final weekRangeTitle =
+        '${_selectedWeekMonday.day} ${_getShortMonthName(_selectedWeekMonday.month)}'
+        ' – ${weekFriday.day} ${_getShortMonthName(weekFriday.month)} ${weekFriday.year}';
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: palette.bgBase,
+        body: Column(
+          children: [
+            _buildHero(
+              className: className,
+              weekRangeTitle: weekRangeTitle,
+              isCurrentWeek: isCurrentWeek,
+              isViewingToday: isViewingToday,
+              today: today,
+              appState: appState,
+            ),
+            if (isViewingToday && (activeLesson != null || nextLesson != null))
+              _buildLiveBanner(
+                activeLesson ?? nextLesson!,
+                isActive: activeLesson != null,
+              ),
+            _buildDaySummary(
+              palette: palette,
+              selectedDate: selectedDate,
+              isViewingToday: isViewingToday,
+              lessonCount: lessons.length,
+            ),
+            Expanded(
+              child: className.isEmpty
+                  ? const AppEmptyState(
+                      icon: Icons.school_outlined,
+                      title: 'Sinif təyin edilməyib',
+                      message:
+                          'Şagirdin sinfi administrator tərəfindən təyin olunmadığı üçün dərs cədvəli göstərilə bilmir.',
+                    )
+                  : isHoliday
+                      ? AppEmptyState(
+                          icon: Icons.flag_rounded,
+                          title: holidayTitle ?? '${selectedDate.day} ${_getMonthName(selectedDate.month)} — Qeyri-iş günü',
+                          message:
+                              'Rəsmi dövlət bayramı və ya tətil günüdür. Bu gün üçün heç bir dərs təyin edilməyib.',
+                          accent: AppColors.gold,
+                        )
+                      : lessons.isEmpty
+                          ? AppEmptyState(
+                              icon: _showClubs ? Icons.palette_outlined : Icons.weekend_rounded,
+                              title: _showClubs
+                                  ? '${selectedDate.day} ${_getMonthName(selectedDate.month)} üçün dərnək yoxdur'
+                                  : '${selectedDate.day} ${_getMonthName(selectedDate.month)} üçün dərs yoxdur',
+                              message: _showClubs
+                                  ? 'Bu gün keçiriləcək dərnək məşğələsi təyin edilməyib.'
+                                  : 'Bu gün istirahət günüdür. Sabahkı dərslərə hazırlaşa bilərsiniz.',
+                              accent: palette.brandAzure,
+                            )
+                      : AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 260),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0.03, 0),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: ListView.builder(
+                            key: ValueKey(
+                                '${_selectedWeekMonday.toIso8601String()}-$_selectedDayIndex'),
+                            physics: const BouncingScrollPhysics(),
+                            padding: EdgeInsets.fromLTRB(
+                              16,
+                              4,
+                              16,
+                              MediaQuery.paddingOf(context).bottom + 28,
+                            ),
+                            itemCount: lessons.length,
+                            itemBuilder: (context, index) {
+                              final lesson = lessons[index];
+                              final isLast = index == lessons.length - 1;
+                              int? breakMins;
+                              if (!isLast &&
+                                  lesson.time.contains(' - ') &&
+                                  lessons[index + 1].time.contains(' - ')) {
+                                breakMins = _calculateBreakMinutes(
+                                  lesson.time.split(' - ')[1],
+                                  lessons[index + 1].time.split(' - ')[0],
+                                );
+                              }
+                              final isCurrent = _isLessonNow(lesson, now,
+                                  isViewingToday: isViewingToday);
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _buildLessonCard(
+                                    context,
+                                    palette,
+                                    lesson,
+                                    className,
+                                    isCurrent,
+                                  ),
+                                  if (breakMins != null && breakMins > 0)
+                                    _buildBreakIndicator(palette, breakMins),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+            ),
+          ],
         ),
       ),
-      body: Column(
-        children: [
-          // Current Selected Day Banner
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              border: Border(bottom: BorderSide(color: AppColors.cardBorder)),
+    );
+  }
+
+  bool _isLessonNow(LessonSlot lesson, DateTime now,
+      {required bool isViewingToday}) {
+    if (!isViewingToday || !lesson.time.contains(' - ')) return false;
+    final parts = lesson.time.split(' - ');
+    final startParts = parts[0].trim().split(':');
+    final endParts = parts[1].trim().split(':');
+    if (startParts.length != 2 || endParts.length != 2) return false;
+    final start = DateTime(now.year, now.month, now.day,
+        int.parse(startParts[0]), int.parse(startParts[1]));
+    final end = DateTime(now.year, now.month, now.day,
+        int.parse(endParts[0]), int.parse(endParts[1]));
+    return now.isAfter(start) && now.isBefore(end);
+  }
+
+  Widget _buildHero({
+    required String className,
+    required String weekRangeTitle,
+    required bool isCurrentWeek,
+    required bool isViewingToday,
+    required DateTime today,
+    required AppState appState,
+  }) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF080F1F), Color(0xFF111D36)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Stack(
+          children: [
+            Positioned(
+              top: -70,
+              right: -50,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF2563EB).withValues(alpha: 0.32),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => handleBackNavigation(context),
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.10),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 15,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Dərs Cədvəli',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              className.isNotEmpty
+                                  ? '$className sinfi • İdrak Liseyi'
+                                  : 'İdrak Liseyi',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.62),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Dərnəklər Filter Switch (Web show_clubs 1:1)
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _showClubs = !_showClubs;
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _showClubs
+                                ? const Color(0xFF8B5CF6).withValues(alpha: 0.35)
+                                : Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _showClubs
+                                  ? const Color(0xFFA78BFA)
+                                  : Colors.white.withValues(alpha: 0.12),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.palette_rounded,
+                                size: 14,
+                                color: _showClubs
+                                    ? const Color(0xFFDDD6FE)
+                                    : Colors.white70,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Dərnəklər',
+                                style: TextStyle(
+                                  color: _showClubs
+                                      ? Colors.white
+                                      : Colors.white70,
+                                  fontSize: 11,
+                                  fontWeight: _showClubs
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (!isViewingToday)
+                        GestureDetector(
+                          onTap: _goToToday,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF38BDF8)
+                                  .withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFF38BDF8)
+                                    .withValues(alpha: 0.32),
+                              ),
+                            ),
+                            child: const Text(
+                              'Bu gün',
+                              style: TextStyle(
+                                color: Color(0xFF7DD3FC),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        _weekArrow(Icons.chevron_left_rounded, _goToPreviousWeek),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Text(
+                                isCurrentWeek ? 'BU HƏFTƏ' : 'HƏFTƏ',
+                                style: TextStyle(
+                                  color: isCurrentWeek
+                                      ? const Color(0xFF7DD3FC)
+                                      : Colors.white.withValues(alpha: 0.45),
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.1,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                weekRangeTitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _weekArrow(Icons.chevron_right_rounded, _goToNextWeek),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: List.generate(5, (index) {
+                      final dayDate =
+                          _selectedWeekMonday.add(Duration(days: index));
+                      final isToday = dayDate.isAtSameMomentAs(today);
+                      final isSelected = _selectedDayIndex == index;
+                      final count = appState.getClassLessonsForDate(
+                          className, dayDate).length;
+                      return Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(right: index < 4 ? 6 : 0),
+                          child: GestureDetector(
+                            onTap: () =>
+                                setState(() => _selectedDayIndex = index),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 9,
+                                horizontal: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: isSelected
+                                    ? const LinearGradient(
+                                        colors: [
+                                          Color(0xFF2563EB),
+                                          Color(0xFF1D4ED8),
+                                        ],
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                      )
+                                    : null,
+                                color: isSelected
+                                    ? null
+                                    : Colors.white.withValues(
+                                        alpha: isToday ? 0.10 : 0.04),
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? const Color(0xFF60A5FA)
+                                          .withValues(alpha: 0.7)
+                                      : isToday
+                                          ? const Color(0xFF38BDF8)
+                                              .withValues(alpha: 0.45)
+                                          : Colors.white
+                                              .withValues(alpha: 0.07),
+                                  width: isSelected ? 1.4 : 1,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: const Color(0xFF2563EB)
+                                              .withValues(alpha: 0.38),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 5),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    _shortDays[index],
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w900
+                                          : FontWeight.w600,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : isToday
+                                              ? const Color(0xFF7DD3FC)
+                                              : Colors.white
+                                                  .withValues(alpha: 0.55),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    '${dayDate.day}',
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      height: 1.1,
+                                      fontWeight: FontWeight.w900,
+                                      color: isSelected || isToday
+                                          ? Colors.white
+                                          : Colors.white
+                                              .withValues(alpha: 0.88),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 1.5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? Colors.white
+                                              .withValues(alpha: 0.18)
+                                          : Colors.white
+                                              .withValues(alpha: 0.06),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '$count dərs',
+                                      style: TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w800,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : Colors.white
+                                                .withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _weekArrow(IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox(
+        width: 36,
+        height: 36,
+        child: Icon(icon, size: 22, color: Colors.white70),
+      ),
+    );
+  }
+
+  Widget _buildLiveBanner(LessonSlot lesson, {required bool isActive}) {
+    final colors = isActive
+        ? const [Color(0xFF047857), Color(0xFF065F46)]
+        : const [Color(0xFF1D4ED8), Color(0xFF1E3A8A)];
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: colors.first.withValues(alpha: 0.28),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.13),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(lesson.subjectIcon, color: Colors.white, size: 21),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryAccent.withAlpha(20),
-                        borderRadius: BorderRadius.circular(10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
                       ),
-                      child: const Icon(Icons.calendar_month_outlined, color: AppColors.primaryAccent, size: 18),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isActive ? 'İNDİ' : 'NÖVBƏTİ',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.7,
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          days[_selectedDayIndex].dayName,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
-                          ),
+                    const SizedBox(width: 7),
+                    Flexible(
+                      child: Text(
+                        lesson.time,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
                         ),
-                        Text(
-                          '${days[_selectedDayIndex].lessons.length} Dərs Saatı Planlaşdırılıb',
-                          style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryAccent.withAlpha(15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.primaryAccent.withAlpha(40)),
+                const SizedBox(height: 3),
+                Text(
+                  lesson.subject,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.school_outlined, size: 13, color: AppColors.primaryAccent),
-                      const SizedBox(width: 4),
-                      Text(
-                        className,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5, color: AppColors.primaryAccent),
-                      ),
-                    ],
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  '${lesson.displayTeachers}${lesson.room.isNotEmpty ? " • ${lesson.room}" : ""}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.64),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
-            ),
-          ),
-
-          // Timetable Matrix List
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: days.map((day) => _buildDaySchedule(day, className)).toList(),
             ),
           ),
         ],
@@ -134,220 +769,385 @@ class _TimetableMatrixScreenState extends State<TimetableMatrixScreen> with Sing
     );
   }
 
-  Widget _buildDaySchedule(DayTimetable day, String className) {
-    if (day.lessons.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.event_busy_outlined, size: 48, color: AppColors.textMuted),
-              const SizedBox(height: 12),
-              Text(
-                '${day.dayName} üçün dərs cədvəli boşdur',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Dərslər əlavə olunduqda burada əks olunacaq.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      itemCount: day.lessons.length,
-      itemBuilder: (context, index) {
-        final lesson = day.lessons[index];
-        final isCurrent = lesson.isCurrent;
-        final color = lesson.subjectColor;
-        final icon = lesson.subjectIcon;
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isCurrent ? AppColors.primaryAccent : AppColors.cardBorder,
-              width: isCurrent ? 1.5 : 1.0,
+  Widget _buildDaySummary({
+    required AppPalette palette,
+    required DateTime selectedDate,
+    required bool isViewingToday,
+    required int lessonCount,
+  }) {
+    final textPrimary = Theme.of(context).colorScheme.onSurface;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 6),
+      child: Row(
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: isViewingToday ? const Color(0xFF10B981) : palette.brandRoyal,
+              shape: BoxShape.circle,
             ),
-            boxShadow: AppShadows.sm,
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(15),
-            child: IntrinsicHeight(
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${_dayNames[_selectedDayIndex]}, ${selectedDate.day} ${_getMonthName(selectedDate.month)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: textPrimary,
+                letterSpacing: -0.1,
+              ),
+            ),
+          ),
+          if (isViewingToday)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'BUGÜN',
+                style: TextStyle(
+                  fontSize: 8.5,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF059669),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+            decoration: BoxDecoration(
+              color: palette.surface2,
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(color: palette.borderHairline),
+            ),
+            child: Text(
+              '$lessonCount dərs',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: palette.textMuted,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBreakIndicator(AppPalette palette, int minutes) {
+    final isLunch = minutes >= 35;
+    final accent = isLunch ? palette.brandGold : palette.textMuted;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(height: 1, color: palette.borderHairline),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+              decoration: BoxDecoration(
+                color: isLunch
+                    ? palette.warningContainer
+                    : palette.surface2,
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(
+                  color: isLunch
+                      ? palette.brandGold.withValues(alpha: 0.35)
+                      : palette.borderHairline,
+                ),
+              ),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Left Accent Strip
-                  Container(
-                    width: 5,
-                    color: color,
+                  Icon(
+                    isLunch
+                        ? Icons.restaurant_rounded
+                        : Icons.pause_circle_outline_rounded,
+                    size: 11,
+                    color: accent,
                   ),
-
-                  // Lesson Content
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                                    decoration: BoxDecoration(
-                                      color: color.withAlpha(20),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      lesson.period,
-                                      style: TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: color,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.schedule_outlined, size: 12, color: AppColors.textSecondary),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        lesson.time,
-                                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              if (isCurrent)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.danger,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.play_circle_filled_rounded, color: Colors.white, size: 11),
-                                      SizedBox(width: 3),
-                                      Text(
-                                        'İNDİ KEÇİRİLİR',
-                                        style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.w900),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              else
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.background,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: AppColors.cardBorder),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.meeting_room_outlined, size: 11, color: AppColors.textSecondary),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        lesson.room,
-                                        style: TextStyle(fontSize: 10.5, color: AppColors.textPrimary, fontWeight: FontWeight.w700),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(7),
-                                decoration: BoxDecoration(
-                                  color: color.withAlpha(20),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(icon, color: color, size: 18),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      lesson.subject,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Row(
-                                      children: [
-                                        Icon(Icons.person_outline_rounded, size: 12, color: AppColors.textSecondary),
-                                        const SizedBox(width: 3),
-                                        Expanded(
-                                          child: Text(
-                                            lesson.displayTeachers,
-                                            style: TextStyle(
-                                              fontSize: 11.5,
-                                              color: AppColors.textSecondary,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    if (lesson.isMerged) ...[
-                                      const SizedBox(height: 5),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.gold.withAlpha(25),
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: AppColors.gold.withAlpha(80)),
-                                        ),
-                                        child: Text(
-                                          '🔗 ${lesson.displayClasses(className)} Birgə Dərs',
-                                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.goldDark),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                  const SizedBox(width: 4),
+                  Text(
+                    isLunch
+                        ? 'Nahar tənəffüsü • $minutes dəq'
+                        : '$minutes dəqiqə tənəffüs',
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      color: accent,
                     ),
                   ),
                 ],
               ),
             ),
           ),
-        );
-      },
+          Expanded(
+            child: Container(height: 1, color: palette.borderHairline),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLessonCard(
+    BuildContext context,
+    AppPalette palette,
+    LessonSlot lesson,
+    String currentClassName,
+    bool isCurrent,
+  ) {
+    final textPrimary = Theme.of(context).colorScheme.onSurface;
+    final accent = lesson.subjectColor;
+    final tintAlpha = Theme.of(context).brightness == Brightness.dark
+        ? 0.18
+        : 0.10;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: palette.surface1,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isCurrent ? accent : palette.borderHairline,
+          width: isCurrent ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark
+                  ? 0.22
+                  : 0.035,
+            ),
+            blurRadius: isCurrent ? 16 : 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(19),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: Container(width: 4, color: accent),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      if (isCurrent) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'CANLI',
+                            style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.6,
+                              color: accent,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2.5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: tintAlpha),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: Text(
+                          lesson.period,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: accent,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.schedule_rounded,
+                              size: 12,
+                              color: palette.textMuted,
+                            ),
+                            const SizedBox(width: 3),
+                            Flexible(
+                              child: Text(
+                                lesson.time,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: palette.textMuted,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (lesson.room.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: palette.surface2,
+                            borderRadius: BorderRadius.circular(7),
+                            border: Border.all(
+                              color: palette.borderHairline,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.meeting_room_outlined,
+                                size: 11,
+                                color: palette.textMuted,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                lesson.room,
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: palette.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: tintAlpha),
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: Icon(lesson.subjectIcon, color: accent, size: 21),
+                      ),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              lesson.subject,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w900,
+                                color: textPrimary,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.person_pin_rounded,
+                                  size: 13,
+                                  color: palette.textMuted,
+                                ),
+                                const SizedBox(width: 3),
+                                Expanded(
+                                  child: Text(
+                                    lesson.displayTeachers,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: palette.textMuted,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (lesson.isMerged) ...[
+                    const SizedBox(height: 9),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: palette.warningContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.people_outline_rounded,
+                            size: 12,
+                            color: palette.brandGold,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Birgə dərs • ${lesson.displayClasses(currentClassName)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                color: palette.brandGold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

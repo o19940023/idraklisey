@@ -4,8 +4,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/app_shadows.dart';
+import '../../../core/widgets/motion.dart';
 import '../../../data/models/user_preferences_model.dart';
+import '../../../l10n/app_localizations.dart';
 
 class ReorderableModuleGrid extends StatefulWidget {
   final List<ModuleItem> modules;
@@ -13,6 +16,7 @@ class ReorderableModuleGrid extends StatefulWidget {
   final bool isReorderMode;
   final Function(String moduleId, BuildContext context)? onModuleTap;
   final Map<String, dynamic>? dynamicData; // subtitle üçün dinamik veri
+  final bool allowTwoLineTitle;
 
   const ReorderableModuleGrid({
     super.key,
@@ -21,6 +25,7 @@ class ReorderableModuleGrid extends StatefulWidget {
     this.isReorderMode = false,
     this.onModuleTap,
     this.dynamicData,
+    this.allowTwoLineTitle = false,
   });
 
   @override
@@ -98,6 +103,8 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
       'analytics_outlined': Icons.analytics_outlined,
       'restaurant_menu_rounded': Icons.restaurant_menu_rounded,
       'campaign_rounded': Icons.campaign_rounded,
+      'task_rounded': Icons.task_rounded,
+      'task_outlined': Icons.task_outlined,
       'qr_code_rounded': Icons.qr_code_rounded,
       'qr_code_scanner_rounded': Icons.qr_code_scanner_rounded,
       'groups_rounded': Icons.groups_rounded,
@@ -107,6 +114,8 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
       'view_timeline_rounded': Icons.view_timeline_rounded,
       'assignment_rounded': Icons.assignment_rounded,
       'assignment_outlined': Icons.assignment_outlined,
+      'menu_book_rounded': Icons.menu_book_rounded,
+      'menu_book_outlined': Icons.menu_book_outlined,
       'assignment_turned_in_rounded': Icons.assignment_turned_in_rounded,
       'badge_rounded': Icons.badge_rounded,
       'badge_outlined': Icons.badge_outlined,
@@ -126,6 +135,34 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
       'notifications_active_rounded': Icons.notifications_active_rounded,
       'dashboard_rounded': Icons.dashboard_rounded,
       'dashboard_outlined': Icons.dashboard_outlined,
+      'fact_check_rounded': Icons.fact_check_rounded,
+      'how_to_reg_rounded': Icons.how_to_reg_rounded,
+      'sports_soccer_rounded': Icons.sports_soccer_rounded,
+      'sports_basketball_rounded': Icons.sports_basketball_rounded,
+      'receipt_long_rounded': Icons.receipt_long_rounded,
+      'grading_rounded': Icons.grading_rounded,
+      'event_busy_rounded': Icons.event_busy_rounded,
+      'auto_stories_rounded': Icons.auto_stories_rounded,
+      'date_range_rounded': Icons.date_range_rounded,
+      'domain_rounded': Icons.domain_rounded,
+      'schedule_rounded': Icons.schedule_rounded,
+      'account_tree_rounded': Icons.account_tree_rounded,
+      'description_rounded': Icons.description_rounded,
+      'folder_shared_rounded': Icons.folder_shared_rounded,
+      'access_time_filled_rounded': Icons.access_time_filled_rounded,
+      'calculate_rounded': Icons.calculate_rounded,
+      'payments_rounded': Icons.payments_rounded,
+      'account_balance_wallet_rounded': Icons.account_balance_wallet_rounded,
+      'medical_services_rounded': Icons.medical_services_rounded,
+      'alt_route_rounded': Icons.alt_route_rounded,
+      'people_alt_rounded': Icons.people_alt_rounded,
+      'layers_rounded': Icons.layers_rounded,
+      'cast_for_education_rounded': Icons.cast_for_education_rounded,
+      'military_tech_rounded': Icons.military_tech_rounded,
+      'toggle_on_rounded': Icons.toggle_on_rounded,
+      'book_rounded': Icons.book_rounded,
+      'apartment_rounded': Icons.apartment_rounded,
+      'sticky_note_2_rounded': Icons.sticky_note_2_rounded,
     };
     return iconMap[iconName] ?? Icons.apps_rounded;
   }
@@ -139,73 +176,96 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
     }
   }
 
-  String _getSubtitle(ModuleItem module) {
-    if (widget.dynamicData != null && widget.dynamicData!.containsKey(module.id)) {
+  String _getSubtitle(ModuleItem module, AppLocalizations loc) {
+    if (widget.dynamicData != null &&
+        widget.dynamicData!.containsKey(module.id)) {
       return widget.dynamicData![module.id].toString();
     }
-    return module.subtitle;
+    return module.getLocalizedSubtitle(loc);
   }
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     if (widget.isReorderMode) {
-      // Siyahı Şəklində Sıralama Rejimi
-      return ReorderableListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: _modules.length,
-        onReorder: _onReorderList,
-        proxyDecorator: (child, index, animation) {
-          return AnimatedBuilder(
-            animation: animation,
-            builder: (context, child) {
-              final scale = 1.0 + (animation.value * 0.04);
-              return Transform.scale(
-                scale: scale,
-                child: Material(
-                  elevation: 12,
-                  shadowColor: Colors.black38,
-                  borderRadius: BorderRadius.circular(20),
-                  child: child,
-                ),
-              );
-            },
-            child: child,
-          );
-        },
-        itemBuilder: (context, index) {
-          final module = _modules[index];
-          return _buildReorderListTile(module, index);
-        },
+      // Siyahı Şəklində Sıralama Rejimi - Material wrap needed
+      return Material(
+        color: Colors.transparent,
+        child: ReorderableListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _modules.length,
+          onReorder: _onReorderList,
+          proxyDecorator: (child, index, animation) {
+            return AnimatedBuilder(
+              animation: animation,
+              builder: (context, child) {
+                final scale = 1.0 + (animation.value * 0.04);
+                return Transform.scale(
+                  scale: scale,
+                  child: Material(
+                    elevation: 12,
+                    shadowColor: Colors.black38,
+                    borderRadius: BorderRadius.circular(20),
+                    child: child,
+                  ),
+                );
+              },
+              child: child,
+            );
+          },
+          itemBuilder: (context, index) {
+            final module = _modules[index];
+            return _buildReorderListTile(module, index, loc);
+          },
+        ),
       );
     }
 
     // Telefon Tərzi Canlı Sürükle-Bırak Qrid (iOS Squircle App Grid)
     return LayoutBuilder(
       builder: (context, constraints) {
-        final itemWidth = (constraints.maxWidth - 12) / 2;
-        final itemHeight = itemWidth / 1.18;
+        final columns = constraints.maxWidth >= 720 ? 3 : 2;
+        const spacing = 10.0;
+        final tileHeight =
+            widget.allowTwoLineTitle && columns == 2 ? 92.0 : 86.0;
+        final itemWidth =
+            (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.18,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: spacing,
+            mainAxisExtent: tileHeight,
           ),
           itemCount: _modules.length,
           itemBuilder: (context, index) {
             final module = _modules[index];
-            return _buildDraggableGridItem(module, itemWidth, itemHeight);
+            // Paneldəki kartlar bir-birinin ardınca yumşaq "giriş" edir.
+            // Key sayəsində sürükləyib yerini dəyişəndə animasiya təkrar
+            // oynamır — yalnız ilk açılışda.
+            return FadeIn(
+              key: ValueKey('entrance_${module.id}'),
+              delay: staggerDelay(index),
+              duration: const Duration(milliseconds: 380),
+              offset: const Offset(0, 0.04),
+              child: _buildDraggableGridItem(module, itemWidth, tileHeight, loc),
+            );
           },
         );
       },
     );
   }
 
-  Widget _buildDraggableGridItem(ModuleItem module, double width, double height) {
+  Widget _buildDraggableGridItem(
+    ModuleItem module,
+    double width,
+    double height,
+    AppLocalizations loc,
+  ) {
     final isHovered = _hoveredTargetId == module.id;
     final isDraggingSelf = _currentlyDraggingId == module.id;
 
@@ -227,10 +287,11 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
         }
       },
       onAcceptWithDetails: (details) {
+        _swapModules(details.data.id, module.id);
         setState(() {
+          _currentlyDraggingId = null;
           _hoveredTargetId = null;
         });
-        _swapModules(details.data.id, module.id);
       },
       builder: (context, candidateData, rejectedData) {
         return LongPressDraggable<ModuleItem>(
@@ -261,97 +322,20 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
               width: width,
               height: height,
               child: Transform.scale(
-                scale: 1.08,
-                child: Container(
+                scale: 1.05,
+                child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: AppColors.primaryAccent,
-                      width: 2.0,
-                    ),
+                    borderRadius: BorderRadius.circular(18),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primaryAccent.withAlpha(90),
+                        color: _getColorFromHex(module.accentColor).withAlpha(60),
                         blurRadius: 24,
-                        spreadRadius: 3,
+                        spreadRadius: 2,
                         offset: const Offset(0, 10),
                       ),
                     ],
                   ),
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  _getColorFromHex(module.accentColor).withAlpha(40),
-                                  _getColorFromHex(module.accentColor).withAlpha(15),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: _getColorFromHex(module.accentColor).withAlpha(80),
-                              ),
-                            ),
-                            child: Icon(
-                              _getIconFromString(module.icon),
-                              color: _getColorFromHex(module.accentColor),
-                              size: 22,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.all(5),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryAccent.withAlpha(30),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.drag_indicator_rounded,
-                              size: 14,
-                              color: AppColors.primaryAccent,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            module.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                              color: AppColors.textPrimary,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _getSubtitle(module),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                  child: _buildModuleTile(module, true, false, loc),
                 ),
               ),
             ),
@@ -375,143 +359,143 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
             ),
           ),
           // Normal qrid kartı
-          child: _buildModuleTile(module, isHovered, isDraggingSelf),
+          child: _buildModuleTile(module, isHovered, isDraggingSelf, loc),
         );
       },
     );
   }
 
-  Widget _buildModuleTile(ModuleItem module, bool isHovered, bool isDraggingSelf) {
+  Widget _buildModuleTile(
+    ModuleItem module,
+    bool isHovered,
+    bool isDraggingSelf,
+    AppLocalizations loc,
+  ) {
     final iconData = _getIconFromString(module.icon);
     final accentColor = _getColorFromHex(module.accentColor);
-    final subtitleText = _getSubtitle(module);
+    final subtitleText = _getSubtitle(module, loc);
+    final palette = AppPalette.of(context);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      decoration: BoxDecoration(
-        color: isHovered
-            ? accentColor.withAlpha(15)
-            : AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: isHovered
-              ? accentColor
-              : AppColors.cardBorder.withAlpha(70),
-          width: isHovered ? 2.0 : 1.2,
-        ),
-        boxShadow: isHovered
-            ? [
-                BoxShadow(
-                  color: accentColor.withAlpha(40),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : AppShadows.sm,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            HapticFeedback.lightImpact();
-            if (widget.onModuleTap != null) {
-              widget.onModuleTap!(module.id, context);
-            }
-          },
-          onLongPress: () {
-            HapticFeedback.mediumImpact();
-          },
-          borderRadius: BorderRadius.circular(22),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Squircle Gradient Icon Badge
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            accentColor.withAlpha(35),
-                            accentColor.withAlpha(15),
+    return PressableScale(
+      pressedScale: 0.97,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 160),
+        opacity: isDraggingSelf ? 0.45 : 1,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: isHovered
+                ? Color.alphaBlend(
+                    accentColor.withValues(alpha: 0.08),
+                    palette.surface1,
+                  )
+                : palette.surface1,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isHovered
+                  ? accentColor.withValues(alpha: 0.55)
+                  : palette.borderHairline,
+              width: isHovered ? 1.4 : 1,
+            ),
+            boxShadow: isHovered
+                ? [
+                    BoxShadow(
+                      color: accentColor.withValues(alpha: 0.18),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                if (widget.onModuleTap != null) {
+                  widget.onModuleTap!(module.id, context);
+                }
+              },
+              borderRadius: BorderRadius.circular(18),
+              child: Semantics(
+                label: '${module.getLocalizedTitle(loc)}, $subtitleText',
+                button: true,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: AppColors.duoTint(accentColor),
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: accentColor.withValues(alpha: 0.22),
+                          ),
+                        ),
+                        child: Icon(iconData, color: accentColor, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              module.getLocalizedTitle(loc),
+                              maxLines: widget.allowTwoLineTitle ? 2 : 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.12,
+                                fontWeight: FontWeight.w800,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitleText,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: palette.textMuted,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: accentColor.withAlpha(45),
-                          width: 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: accentColor.withAlpha(25),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
-                      child: Icon(iconData, color: accentColor, size: 22),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardBorder.withAlpha(40),
-                        shape: BoxShape.circle,
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 11,
+                        color: accentColor.withValues(alpha: 0.65),
                       ),
-                      child: Icon(
-                        Icons.arrow_outward_rounded,
-                        size: 13,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      module.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitleText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
-
-  Widget _buildReorderListTile(ModuleItem module, int index) {
+  Widget _buildReorderListTile(
+    ModuleItem module,
+    int index,
+    AppLocalizations loc,
+  ) {
     final iconData = _getIconFromString(module.icon);
     final accentColor = _getColorFromHex(module.accentColor);
-    final subtitleText = _getSubtitle(module);
+    final subtitleText = _getSubtitle(module, loc);
 
     return Container(
       key: ValueKey(module.id),
@@ -535,7 +519,7 @@ class _ReorderableModuleGridState extends State<ReorderableModuleGrid> {
           child: Icon(iconData, color: accentColor, size: 22),
         ),
         title: Text(
-          module.title,
+          module.getLocalizedTitle(loc),
           style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 14.5,

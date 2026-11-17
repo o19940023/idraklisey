@@ -158,4 +158,28 @@ class AppTypography {
         letterSpacing: 0,
         height: 1.5,
       );
+
+  // Metric styles (KPI numbers, dashboards — tabular figures keep digits aligned)
+  static TextStyle metric(BuildContext context) => _baseTheme.displayLarge!.copyWith(
+        fontSize: 28,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.5,
+        height: 1.1,
+        color: AppColors.textPrimary,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      );
+
+  static TextStyle metricSm(BuildContext context) => _baseTheme.titleLarge!.copyWith(
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
+        height: 1.1,
+        color: AppColors.textPrimary,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      );
+
+  /// Re-colors any static style with the active theme's onSurface so
+  /// widgets stay theme-independent without hardcoding brightness checks.
+  static TextStyle resolve(BuildContext context, TextStyle style) =>
+      style.copyWith(color: Theme.of(context).colorScheme.onSurface);
 }

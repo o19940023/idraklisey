@@ -7,7 +7,7 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:948909504681:android:e938bf8329b3112c",
+        "mobilesdk_app_id": "1:948909504681:android:339c7becedfb54cdc2d1b8",
         "android_client_info": {
           "package_name": "az.idrak.liseyi"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyA_placeholder_android_key_idrak"
+          "current_key": "AIzaSyD5TOY9Z9RcdZvf-Wx_CeUlazTu0009v7E"
         }
       ],
       "services": {

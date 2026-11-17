@@ -2,9 +2,131 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Production rules for Idrak Liseyi platform
+
+    // Helper functions for security checks
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    // ─── 1. USERS & ACCOUNTS ──────────────────────────────────────────
+    // İstifadəçi hesabları və kimlik məlumatları
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasAll(['id', 'username', 'role']);
+      allow delete: if request.auth != null;
+    }
+
+    // ─── 2. STUDENTS PROFILE ──────────────────────────────────────────
+    // Şagird profilləri, sinif və valideyn əlaqələri
+    match /students/{studentId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasAll(['id', 'fullName', 'className']);
+      allow delete: if request.auth != null;
+    }
+
+    // ─── 3. GRADES (QİYMƏTLƏNDİRMƏ) ──────────────────────────────────
+    // KSQ, BSQ, formativ və IB MYP qiymətləri
+    match /grades/{gradeId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.score is number &&
+                               request.resource.data.score >= 0;
+      allow delete: if true;
+    }
+
+    // ─── 4. ATTENDANCE (DAVAMİYYƏT) ──────────────────────────────────
+    // Günlük və dərs saatı üzrə davamiyyət qeydləri
+    match /attendance/{attendanceId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ─── 5. HOMEWORK & ASSIGNMENTS ────────────────────────────────────
+    // Ev tapşırıqları və şagird cavabları
+    match /assignments/{assignmentId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ─── 6. HELPDESK & SUPPORT TICKETS ────────────────────────────────
+    // Valideyn, müəllim və işçi müraciətləri
+    match /tickets/{ticketId} {
+      allow read: if true;
+      allow create, update: if isValidString(request.resource.data.title, 1, 300);
+      allow delete: if false; // Biletlərin silinməsi qadağandır (audit trail)
+    }
+
+    // ─── 7. NOTIFICATIONS ─────────────────────────────────────────────
+    // Sistem və məktəbdaxili bildirişlər
+    match /notifications/{notifId} {
+      allow read: if true;
+      allow create: if isValidString(request.resource.data.title, 1, 200);
+      allow update: if true; // Oxundu statusunun yenilənməsi üçün
+      allow delete: if true;
+    }
+
+    // ─── 8. TIMETABLES & CLASSES ──────────────────────────────────────
+    // Sinif dərs cədvəlləri və sinif detalları
+    match /timetables/{timetableId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /classes/{classId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ─── 9. LIBRARY BOOKS ─────────────────────────────────────────────
+    // Elektron və fiziki kitabxana fondu
+    match /books/{bookId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ─── 10. CAFETERIA & MENU ─────────────────────────────────────────
+    // Həftəlik yeməkxana menyusu
+    match /menu/{menuId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /cafeteria_menu/{menuId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ─── 11. INVENTORY (QR İNVENTAR) ──────────────────────────────────
+    // Məktəb avadanlıqları və QR kod bazası
+    match /inventory_items/{itemId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ─── 12. MEET IDRAK ROOMS ─────────────────────────────────────────
+    // Canlı dərslər və video otaqlar
+    match /meet_rooms/{roomId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ─── 13. ROLES & PERMISSIONS ──────────────────────────────────────
+    // Dinamik rollar və icazələr
+    match /roles/{roleId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ─── 14. USER PREFERENCES ─────────────────────────────────────────
+    // İstifadəçi interfeys seçimləri və modul ardıcıllığı
+    match /user_preferences/{prefId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ─── DEFAULT DENY ─────────────────────────────────────────────────
+    // Siyahıda olmayan hər hansı digər sənəd və kolleksiya üçün qadağan
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

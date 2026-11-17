@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/navigation_utils.dart';
 
@@ -57,6 +58,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -180,13 +182,13 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.white.withAlpha(20)),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
-                          Icon(Icons.qr_code_scanner_rounded, size: 16, color: AppColors.goldLight),
-                          SizedBox(width: 8),
+                          const Icon(Icons.qr_code_scanner_rounded, size: 16, color: AppColors.goldLight),
+                          const SizedBox(width: 8),
                           Text(
-                            'QR Kodu Skan Et',
-                            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+                            loc?.scanQrCode ?? 'QR Kodu Skan Et',
+                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
                           ),
                         ],
                       ),
@@ -212,9 +214,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> with SingleTickerProv
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.white.withAlpha(20)),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Avadanlıqdakı QR kodu çərçivəyə tutun',
-                    style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
+                    style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
                   ),
                 ),
                 const SizedBox(height: 20),

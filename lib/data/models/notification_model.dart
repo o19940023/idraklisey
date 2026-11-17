@@ -20,8 +20,9 @@ class AppNotification {
   final String? targetStudentId;
   final String? targetStudentName;
   final String? targetParentId;
+  final List<String> targetUserIds; // Doğrudan hedeflənmiş istifadəçilər (helpdesk, ticket sahibi və s.)
   final List<String> targetClasses; // e.g. ['9A', '9B'] or [] for all
-  final List<String> targetRoles; // ['student', 'parent', 'teacher'] or [] for all
+  final List<String> targetRoles; // ['student', 'parent', 'teacher', rol-id ('role-helpdesk')] or [] for all
   final DateTime createdAt;
   final List<String> readByUserIds; // User IDs who marked it read
   final String priority; // 'normal', 'important', 'urgent'
@@ -39,6 +40,7 @@ class AppNotification {
     this.targetStudentId,
     this.targetStudentName,
     this.targetParentId,
+    this.targetUserIds = const [],
     this.targetClasses = const [],
     this.targetRoles = const [],
     DateTime? createdAt,
@@ -61,6 +63,7 @@ class AppNotification {
     String? targetStudentId,
     String? targetStudentName,
     String? targetParentId,
+    List<String>? targetUserIds,
     List<String>? targetClasses,
     List<String>? targetRoles,
     DateTime? createdAt,
@@ -80,6 +83,7 @@ class AppNotification {
       targetStudentId: targetStudentId ?? this.targetStudentId,
       targetStudentName: targetStudentName ?? this.targetStudentName,
       targetParentId: targetParentId ?? this.targetParentId,
+      targetUserIds: targetUserIds ?? this.targetUserIds,
       targetClasses: targetClasses ?? this.targetClasses,
       targetRoles: targetRoles ?? this.targetRoles,
       createdAt: createdAt ?? this.createdAt,
@@ -101,6 +105,7 @@ class AppNotification {
     'targetStudentId': targetStudentId,
     'targetStudentName': targetStudentName,
     'targetParentId': targetParentId,
+    'targetUserIds': targetUserIds,
     'targetClasses': targetClasses,
     'targetRoles': targetRoles,
     'createdAt': createdAt.toIso8601String(),
@@ -125,6 +130,7 @@ class AppNotification {
       targetStudentId: json['targetStudentId'],
       targetStudentName: json['targetStudentName'],
       targetParentId: json['targetParentId'],
+      targetUserIds: (json['targetUserIds'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       targetClasses: (json['targetClasses'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       targetRoles: (json['targetRoles'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) ?? DateTime.now() : DateTime.now(),

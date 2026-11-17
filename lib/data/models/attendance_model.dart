@@ -2,7 +2,8 @@ enum AttendanceStatus {
   present, // Yaşıl - İştirak edib (W / İ)
   late,    // Sarı - Dərsə gecikib (G)
   absent,  // Qırmızı - Qayıb (Q)
-  holiday, // Tətil / İstirahət günü
+  excused, // Mavi - Üzrlü səbəb (Ü)
+  holiday, // Boz - Tətil / İstirahət günü
 }
 
 class DayAttendance {

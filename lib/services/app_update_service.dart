@@ -17,8 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 ///
 /// Yeni versiya varsa banner göstərilir; istifadəçi banner-i bağlasa belə
 /// tətbiq yenilənənə qədər hər açılışda yenidən görünür.
-class AppUpdateService extends ChangeNotifier {
-  String _currentVersion = '';
+class AppUpdateService extends ChangeNotifier {  String _currentVersion = '';
   String _latestVersion = '';
   String _updateUrl = '';
   bool _updateAvailable = false;
@@ -132,9 +131,14 @@ class AppUpdateService extends ChangeNotifier {
 
   String _fallbackStoreUrl() {
     return Platform.isIOS
-        ? 'https://apps.apple.com/az/search?term=idrak+liseyi'
+        ? _iosAppStoreUrl
         : 'https://play.google.com/store/apps/details?id=$_androidPackageName';
   }
+
+  /// Mağaza linkləri
+  /// iOS: unlisted App Store bağlantısı (iTunes lookup ilə tapılmır)
+  static const String _iosAppStoreUrl =
+      'https://apps.apple.com/us/app/i-drak-liseyi-t%C9%99hsil/id6801854699';
 
   /// Semantik versiya müqayisəsi: latest > current ?
   bool _isNewerVersion(String latest, String current) {
@@ -177,3 +181,7 @@ class AppUpdateService extends ChangeNotifier {
     }
   }
 }
+
+/// Qlobal tək nüsxə — main.dart-da provayderə qeyd olunur.
+/// Tənzimləmə ekranı da eyni nüsxəni yeniləyir ki, banner dərhal reaksiya versin.
+final AppUpdateService appUpdateService = AppUpdateService();

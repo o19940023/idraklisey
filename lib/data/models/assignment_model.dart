@@ -55,6 +55,7 @@ class AssignmentSubmission {
 
 class HomeworkAssignment {
   final String id;
+  final int? rawBackendId;
   final String subject;
   final String title;
   final String teacherName;
@@ -64,10 +65,13 @@ class HomeworkAssignment {
   final String? attachmentDocUrl;
   final String? assignedClass;
   final List<String> assignedStudentIds;
+  final double maxScore;
+  final List<Map<String, dynamic>> attachments;
   final Map<String, AssignmentSubmission> submissions; // studentId -> AssignmentSubmission
 
   HomeworkAssignment({
     required this.id,
+    this.rawBackendId,
     required this.subject,
     required this.title,
     required this.teacherName,
@@ -77,8 +81,76 @@ class HomeworkAssignment {
     this.attachmentDocUrl,
     this.assignedClass,
     this.assignedStudentIds = const [],
+    this.maxScore = 100.0,
+    this.attachments = const [],
     this.submissions = const {},
   });
+
+  factory HomeworkAssignment.fromApiJson(
+    Map<String, dynamic> json, {
+    String? currentStudentId,
+  }) {
+    final rawId = json['id'];
+    final id = 'api-asg-$rawId';
+    final subject = json['subject']?.toString() ?? 'Fənn';
+    final title = json['title']?.toString() ?? 'Tapşırıq';
+    final teacherName = json['teacher']?.toString() ?? 'Müəllim';
+    final instructions = json['description']?.toString() ?? '';
+    final assignedDate = DateTime.tryParse(json['start_at']?.toString() ?? '') ?? DateTime.now();
+    final dueDate = DateTime.tryParse(json['due_date']?.toString() ?? '') ?? DateTime.now().add(const Duration(days: 1));
+    final assignedClass = json['class']?.toString();
+    final maxScore = (json['max_score'] as num?)?.toDouble() ?? 100.0;
+
+    final rawAtts = json['attachments'];
+    final List<Map<String, dynamic>> attachmentsList = [];
+    if (rawAtts is List) {
+      for (final a in rawAtts) {
+        if (a is Map) {
+          attachmentsList.add(Map<String, dynamic>.from(a));
+        }
+      }
+    }
+
+    final submissions = <String, AssignmentSubmission>{};
+    final rawSub = json['submission'];
+    if (rawSub is Map && currentStudentId != null) {
+      final subImages = <String>[];
+      final rawSubAtts = rawSub['attachments'];
+      if (rawSubAtts is List) {
+        for (final a in rawSubAtts) {
+          if (a is Map && a['url'] != null) {
+            subImages.add(a['url'].toString());
+          }
+        }
+      }
+      submissions[currentStudentId] = AssignmentSubmission(
+        studentId: currentStudentId,
+        studentName: '',
+        submittedAt: DateTime.tryParse(rawSub['submitted_at']?.toString() ?? '') ?? DateTime.now(),
+        scannedImages: subImages,
+        studentNote: rawSub['content']?.toString(),
+        score: (rawSub['grade'] as num?)?.toDouble(),
+        teacherComment: rawSub['feedback']?.toString(),
+        gradedAt: rawSub['grade'] != null ? DateTime.now() : null,
+      );
+    }
+
+    return HomeworkAssignment(
+      id: id,
+      rawBackendId: rawId is int ? rawId : int.tryParse(rawId?.toString() ?? ''),
+      subject: subject,
+      title: title,
+      teacherName: teacherName,
+      instructions: instructions,
+      assignedDate: assignedDate,
+      dueDate: dueDate,
+      assignedClass: assignedClass,
+      maxScore: maxScore,
+      attachments: attachmentsList,
+      attachmentDocUrl: attachmentsList.isNotEmpty ? attachmentsList.first['url']?.toString() : null,
+      submissions: submissions,
+    );
+  }
 
   AssignmentSubmission? getSubmissionForStudent(String studentId) => submissions[studentId];
 

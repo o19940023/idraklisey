@@ -43,35 +43,37 @@ class CustomCard extends StatelessWidget {
     Widget content;
 
     if (useGlass) {
-      content = ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark
-                  ? AppColors.darkSurface.withAlpha(215)
-                  : Colors.white.withAlpha(220),
-              borderRadius: BorderRadius.circular(borderRadius),
-              border: border ??
-                  Border.all(
-                    color: isDark
-                        ? Colors.white.withAlpha(28)
-                        : Colors.white.withAlpha(50),
-                    width: 1,
-                  ),
-              boxShadow: boxShadow ??
-                  [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(isDark ? 60 : 10),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+      content = RepaintBoundary(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.darkSurface.withAlpha(215)
+                    : Colors.white.withAlpha(220),
+                borderRadius: BorderRadius.circular(borderRadius),
+                border: border ??
+                    Border.all(
+                      color: isDark
+                          ? Colors.white.withAlpha(28)
+                          : Colors.white.withAlpha(50),
+                      width: 1,
                     ),
-                  ],
-            ),
-            child: Padding(
-              padding: padding ?? const EdgeInsets.all(16),
-              child: child,
+                boxShadow: boxShadow ??
+                    [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(isDark ? 60 : 10),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+              ),
+              child: Padding(
+                padding: padding ?? const EdgeInsets.all(16),
+                child: child,
+              ),
             ),
           ),
         ),
