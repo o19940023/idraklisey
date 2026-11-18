@@ -30,6 +30,7 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = true
+            keepDebugSymbols += setOf("**/*.so")
         }
         resources {
             excludes += setOf(
